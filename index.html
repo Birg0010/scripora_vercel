@@ -9,11 +9,11 @@
 <meta name="apple-mobile-web-app-title" content="Scripora"/>
 <meta name="theme-color" content="#12161F"/>
 <meta name="description" content="Scripora helps YouTube creators plan, structure and write better scripts. Score your Hook, Context, Main Body, CTA and Outro. Track your growth and export professional Script Portfolios."/>
-<meta property="og:title" content="Scripora — Write with Intention"/>
+<meta property="og:title" content="Scripora   Write with Intention"/>
 <meta property="og:description" content="The professional scriptwriting app for YouTube creators. Score your scripts, track your growth and export beautiful Script Portfolios."/>
 <meta property="og:url" content="https://scripora.app"/>
 <meta property="og:type" content="website"/>
-<title>Scripora — Write with Intention</title>
+<title>Scripora   Write with Intention</title>
 <link rel="manifest" href="manifest.json"/>
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg"/>
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png"/>
@@ -27,7 +27,7 @@
 
 <!-- Twitter Card (was missing) -->
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Scripora — Write with Intention"/>
+<meta name="twitter:title" content="Scripora   Write with Intention"/>
 <meta name="twitter:description" content="Score your scripts, track your growth and write better YouTube content."/>
 <meta name="twitter:image" content="https://scripora.app/icons/icon-512.png"/>
 <meta name="twitter:site" content="@selerii"/>
@@ -79,10 +79,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-VF0QK7J6TZ"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-VF0QK7J6TZ');</script>
+
+
 
 <style>
 :root{
@@ -171,6 +174,25 @@ header{height:var(--hh);flex-shrink:0;background:var(--surface);border-bottom:1p
 .logo span{color:var(--text);font-style:normal;}
 .hdr-right{display:flex;align-items:center;gap:4px;}
 .hdr-btn{background:none;border:none;color:var(--muted);padding:7px;border-radius:8px;display:flex;align-items:center;transition:color .12s;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.help-tab{background:none;border:none;padding:10px 14px;font-size:.74rem;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;cursor:pointer;flex-shrink:0;}
+.help-tab.on{color:var(--accent);border-bottom-color:var(--accent);}
+.help-section{margin-bottom:18px;}
+.help-section-title{font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+.help-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;overflow:hidden;}
+.help-item-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;gap:8px;}
+.help-item-q{font-size:.78rem;font-weight:600;color:var(--text);flex:1;}
+.help-item-a{padding:0 12px;font-size:.74rem;color:var(--muted);line-height:1.65;max-height:0;overflow:hidden;transition:max-height .25s,padding .25s;}
+.help-item.open .help-item-a{max-height:400px;padding:8px 12px 12px;}
+.help-item-chev{transition:transform .2s;flex-shrink:0;color:var(--faint);}
+.help-item.open .help-item-chev{transform:rotate(180deg);}
+.ob-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:background .2s;}
+.ob-dot.on{background:var(--accent);}
+.ob-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:8px;line-height:1.3;}
+.ob-body{font-size:.8rem;color:var(--muted);line-height:1.7;}
+.ob-icon{width:48px;height:48px;border-radius:12px;background:var(--accent-soft);border:1px solid var(--accent-border);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.ob-icon svg{width:22px;height:22px;stroke:var(--accent);}
+.spinning{animation:spin .7s linear infinite;}
 .hdr-btn:hover{color:var(--text);}
 .hdr-btn svg{width:18px;height:18px;}
 
@@ -226,14 +248,14 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
 .search-clear svg{width:14px;height:14px;}
 
 /* Filter pills */
-.filter-row{display:flex;gap:6px;padding:10px 14px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.filter-wrap{display:flex;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;padding-right:12px;}
+.filter-row{display:flex;gap:6px;padding:10px 14px 10px 14px;overflow-x:auto;scrollbar-width:none;flex:1;align-items:center;}
 .filter-row::-webkit-scrollbar{display:none;}
-.filter-row{align-items:center;}
 .add-pill{
   display:flex;align-items:center;justify-content:center;
   width:32px;height:32px;border-radius:50%;
   background:var(--accent);border:none;
-  flex-shrink:0;margin-left:auto;
+  flex-shrink:0;
   box-shadow:0 2px 10px var(--accent-glow);
   transition:transform .12s;
 }
@@ -270,7 +292,7 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
 .score-chip.mid .score-chip-dot{background:var(--s-mid);}
 .score-chip.low{background:var(--s-low-bg);color:var(--s-low);}
 .score-chip.low .score-chip-dot{background:var(--s-low);}
-.add-bar{padding:12px 14px;border-top:1px solid var(--border);display:flex;justify-content:center;background:var(--bg);flex-shrink:0;}
+
 .add-btn{display:inline-flex;align-items:center;gap:7px;padding:12px 28px;border-radius:30px;background:var(--accent);color:#0A0D14;border:none;font-size:.86rem;font-weight:700;box-shadow:0 4px 20px var(--accent-glow);transition:transform .12s;}
 .add-btn:active{transform:scale(.97);}
 .add-btn svg{width:14px;height:14px;}
@@ -377,8 +399,9 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
 .view-bar{width:3px;border-radius:2px;flex-shrink:0;margin-top:4px;}
 .view-bar.hook{background:var(--hook);}
 .view-bar.ctx{background:var(--ctx);}
-.view-bar.body-t{background:var(--body-c);}
+
 .view-bar.cta{background:var(--cta);}
+.view-bar.body-t{background:var(--body-c);}
 .view-bar.out{background:var(--out);}
 .view-para{font-size:.88rem;line-height:1.88;color:var(--text);text-align:justify;flex:1;}
 .view-footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:.62rem;color:var(--faint);}
@@ -478,55 +501,130 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
 .hmeta{font-size:.62rem;color:var(--muted);}
 .harrow svg{width:14px;height:14px;color:var(--faint);}
 .view-all-btn{display:block;width:calc(100% - 28px);margin:0 14px 14px;padding:10px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--accent);font-size:.74rem;font-weight:600;text-align:center;cursor:pointer;}
+/* ═══════════════════════════════════════
+   RESULTS PAGE   v3
+═══════════════════════════════════════ */
 .res-hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;height:var(--hh);display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .res-back{background:none;border:none;color:var(--muted);padding:4px;display:flex;flex-shrink:0;}
 .res-back svg{width:20px;height:20px;}
 .res-title{font-family:'Playfair Display',serif;font-size:.95rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .res-date{font-size:.6rem;color:var(--muted);flex-shrink:0;}
-.score-banner{background:linear-gradient(135deg,rgba(184,115,51,.09),rgba(184,115,51,.02));border-bottom:1px solid var(--border);padding:16px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
-.score-banner-num{font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:700;line-height:1;flex-shrink:0;}
-.score-banner-num.mid{color:var(--s-mid);}
-.score-banner-num.high{color:var(--s-high);}
-.score-banner-num.low{color:var(--s-low);}
-.score-banner-lbl{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
-.score-banner-verdict{font-size:.82rem;font-weight:600;color:var(--text);}
-.score-banner-sub{font-size:.68rem;color:var(--muted);margin-top:2px;line-height:1.4;}
-.section-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:14px;}
-.sgrid-cell{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
-.sgrid-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-.sgrid-name{font-size:.58rem;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;}
-.sgrid-num{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;}
-.sgrid-num.high{color:var(--s-high);}
-.sgrid-num.mid{color:var(--s-mid);}
-.sgrid-num.low{color:var(--s-low);}
-.sgrid-bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;margin-bottom:5px;}
-.sgrid-fill{height:100%;border-radius:2px;}
-.sgrid-fill.high{background:var(--s-high);}
-.sgrid-fill.mid{background:var(--s-mid);}
-.sgrid-fill.low{background:var(--s-low);}
-.sgrid-note{font-size:.62rem;color:var(--muted);line-height:1.4;}
-.anno-lbl{padding:8px 14px 4px;font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);border-top:1px solid var(--border);}
-.anno-block{margin:0 14px 10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-.anno-block.tag-hook{border-left:3px solid var(--hook);}
-.anno-block.tag-ctx{border-left:3px solid var(--ctx);}
-.anno-block.tag-body{border-left:3px solid var(--body-c);}
-.anno-block.tag-cta{border-left:3px solid var(--cta);}
-.anno-block.tag-out{border-left:3px solid var(--out);}
-.anno-hd{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--border);}
-.anno-tag-lbl{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
-.anno-block.tag-hook .anno-tag-lbl{color:var(--hook);}
-.anno-block.tag-ctx .anno-tag-lbl{color:var(--ctx);}
-.anno-block.tag-body .anno-tag-lbl{color:var(--body-c);}
-.anno-block.tag-cta .anno-tag-lbl{color:var(--cta);}
-.anno-block.tag-out .anno-tag-lbl{color:var(--out);}
-.anno-text{padding:12px 14px;font-size:.85rem;line-height:1.8;color:var(--text);text-align:justify;}
-.anno-text.empty{color:var(--muted);font-style:italic;text-align:left;}
-.hl-bad{background:rgba(139,58,58,.15);border-bottom:1px solid rgba(192,90,90,.4);border-radius:2px;padding:0 1px;}
-.hl-ok{background:rgba(74,124,89,.12);border-bottom:1px solid rgba(106,175,130,.35);border-radius:2px;padding:0 1px;}
-.anno-fb{padding:8px 14px 10px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-start;font-size:.75rem;line-height:1.55;color:rgba(192,90,90,.85);}
-.anno-fb.ok{color:rgba(106,175,130,.85);}
-.anno-fb-ico{flex-shrink:0;font-size:.8rem;margin-top:1px;}
-.export-row{display:flex;justify-content:center;padding:16px 14px 20px;}
+
+/* Score hero */
+.res-hero{
+  padding:20px 16px 16px;
+  background:linear-gradient(160deg,var(--s2) 0%,var(--bg) 100%);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.res-hero-top{display:flex;align-items:center;gap:16px;margin-bottom:14px;}
+.res-score-ring{position:relative;width:72px;height:72px;flex-shrink:0;}
+.res-score-ring svg{width:72px;height:72px;transform:rotate(-90deg);}
+.res-ring-track{fill:none;stroke:rgba(255,255,255,.06);stroke-width:7;}
+.res-ring-fill{fill:none;stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .8s ease;}
+.res-ring-fill.high{stroke:var(--s-high);}
+.res-ring-fill.mid{stroke:var(--s-mid);}
+.res-ring-fill.low{stroke:var(--s-low);}
+.res-score-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.res-score-val{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;line-height:1;}
+.res-score-val.high{color:var(--s-high);}
+.res-score-val.mid{color:var(--s-mid);}
+.res-score-val.low{color:var(--s-low);}
+.res-score-lbl{font-size:.42rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px;}
+.res-hero-info{flex:1;}
+.res-verdict{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:4px;line-height:1.3;}
+.res-summary{font-size:.72rem;color:var(--muted);line-height:1.6;}
+
+/* Section bars - horizontal */
+.res-section-bars{display:flex;flex-direction:column;gap:6px;}
+.res-sbar{display:flex;align-items:center;gap:8px;}
+.res-sbar-name{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;width:52px;flex-shrink:0;color:var(--muted);}
+.res-sbar-track{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;}
+.res-sbar-fill{height:100%;border-radius:3px;transition:width .6s ease;}
+.res-sbar-fill.high{background:var(--s-high);}
+.res-sbar-fill.mid{background:var(--s-mid);}
+.res-sbar-fill.low{background:var(--s-low);}
+.res-sbar-val{font-size:.62rem;font-weight:700;width:24px;text-align:right;flex-shrink:0;}
+.res-sbar-val.high{color:var(--s-high);}
+.res-sbar-val.mid{color:var(--s-mid);}
+.res-sbar-val.low{color:var(--s-low);}
+
+/* Attention curve chart */
+.res-curve-card{margin:12px 14px 0;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;}
+.res-card-title{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:12px;}
+.res-curve{display:flex;align-items:flex-end;gap:3px;height:52px;}
+.res-curve-bar{flex:1;border-radius:3px 3px 0 0;min-height:3px;transition:height .4s ease;}
+.res-curve-bar.pos{background:var(--s-high);}
+.res-curve-bar.neu{background:rgba(255,255,255,.15);}
+.res-curve-bar.neg{background:var(--s-low);}
+.res-curve-labels{display:flex;justify-content:space-between;margin-top:5px;}
+.res-curve-lbl{font-size:.5rem;color:var(--faint);}
+
+/* Failure patterns */
+.res-pattern-card{margin:10px 14px 0;border:1px solid rgba(192,90,90,.25);border-radius:12px;background:rgba(139,58,58,.08);padding:12px 14px;}
+.res-pattern-tag{font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--s-low);margin-bottom:4px;}
+.res-pattern-name{font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:3px;}
+.res-pattern-desc{font-size:.7rem;color:var(--muted);line-height:1.55;}
+
+/* Issues */
+.res-issues{padding:12px 14px 0;}
+.res-issues-title{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;}
+.res-issue{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden;}
+.res-issue-hd{display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(255,255,255,.025);border-bottom:1px solid var(--border);}
+.res-issue-section{font-size:.64rem;font-weight:700;color:var(--text);}
+.res-issue-impact{font-size:.56rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:20px;}
+.res-issue-impact.high{background:rgba(139,58,58,.15);color:var(--s-low);}
+.res-issue-impact.medium{background:var(--s-mid-bg);color:var(--s-mid);}
+.res-issue-impact.low{background:rgba(255,255,255,.06);color:var(--muted);}
+.res-issue-score{font-size:.64rem;color:var(--muted);margin-left:auto;}
+.res-issue-body{padding:10px 12px;}
+.res-oi{display:flex;gap:8px;margin-bottom:6px;}
+.res-oi-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.res-oi-dot.obs{background:var(--muted);}
+.res-oi-dot.cons{background:var(--s-low);}
+.res-oi-dot.fix{background:var(--s-high);}
+.res-oi-text{font-size:.74rem;color:var(--muted);line-height:1.55;}
+.res-oi-text.obs{color:var(--text);}
+.res-oi-text.fix{color:var(--s-high);}
+
+/* Annotated script */
+.res-anno-section{padding:12px 14px 0;}
+.res-anno-title{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;}
+.res-anno-block{background:var(--s2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden;}
+.res-anno-block.tag-hook{border-left:3px solid var(--hook);}
+.res-anno-block.tag-ctx{border-left:3px solid var(--ctx);}
+.res-anno-block.tag-body{border-left:3px solid var(--body-c);}
+.res-anno-block.tag-cta{border-left:3px solid var(--cta);}
+.res-anno-block.tag-out{border-left:3px solid var(--out);}
+.res-anno-hd{display:flex;align-items:center;justify-content:space-between;padding:7px 11px;background:rgba(255,255,255,.025);border-bottom:1px solid var(--border);}
+.res-anno-tag{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+.res-anno-block.tag-hook .res-anno-tag{color:var(--hook);}
+.res-anno-block.tag-ctx .res-anno-tag{color:var(--ctx);}
+.res-anno-block.tag-body .res-anno-tag{color:var(--body-c);}
+.res-anno-block.tag-cta .res-anno-tag{color:var(--cta);}
+.res-anno-block.tag-out .res-anno-tag{color:var(--out);}
+.res-anno-text{padding:10px 12px;font-size:.82rem;line-height:1.8;color:var(--text);text-align:justify;}
+.res-anno-fb{padding:7px 12px 9px;border-top:1px solid var(--border);font-size:.72rem;line-height:1.55;color:var(--muted);}
+.res-anno-fb.pos{color:rgba(106,175,130,.9);}
+.res-anno-fb.neg{color:rgba(192,90,90,.85);}
+
+/* Stats row */
+.res-stats-row{display:flex;gap:6px;padding:12px 14px 0;}
+.res-stat-chip{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;}
+.res-stat-num{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--text);line-height:1;}
+.res-stat-lbl{font-size:.52rem;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;}
+
+/* In short */
+.res-inshort{margin:12px 14px 0;padding:13px 14px;background:var(--s2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;}
+.res-inshort-tag{font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:5px;}
+.res-inshort-verdict{font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:5px;}
+.res-inshort-body{font-size:.72rem;color:var(--muted);line-height:1.65;}
+
+/* Export */
+.res-export{display:flex;justify-content:center;padding:16px 14px 28px;}
+.res-export-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:30px;background:var(--accent-soft);border:1px solid var(--accent-border);color:var(--accent);font-size:.8rem;font-weight:600;cursor:pointer;}
+.res-export-btn svg{width:14px;height:14px;}
+
 .export-row-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:30px;background:var(--accent-soft);border:1px solid var(--accent-border);color:var(--accent);font-size:.8rem;font-weight:600;cursor:pointer;}
 .export-row-btn svg{width:14px;height:14px;}
 
@@ -630,20 +728,44 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
 
 /* Themes */
 .theme-grid-modal{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
-.theme-card{border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:border .14s;position:relative;}
-.theme-card.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);}
-.theme-preview{height:50px;display:flex;align-items:flex-end;padding:6px 8px;gap:4px;}
-.theme-bar{height:18px;border-radius:3px;flex:1;opacity:.65;}
-.theme-bar.ac{opacity:1;flex:.7;}
-.theme-meta{padding:8px 10px;}
-.theme-name-lbl{font-size:.72rem;font-weight:600;color:var(--text);}
-.theme-tag-lbl{font-size:.58rem;color:var(--muted);margin-top:1px;}
-.theme-check{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;}
+.theme-card{
+  border:1.5px solid var(--border);border-radius:14px;
+  overflow:hidden;cursor:pointer;
+  transition:all .18s;position:relative;
+  box-shadow:var(--sh-sm);
+}
+.theme-card:active{transform:scale(.97);}
+.theme-card.active{
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px var(--accent-border),var(--sh-sm);
+}
+.theme-preview{
+  height:56px;display:flex;align-items:flex-end;
+  padding:8px 10px;gap:5px;
+  position:relative;overflow:hidden;
+}
+.theme-preview::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.04),transparent);
+  pointer-events:none;
+}
+.theme-bar{height:20px;border-radius:4px;flex:1;opacity:.7;box-shadow:0 1px 3px rgba(0,0,0,.15);}
+.theme-bar.ac{opacity:1;flex:.8;box-shadow:0 2px 6px rgba(0,0,0,.2);}
+.theme-meta{padding:9px 11px;border-top:1px solid var(--border2);}
+.theme-name-lbl{font-size:.75rem;font-weight:700;color:var(--text);}
+.theme-tag-lbl{font-size:.6rem;color:var(--muted);margin-top:2px;letter-spacing:.02em;}
+.theme-check{
+  position:absolute;top:7px;right:7px;
+  width:18px;height:18px;border-radius:50%;
+  background:var(--accent);border:1.5px solid rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.25);
+}
 .theme-check svg{width:9px;height:9px;stroke:#0A0D14;fill:none;stroke-width:2.5;}
 .theme-more{font-size:.64rem;color:var(--muted);text-align:center;padding:4px 0;}
 
 /* Toast */
-.toast{position:fixed;top:calc(var(--hh) + 12px);left:50%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:30px;font-size:.78rem;font-weight:500;letter-spacing:.01em;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:300;opacity:0;pointer-events:none;transition:opacity .18s;white-space:nowrap;}
+.toast{position:fixed;top:calc(var(--hh) + 12px);left:12px;right:12px;max-width:360px;margin:0 auto;display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:30px;font-size:.76rem;font-weight:500;letter-spacing:.01em;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:300;opacity:0;pointer-events:none;transition:opacity .18s;white-space:normal;text-align:center;}
 .toast.show{opacity:1;}
 .toast.default{background:rgba(232,224,208,.12);border:1px solid rgba(232,224,208,.15);color:var(--text);}
 .toast.success{background:rgba(74,124,89,.22);border:1px solid rgba(106,175,130,.2);color:#9AD4AF;}
@@ -684,10 +806,32 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
 .contact-ta:focus,.contact-sel:focus{border-color:var(--accent);}
 .contact-ta::placeholder{color:var(--muted);}
 
+/* Bulk select */
+.scard.selected{border-color:var(--accent);background:var(--accent-soft);}
+.scard.selected .scard-ico{background:var(--accent);border-color:var(--adk);}
+.scard.selected .scard-ico svg{stroke:#0A0D14;}
+.bulk-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:var(--surface);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.bulk-count{font-size:.82rem;font-weight:600;color:var(--accent);}
+.bulk-actions{display:flex;gap:8px;}
+.bulk-delete-btn{
+  padding:7px 16px;border-radius:8px;
+  background:rgba(139,58,58,.15);color:var(--s-low);
+  border:1px solid rgba(139,58,58,.25);
+  font-size:.78rem;font-weight:600;cursor:pointer;
+}
+.bulk-cancel-btn{
+  padding:7px 12px;border-radius:8px;
+  background:transparent;border:1px solid var(--border);
+  color:var(--muted);font-size:.78rem;cursor:pointer;
+}
 /* Swipe delete */
-.scard-swipe{overflow:hidden;position:relative;}
-.scard-delete-reveal{position:absolute;right:0;top:0;bottom:0;width:80px;background:var(--s-low);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;font-size:.62rem;font-weight:700;color:#fff;cursor:pointer;}
-.scard-delete-reveal svg{width:18px;height:18px;}
+
+
+
 </style>
 
 
@@ -725,6 +869,13 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
 
     <!-- ── SCRIPTS ── -->
     <div class="screen on" id="screen-scripts">
+      <div class="bulk-bar hide" id="bulkBar">
+        <span class="bulk-count" id="bulkCount">0 selected</span>
+        <div class="bulk-actions">
+          <button class="bulk-cancel-btn" onclick="exitBulkMode()">Cancel</button>
+          <button class="bulk-delete-btn" onclick="bulkDelete()">Delete</button>
+        </div>
+      </div>
       <div class="search-bar hide" id="searchBar">
         <div class="search-inner">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -732,11 +883,13 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
           <button class="search-clear" onclick="clearSearch()"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
         </div>
       </div>
-      <div class="filter-row" id="filterRow">
-        <button class="fpill" data-filter="Draft" onclick="setFilter(this,'Draft')">Draft</button>
-        <button class="fpill" data-filter="In Progress" onclick="setFilter(this,'In Progress')">In Progress</button>
-        <button class="fpill" data-filter="Ready" onclick="setFilter(this,'Ready')">Ready</button>
-        <button class="fpill" data-filter="Filmed" onclick="setFilter(this,'Filmed')">Filmed</button>
+      <div class="filter-wrap">
+        <div class="filter-row" id="filterRow">
+          <button class="fpill" data-filter="Draft" onclick="setFilter(this,'Draft')">Draft</button>
+          <button class="fpill" data-filter="In Progress" onclick="setFilter(this,'In Progress')">In Progress</button>
+          <button class="fpill" data-filter="Ready" onclick="setFilter(this,'Ready')">Ready</button>
+          <button class="fpill" data-filter="Filmed" onclick="setFilter(this,'Filmed')">Filmed</button>
+        </div>
         <button class="add-pill" onclick="openModal('newScript')" title="New Script">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
         </button>
@@ -757,6 +910,9 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
           </button>
           <button class="hdr-btn" onclick="openViewScript()" title="View Script">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          </button>
+          <button class="hdr-btn" onclick="openReportDrawer()" title="Script Report" id="writeAnalyseBtn" style="color:var(--accent);">
+            <svg id="writeAnalyseIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
           </button>
         </div>
       </div>
@@ -870,6 +1026,9 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
     <button class="res-back" onclick="closeAnalyseResults()"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
     <div class="res-title" id="resTitle">Analysis Results</div>
     <div class="res-date" id="resDate"></div>
+    <button class="hdr-btn" onclick="downloadAnalysisResults()" title="Download results" style="flex-shrink:0;">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+    </button>
   </div>
   <div id="scoreBanner" class="score-banner"></div>
   <div style="flex:1;overflow-y:auto;" id="resBody"></div>
@@ -886,11 +1045,41 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
   </div>
 </div>
 
+<!-- REPORT DRAWER -->
+<div class="dov hide" id="rdov" onclick="closeReportDrawer()"></div>
+<div class="drawer hide" id="reportDrawer">
+  <div class="drawer-hd"><span class="drawer-title">Script Report</span>
+    <button class="drawer-close" onclick="closeReportDrawer()"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+  </div>
+  <div class="drawer-body" id="reportDrawerBody" style="overflow-y:auto;padding:12px 14px 20px;"></div>
+</div>
+<!-- HELP SCREEN -->
+<div id="helpScreen" class="hide" style="position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;">
+  <div class="res-hdr">
+    <button class="res-back" onclick="closeHelp()"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+    <div class="res-title">Help &amp; Guide</div>
+  </div>
+  <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none;">
+    <button class="help-tab on" id="htab-start" onclick="switchHelpTab('start')">Start</button>
+    <button class="help-tab" id="htab-write" onclick="switchHelpTab('write')">Writing</button>
+    <button class="help-tab" id="htab-analyse" onclick="switchHelpTab('analyse')">Analyse</button>
+    <button class="help-tab" id="htab-account" onclick="switchHelpTab('account')">Account</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:16px 14px 32px;" id="helpBody"></div>
+</div>
+<!-- ONBOARDING -->
+<div id="onboardScreen" class="hide" style="position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:200;display:flex;align-items:flex-end;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:28px 24px 36px;">
+    <div id="obSlides"></div>
+    <div style="display:flex;justify-content:center;gap:6px;margin:16px 0;"><div class="ob-dot on" id="od0"></div><div class="ob-dot" id="od1"></div><div class="ob-dot" id="od2"></div></div>
+    <div style="display:flex;gap:10px;"><button class="btn-g" id="obBack" onclick="obPrev()" style="display:none;">Back</button><button class="btn-a active" id="obNext" onclick="obNext()" style="flex:1;">Next</button></div>
+  </div>
+</div>
 <!-- TOAST -->
 <div class="toast default" id="toast"></div>
 
 <!-- MODAL OVERLAY -->
-<div class="mo" id="mo" onclick="closeMo(event)">
+<div class="mo" id="mo" onclick="closeMo(event)" ontouchend="closeMoTouch(event)">
   <div class="modal" id="modal" onclick="event.stopPropagation()"></div>
 </div>
 
@@ -899,11 +1088,20 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
   <div class="pro-sheet" id="proSheet" onclick="event.stopPropagation()"></div>
 </div>
 
+
+
+
+
+
+
+
+
+
 <script>
 // ═══════════════════════════════════════
-// SCRIPORA — Full Engine
+// SCRIPORA   Full Engine
 // ═══════════════════════════════════════
-// ── Core state — declared first so nothing can crash before these exist ──
+// ── Core state   declared first so nothing can crash before these exist ──
 var SK='sp1',THEME_KEY='sp_theme',PRO_KEY='sp_pro',STATS_KEY='sp_stats';
 var FREE_LIMIT=10;
 var EMAILJS_SVC='service_8i8l9cr',EMAILJS_TPL='template_g7hi73d',EMAILJS_KEY='0PgWLFm8kqqvXjc9_';
@@ -924,17 +1122,17 @@ var TAGS={
   out:{label:'Outro',cls:'tag-out',color:'#8A6AC9'}
 };
 
-var S={scripts:[],activeId:null,currentUser:null,isGuest:false,appShown:false,activeHubTab:'stats',statsFilter:'all',drawerTab:'facts',analyseHistory:[],hubPillOpen:false};
+var S={scripts:[],activeId:null,currentUser:null,isGuest:false,appShown:false,activeHubTab:'stats',statsFilter:'all',drawerTab:'facts',analyseHistory:[],hubPillOpen:false,bulkMode:false,bulkSelected:[],analysing:false};
 
 
-// ── Firebase init — wrapped so offline/CDN failure can't break the app ──
+// ── Firebase init   wrapped so offline/CDN failure can't break the app ──
 try{
   var fbConfig={apiKey:"AIzaSyB2JM8740tE5EfjQTZyfGrvBUNdJt5l6jI",authDomain:"scripora-app.firebaseapp.com",projectId:"scripora-app",storageBucket:"scripora-app.firebasestorage.app",messagingSenderId:"408270357865",appId:"1:408270357865:web:8d1e332f58b584db0329f8"};
   firebase.initializeApp(fbConfig);
   auth=firebase.auth();
   db=firebase.firestore();
 }catch(e){
-  console.warn('Firebase unavailable — running in local mode.',e);
+  console.warn('Firebase unavailable   running in local mode.',e);
 }
 
 
@@ -959,188 +1157,697 @@ function saveAnalyseHistory(){localStorage.setItem('sp_ah',JSON.stringify(S.anal
 function applyTheme(id){var t=null;for(var i=0;i<THEMES.length;i++){if(THEMES[i].id===id){t=THEMES[i];break;}}t=t||THEMES[0];document.body.className=t.cls||'';localStorage.setItem(THEME_KEY,id);}
 function currentThemeId(){return localStorage.getItem(THEME_KEY)||'midnight';}
 
-// ── Score engine — YouTube-specific criteria ──
-// Hook: YouTube gives you 3-5 seconds. A good hook creates an open loop the viewer
-// feels compelled to close. It asks a question, makes a bold claim, or presents
-// a scenario the viewer recognises and wants resolved. Starting with "I" is weak
-// because the viewer doesn't know you yet. Starting with THEM or a problem is strong.
-//
-// Context: After the hook, viewers need one reason to stay. Not your whole biography —
-// one credential, one number, one promise of what they will get. The best context
-// sections are brief, specific, and viewer-focused (you will learn X, not I will show you X).
-//
-// Body: This is where trust is built or lost. Specific examples outperform general advice.
-// Named tools, real numbers, step-by-step structure all signal credibility. Passive voice
-// and filler language signal uncertainty. Longer is fine if every sentence earns its place.
-//
-// CTA: The best CTAs are earned, not begged. They give a reason (subscribe because we
-// post every Tuesday), make a specific ask (comment with X), and arrive after value has
-// been delivered. Vague CTAs (like and subscribe) perform worse than specific ones.
-//
-// Outro: Closes the loop opened in the hook, gives the viewer somewhere to go next,
-// and leaves them feeling the time was well spent. Abrupt endings feel unfinished
-// and reduce watch time on the next video.
+// ── SCRIPORA INTELLIGENCE ENGINE v3 ──
+// Viewer attention simulator based on temporal signal analysis
 
-var HOOK_OPENERS=['what if','imagine','most people','the reason','here is why','this is why','did you know','i used to','i made','i spent','i lost','i gained','you are','you have been','stop','never','always','the truth','what nobody'];
-var SPECIFICITY_SIGNALS=[/\d+/,/\$\d/,/%/,/per (day|week|month|year)/,/in \d+ (days|weeks|months|years)/,/(step|tip|way|mistake|rule|hack|method|strategy)\s/];
-var VIEWER_FOCUS=['you will','you can','you need','you have','your','by the end','after this','this will help you','this will show you'];
-var FILLER=['basically','literally','you know','sort of','kind of','actually','i guess','i think i','as i mentioned','like i said','so yeah','um ','uh '];
-var CTA_VERBS=['subscribe','follow','comment','like','share','click','watch','join','download','check out','hit the','tap the','turn on','save this','bookmark'];
-var CTA_REASONS=['because','so that','if you want','to get','for more','every week','every tuesday','every monday','whenever','new video'];
-var RESOLUTION_PHRASES=["so there you have it","that's it","that's all","to wrap up","in summary","to sum up","bottom line","the takeaway","now you know","hope that helps","hope this helped","as always","until next time","see you in the next","see you next","next video","next one"];
-
-function scoreHook(t){
-  if(!t||t.trim().length<5)return 0;
-  var s=0,l=t.toLowerCase(),wc=wordCount(t);
-  // Length: hooks should be punchy — 8 to 35 words is the sweet spot
-  if(wc>=8&&wc<=35)s+=20;
-  else if(wc>=5&&wc<8)s+=10;
-  else if(wc>35&&wc<=55)s+=12;
-  // Does not open with "I" — self-centred hooks perform poorly
-  if(!l.match(/^i[\s,']/) )s+=15;
-  // Opens with viewer-centric or tension language
-  var hasStrongOpener=false;
-  HOOK_OPENERS.forEach(function(o){if(l.indexOf(o)===0||l.indexOf(o)<=15)hasStrongOpener=true;});
-  if(hasStrongOpener)s+=20;
-  // Contains a question — open loops keep viewers watching
-  if(t.match(/\?/))s+=15;
-  // Contains specificity — numbers and named things feel credible even in hooks
-  var specCount=0;
-  SPECIFICITY_SIGNALS.forEach(function(r){if(r.test(l))specCount++;});
-  s+=Math.min(specCount*8,16);
-  // Contains tension or contrast language
-  if(l.match(/(wrong|mistake|fail|stop|never|always|secret|truth|nobody|everyone|most people|actually)/))s+=14;
-  return Math.min(s,100);
+// ── Sentence utilities ──
+function splitSentences(text){
+  var raw=text.match(/[^.!?]+[.!?]+/g)||[text];
+  return raw.map(function(s){return s.trim();}).filter(function(s){return s.length>3;});
+}
+function getWords(text){return text.toLowerCase().split(/\s+/).filter(function(w){return w.length>0;});}
+function wc(text){return text?text.trim().split(/\s+/).filter(function(w){return w.length>0;}).length:0;}
+function countNumbers(text){return (text.match(/\b\d[\d,.]*/g)||[]).length;}
+function countSpecifics(text){
+  return countNumbers(text)+
+    (text.match(/[$£€%]/g)||[]).length+
+    (text.match(/\b(years?|months?|days?|hours?|minutes?|seconds?|weeks?)\b/gi)||[]).length;
 }
 
-function scoreContext(t){
-  if(!t||t.trim().length<5)return 0;
-  var s=0,l=t.toLowerCase(),wc=wordCount(t);
-  // Length: context should be brief — 20 to 60 words
-  if(wc>=20&&wc<=60)s+=15;
-  else if(wc>=10&&wc<20)s+=8;
-  else if(wc>60&&wc<=100)s+=10;
-  // First-person credential — establishes why you can talk about this
-  if(l.match(/i (have|spent|built|made|tested|tried|studied|tracked|learned|discovered|worked|ran|grew|lost|gained|earned)/))s+=20;
-  // Specific numbers or timeframes — vague credentials are weak
-  var specCount=0;
-  SPECIFICITY_SIGNALS.forEach(function(r){if(r.test(l))specCount++;});
-  s+=Math.min(specCount*10,20);
-  // Viewer-focused promise — tells them what THEY will get
-  var vf=0;
-  VIEWER_FOCUS.forEach(function(v){if(l.indexOf(v)>=0)vf++;});
-  s+=Math.min(vf*12,24);
-  // No filler language
-  var fc=0;FILLER.forEach(function(f){if(l.indexOf(f)>=0)fc++;});
-  s-=fc*8;
-  // Transition language — bridges hook to main content
-  if(l.match(/(so today|in this video|in this one|let me|i('m going to| will| want to))/))s+=10;
-  return Math.min(Math.max(s,0),100);
+// ── Tension signals ──
+var CURIOSITY_OPENERS=['what if','imagine','most people','the reason','here is why','did you know','have you ever','you are about to','this is why','stop doing','never do','always do','the truth about','what nobody','i made a mistake','i failed','i lost','i gained','i discovered'];
+var TENSION_WORDS=['wrong','mistake','fail','secret','truth','nobody','everyone','surprising','shocking','actually','real reason','never told','hidden','exposed','myth','lied','misunderstood'];
+var RESOLUTION_WORDS=['because','so','which means','that is why','this is why','the answer is','the reason is','here is how','the solution'];
+
+function signalCuriosityOpened(sentence){
+  var l=sentence.toLowerCase();
+  if(l.match(/\?/))return true;
+  for(var i=0;i<CURIOSITY_OPENERS.length;i++){if(l.indexOf(CURIOSITY_OPENERS[i])>=0)return true;}
+  for(var i=0;i<TENSION_WORDS.length;i++){if(l.indexOf(TENSION_WORDS[i])>=0)return true;}
+  return false;
+}
+function signalCuriosityCollapsed(sentence){
+  var l=sentence.toLowerCase();
+  // Same sentence opens AND resolves tension
+  var opens=signalCuriosityOpened(sentence);
+  var resolves=false;
+  for(var i=0;i<RESOLUTION_WORDS.length;i++){if(l.indexOf(RESOLUTION_WORDS[i])>=0){resolves=true;break;}}
+  return opens&&resolves;
+}
+function signalTensionLanguage(sentence){
+  var l=sentence.toLowerCase();
+  for(var i=0;i<TENSION_WORDS.length;i++){if(l.indexOf(TENSION_WORDS[i])>=0)return true;}
+  return false;
 }
 
-function scoreBody(t){
-  if(!t||t.trim().length<5)return 0;
-  var s=20,l=t.toLowerCase(),wc=wordCount(t);
-  // Minimum substance — body needs enough to actually teach something
-  if(wc>=40)s+=10;
-  if(wc>=80)s+=10;
-  if(wc>=150)s+=5;
-  // Specificity is the single biggest signal of quality in body content
-  var specCount=0;
-  SPECIFICITY_SIGNALS.forEach(function(r){if(r.test(l))specCount++;});
-  s+=Math.min(specCount*8,24);
-  // Structured language — signals organised thinking
-  if(l.match(/(first|second|third|step \d|number \d|\d\.|the first|the second|next|then|finally|lastly)/))s+=15;
-  // Examples and evidence
-  if(l.match(/(for example|for instance|such as|like when|in my case|when i|i found that|the data|research shows|studies show|according to)/))s+=12;
-  // Filler language — drains credibility
-  var fc=0;FILLER.forEach(function(f){if(l.indexOf(f)>=0)fc++;});
-  s-=fc*6;
-  // Passive constructions signal weak authority
-  var passiveCount=(l.match(/(is being|was being|have been|has been|will be|can be|should be|would be|might be)/g)||[]).length;
-  s-=passiveCount*4;
-  // Sentence variety — mixing short and long sentences improves retention
-  var sentences=t.split(/[.!?]+/).filter(function(x){return x.trim().length>3;});
-  if(sentences.length>=3){
-    var lens=sentences.map(function(s){return s.trim().split(/\s+/).length;});
-    var avg=lens.reduce(function(a,b){return a+b;},0)/lens.length;
-    var variance=lens.reduce(function(a,b){return a+Math.abs(b-avg);},0)/lens.length;
-    if(variance>=4)s+=8;
+// ── Credibility signals ──
+var CREDENTIAL_VERBS=['spent','built','made','tested','tried','studied','tracked','learned','discovered','worked','ran','grew','lost','gained','earned','created','launched','failed','succeeded','interviewed','analyzed','researched'];
+var VAGUE_AUTHORITY=['i know','i think','i believe','in my opinion','i feel like','as someone who','i have experience'];
+
+function signalAuthorityProven(sentence){
+  var l=sentence.toLowerCase();
+  for(var i=0;i<CREDENTIAL_VERBS.length;i++){
+    if(l.match(new RegExp('\\bi '+CREDENTIAL_VERBS[i]+'\\b')))return true;
   }
-  return Math.min(Math.max(s,0),100);
+  return countSpecifics(sentence)>=2;
+}
+function signalAuthorityVague(sentence){
+  var l=sentence.toLowerCase();
+  for(var i=0;i<VAGUE_AUTHORITY.length;i++){if(l.indexOf(VAGUE_AUTHORITY[i])>=0)return true;}
+  return false;
+}
+function signalViewerBenefit(sentence){
+  var l=sentence.toLowerCase();
+  return !!(l.match(/\b(you will|you can|you.?ll|by the end|after this|you.?re going to|this will help|you.?ll learn|you.?ll know|you.?ll be able)\b/));
 }
 
-function scoreCTA(t){
-  if(!t||t.trim().length<5)return 0;
-  var s=10,l=t.toLowerCase(),wc=wordCount(t);
-  // Length: CTAs should be direct — 10 to 50 words
-  if(wc>=10&&wc<=50)s+=15;
-  // Contains a specific action verb
-  var av=0;CTA_VERBS.forEach(function(v){if(l.indexOf(v)>=0)av++;});
-  s+=Math.min(av*15,30);
-  // Gives a reason — the best CTAs earn the action
-  var rv=0;CTA_REASONS.forEach(function(r){if(l.indexOf(r)>=0)rv++;});
-  s+=Math.min(rv*15,25);
-  // Specific ask is better than generic (comment below what X vs just comment)
-  if(l.match(/(comment (below|down|with|and tell|and let)|let me know|tell me|what do you|what would you|drop a)/))s+=15;
-  // Mentions next video or channel — keeps viewers in your world
-  if(l.match(/(next video|next one|next week|more videos|the channel|my channel|check out|watch next|linked above|linked below|in the description)/))s+=10;
-  // Penalise pure begging with no reason
-  if(l.match(/please (subscribe|like|share)/) && !rv)s-=10;
-  return Math.min(Math.max(s,0),100);
+// ── Pacing signals ──
+function signalShortSentence(sentence){return wc(sentence)<=8;}
+function signalLongSentence(sentence){return wc(sentence)>=30;}
+function signalPassiveVoice(sentence){
+  return !!(sentence.match(/\b(was|were|is|are|been|being)\s+\w+ed\b/i));
+}
+var FILLER=['basically','literally','you know','sort of','kind of','actually','i guess','as i mentioned','like i said','so yeah'];
+function signalFiller(sentence){
+  var l=sentence.toLowerCase();
+  for(var i=0;i<FILLER.length;i++){if(l.indexOf(FILLER[i])>=0)return true;}
+  return false;
+}
+function signalHighDensity(sentence){
+  // Many specifics relative to length
+  return countSpecifics(sentence)>=2&&wc(sentence)>=10;
 }
 
-function scoreOutro(t){
-  if(!t||t.trim().length<5)return 0;
-  var s=10,l=t.toLowerCase(),wc=wordCount(t);
-  // Length: outros can be brief — 10 to 60 words
-  if(wc>=10&&wc<=60)s+=15;
-  // Closes the loop — resolves or acknowledges the hook's promise
-  var rc=0;
-  RESOLUTION_PHRASES.forEach(function(p){if(l.indexOf(p)>=0)rc++;});
-  s+=Math.min(rc*18,36);
-  // Callback to opening — the most satisfying outros reference something from the hook
-  if(l.match(/(remember (when|what|how|that)|back to|like i (said|mentioned) (at the start|earlier)|as i (said|mentioned)|full circle)/))s+=20;
-  // Forward momentum — gives viewers somewhere to go
-  if(l.match(/(next video|next one|next week|see you|until next|linked|check out|watch|coming up|dropping)/))s+=15;
-  // Warmth or personal sign-off — builds relationship
-  if(l.match(/(thank(s| you)|appreciate|means a lot|you('re| are) amazing|legend|absolute)/))s+=10;
-  return Math.min(Math.max(s,0),100);
+// ── Direction signals ──
+var PROMISE_PHRASES=['in this video','today i will','i.?m going to show','you will learn','by the end','i.?ll teach','we.?re going to cover','this video will','let me show you'];
+var DELIVERY_PHRASES=['so that.?s','as you can see','as i showed','as we covered','which is why i said','going back to','remember when i said','that.?s exactly what','and that.?s how'];
+var DRIFT_PHRASES=['actually','by the way','speaking of','on a different note','this reminds me','unrelated but'];
+
+function signalPromiseIntroduced(sentence){
+  var l=sentence.toLowerCase();
+  for(var i=0;i<PROMISE_PHRASES.length;i++){if(l.match(new RegExp(PROMISE_PHRASES[i])))return true;}
+  return false;
 }
+function signalPromiseDelivered(sentence){
+  var l=sentence.toLowerCase();
+  for(var i=0;i<DELIVERY_PHRASES.length;i++){if(l.match(new RegExp(DELIVERY_PHRASES[i])))return true;}
+  return false;
+}
+function signalTopicDrift(sentence){
+  var l=sentence.toLowerCase();
+  for(var i=0;i<DRIFT_PHRASES.length;i++){if(l.indexOf(DRIFT_PHRASES[i])>=0)return true;}
+  return false;
+}
+
+// ── Reward signals ──
+var INSIGHT_PHRASES=['the reason is','what this means','the key insight','what most people miss','here.?s the thing','the difference is','what actually happens','the real issue','what this tells us','the pattern i noticed'];
+function signalNewInsight(sentence){
+  var l=sentence.toLowerCase();
+  for(var i=0;i<INSIGHT_PHRASES.length;i++){if(l.match(new RegExp(INSIGHT_PHRASES[i])))return true;}
+  return countSpecifics(sentence)>=2&&signalCuriosityOpened(sentence);
+}
+
+// ── Per-sentence signal analysis ──
+function analyseSentence(sentence,idx,total){
+  var signals={
+    curiosityOpened:signalCuriosityOpened(sentence),
+    curiosityCollapsed:signalCuriosityCollapsed(sentence),
+    tensionLanguage:signalTensionLanguage(sentence),
+    authorityProven:signalAuthorityProven(sentence),
+    authorityVague:signalAuthorityVague(sentence),
+    viewerBenefit:signalViewerBenefit(sentence),
+    short:signalShortSentence(sentence),
+    long:signalLongSentence(sentence),
+    passive:signalPassiveVoice(sentence),
+    filler:signalFiller(sentence),
+    highDensity:signalHighDensity(sentence),
+    promiseIntroduced:signalPromiseIntroduced(sentence),
+    promiseDelivered:signalPromiseDelivered(sentence),
+    topicDrift:signalTopicDrift(sentence),
+    newInsight:signalNewInsight(sentence),
+    position:idx/(Math.max(total-1,1)),
+    wordCount:wc(sentence)
+  };
+  // Attention state: 1=high, 0=neutral, -1=risk
+  var attention=0;
+  if(signals.curiosityOpened&&!signals.curiosityCollapsed)attention+=1;
+  if(signals.newInsight)attention+=1;
+  if(signals.viewerBenefit)attention+=0.5;
+  if(signals.authorityProven)attention+=0.5;
+  if(signals.curiosityCollapsed)attention-=1.5;
+  if(signals.filler)attention-=0.5;
+  if(signals.passive)attention-=0.3;
+  if(signals.topicDrift)attention-=0.8;
+  signals.attention=Math.max(-2,Math.min(2,attention));
+  return signals;
+}
+
+// ── Analyse full script ──
+function analyseScript(paragraphs){
+  var allSentences=[];
+  var paraMap=[];
+  paragraphs.forEach(function(p,pi){
+    var sents=splitSentences(p.text||'');
+    sents.forEach(function(s,si){
+      allSentences.push(s);
+      paraMap.push({paraIdx:pi,tag:p.tag});
+    });
+  });
+  var n=allSentences.length;
+  var sentenceData=allSentences.map(function(s,i){
+    var sig=analyseSentence(s,i,n);
+    sig.sentence=s;
+    sig.tag=paraMap[i]?paraMap[i].tag:'body';
+    sig.paraIdx=paraMap[i]?paraMap[i].paraIdx:0;
+    return sig;
+  });
+
+  // Section scores using signals
+  var tagGroups={hook:[],ctx:[],body:[],cta:[],out:[]};
+  sentenceData.forEach(function(sd){if(tagGroups[sd.tag])tagGroups[sd.tag].push(sd);});
+
+  var sectionScores={};
+  Object.keys(tagGroups).forEach(function(tag){
+    sectionScores[tag]=calcSectionScore(tag,tagGroups[tag],paragraphs);
+  });
+
+  // Overall score weighted by section
+  var weights={hook:30,ctx:20,body:25,cta:15,out:10};
+  var tw=0,ts=0;
+  Object.keys(sectionScores).forEach(function(tag){
+    var w=weights[tag]||10;
+    tw+=w;ts+=sectionScores[tag]*w;
+  });
+  var overall=tw>0?Math.round(ts/tw):0;
+
+  // Attention curve (group into 10 buckets)
+  var curve=[];
+  for(var b=0;b<10;b++){
+    var start=Math.floor(b/10*n);
+    var end2=Math.floor((b+1)/10*n);
+    var bucket=sentenceData.slice(start,end2);
+    var avg=bucket.length?bucket.reduce(function(a,sd){return a+sd.attention;},0)/bucket.length:0;
+    curve.push(parseFloat(avg.toFixed(2)));
+  }
+
+  // Promise tracking
+  var promises=[];
+  var promiseDelivered=false;
+  sentenceData.forEach(function(sd){
+    if(sd.promiseIntroduced)promises.push(sd.sentence.substring(0,60));
+    if(sd.promiseDelivered)promiseDelivered=true;
+  });
+
+  // Pacing data
+  var sentLens=sentenceData.map(function(sd){return sd.wordCount;});
+  var avgLen=sentLens.length?sentLens.reduce(function(a,b){return a+b;},0)/sentLens.length:0;
+  var variance=sentLens.length?Math.sqrt(sentLens.reduce(function(a,b){return a+Math.pow(b-avgLen,2);},0)/sentLens.length):0;
+
+  // Reward density (new insights per 100 words)
+  var totalWc=paragraphs.reduce(function(a,p){return a+wc(p.text||'');},0);
+  var insightCount=sentenceData.filter(function(sd){return sd.newInsight;}).length;
+  var rewardDensity=totalWc>0?Math.round((insightCount/totalWc)*100*10)/10:0;
+
+  // Failure patterns
+  var failurePatterns=detectFailurePatterns(sentenceData,sectionScores,promises,promiseDelivered);
+
+  // Top issues
+  var issues=buildTopIssues(sectionScores,sentenceData,failurePatterns,promises,promiseDelivered,variance);
+
+  return {
+    overall:overall,
+    sectionScores:sectionScores,
+    curve:curve,
+    sentenceData:sentenceData,
+    promises:promises,
+    promiseDelivered:promiseDelivered,
+    avgSentenceLen:Math.round(avgLen),
+    sentenceLenVariance:Math.round(variance*10)/10,
+    rewardDensity:rewardDensity,
+    failurePatterns:failurePatterns,
+    issues:issues,
+    totalSentences:n,
+    totalWords:totalWc
+  };
+}
+
+function calcSectionScore(tag,sentences,paragraphs){
+  if(!sentences||!sentences.length)return 0;
+  var score=30;
+  var para=paragraphs.find(function(p){return p.tag===tag;});
+  var text=para?para.text:'';
+  var l=text.toLowerCase();
+  if(tag==='hook'){
+    if(!l.match(/^i[\s,]/))score+=15;
+    var collapses=sentences.filter(function(s){return s.curiosityCollapsed;}).length;
+    var opens=sentences.filter(function(s){return s.curiosityOpened;}).length;
+    if(opens>0&&collapses===0)score+=25;
+    else if(collapses>0)score-=20;
+    if(countSpecifics(text)>=1)score+=15;
+    if(l.match(/\?/))score+=15;
+  }else if(tag==='ctx'){
+    var proven=sentences.filter(function(s){return s.authorityProven;}).length;
+    var vague=sentences.filter(function(s){return s.authorityVague;}).length;
+    score+=proven*15-vague*8;
+    var benefits=sentences.filter(function(s){return s.viewerBenefit;}).length;
+    score+=benefits*12;
+    if(countSpecifics(text)>=2)score+=10;
+  }else if(tag==='body'){
+    var insights=sentences.filter(function(s){return s.newInsight;}).length;
+    score+=Math.min(insights*10,25);
+    var passives=sentences.filter(function(s){return s.passive;}).length;
+    score-=passives*6;
+    var fillers=sentences.filter(function(s){return s.filler;}).length;
+    score-=fillers*8;
+    if(wc(text)>=50)score+=10;
+    var lens=sentences.map(function(s){return s.wordCount;});
+    var avg=lens.reduce(function(a,b){return a+b;},0)/(lens.length||1);
+    var vari=Math.sqrt(lens.reduce(function(a,b){return a+Math.pow(b-avg,2);},0)/(lens.length||1));
+    if(vari>=4)score+=10;
+  }else if(tag==='cta'){
+    var ctaText=l;
+    var hasVerb=!!ctaText.match(/\b(subscribe|follow|comment|like|share|click|watch|join|download|check out|hit the|tap)\b/);
+    var hasReason=!!ctaText.match(/\b(because|so that|if you|to get|for more|every week|new video|coming)\b/);
+    if(hasVerb)score+=25;
+    if(hasReason)score+=25;
+    if(hasVerb&&hasReason)score+=10;
+  }else if(tag==='out'){
+    var hasRes=!!l.match(/\b(so there|that.?s it|to wrap|in summary|now you know|hope this|until next|see you)\b/);
+    var hasFwd=!!l.match(/\b(next video|next one|watch next|see you|coming up|linked)\b/);
+    var hasCB=!!l.match(/\b(remember|back to|started with|from the beginning|full circle)\b/);
+    if(hasRes)score+=20;
+    if(hasFwd)score+=20;
+    if(hasCB)score+=15;
+  }
+  return Math.min(Math.max(score,0),100);
+}
+
+function detectFailurePatterns(sentenceData,scores,promises,promiseDelivered){
+  var patterns=[];
+  // Early Payoff Trap
+  var firstFive=sentenceData.slice(0,5);
+  var earlyCollapse=firstFive.filter(function(s){return s.curiosityCollapsed;}).length;
+  if(earlyCollapse>=1)patterns.push({id:'early_payoff',name:'Early Payoff Trap',desc:'The hook resolves its own tension before the viewer has a reason to stay. Curiosity collapses in the opening.'});
+  // Creator Diary
+  var hookSents=sentenceData.filter(function(s){return s.tag==='hook';});
+  var hookText=hookSents.map(function(s){return s.sentence;}).join(' ').toLowerCase();
+  if(hookText.match(/^i |^my |i.?ve been|i used to|i remember/))patterns.push({id:'creator_diary',name:'Creator Diary Opening',desc:'The script opens with the creator\'s experience before earning the viewer\'s attention. Lead with the viewer\'s problem first.'});
+  // Endless Setup
+  if((scores.hook||0)<50&&(scores.ctx||0)<50&&(scores.body||0)>60)patterns.push({id:'endless_setup',name:'Endless Setup',desc:'The script takes too long to deliver value. Strong body content is buried under a weak opening and context.'});
+  // Promise Not Delivered
+  if(promises.length>0&&!promiseDelivered)patterns.push({id:'broken_promise',name:'Promise Not Delivered',desc:'A promise made early in the script has no clear delivery point. Viewers who stayed for the payoff will feel let down.'});
+  // Flatline Pacing
+  var lens=sentenceData.map(function(s){return s.wordCount;});
+  var avg=lens.reduce(function(a,b){return a+b;},0)/(lens.length||1);
+  var vari=Math.sqrt(lens.reduce(function(a,b){return a+Math.pow(b-avg,2);},0)/(lens.length||1));
+  if(vari<3&&sentenceData.length>8)patterns.push({id:'flatline',name:'Flatline Pacing',desc:'Sentence length is uniform throughout. This creates cognitive flatness. Mix short punchy sentences with longer explanatory ones.'});
+  // Authority Dump
+  var ctxSents=sentenceData.filter(function(s){return s.tag==='ctx';});
+  var vagueCount=ctxSents.filter(function(s){return s.authorityVague;}).length;
+  var provenCount=ctxSents.filter(function(s){return s.authorityProven;}).length;
+  if(vagueCount>provenCount&&ctxSents.length>2)patterns.push({id:'authority_dump',name:'Authority Without Evidence',desc:'The context section makes claims about experience without specific proof. Viewers weigh evidence, not assertions.'});
+  return patterns;
+}
+
+function buildTopIssues(scores,sentenceData,patterns,promises,promiseDelivered,variance){
+  var issues=[];
+  var hookScore=scores.hook||0;
+  var ctaScore=scores.cta||0;
+  var bodyScore=scores.body||0;
+  var ctxScore=scores.ctx||0;
+  var outScore=scores.out||0;
+
+  // Hook issues
+  if(hookScore<50){
+    var hookSents=sentenceData.filter(function(s){return s.tag==='hook';});
+    var hasCollapse=hookSents.some(function(s){return s.curiosityCollapsed;});
+    var hookText=hookSents.map(function(s){return s.sentence;}).join(' ');
+    var obs,cons,fix;
+    if(hasCollapse){
+      obs='The hook introduces a question or tension and resolves it in the same sentence.';
+      cons='The viewer has no open loop to stay for. The reason to keep watching disappears before it is established.';
+      fix='Separate the question from the answer. Raise the tension in the hook and delay the resolution until the body.';
+    }else if(hookText.toLowerCase().match(/^i[\s,]/)){
+      obs='The hook opens with the creator\'s perspective before establishing relevance to the viewer.';
+      cons='Viewers who do not already know you have no reason to care. The first word determines whether they stay.';
+      fix='Open with the viewer\'s problem, a claim they need to verify, or a scenario they recognise.';
+    }else{
+      obs='The hook makes a statement but does not create urgency or an open loop.';
+      cons='Without a question or a surprising claim, the viewer has no psychological pull to continue.';
+      fix='Rewrite the first sentence as a direct question or a bold claim that demands verification.';
+    }
+    issues.push({section:'Hook',score:hookScore,impact:'high',observation:obs,consequence:cons,fix:fix});
+  }
+
+  // Body issues
+  if(bodyScore<55&&bodyScore>0){
+    var bodySents=sentenceData.filter(function(s){return s.tag==='body';});
+    var passiveCount=bodySents.filter(function(s){return s.passive;}).length;
+    var fillerCount=bodySents.filter(function(s){return s.filler;}).length;
+    var insightCount=bodySents.filter(function(s){return s.newInsight;}).length;
+    var obs2,cons2,fix2;
+    if(passiveCount>=2){
+      obs2='The body uses passive voice constructions '+passiveCount+' times.';
+      cons2='Passive voice creates distance and signals uncertainty. It drains authority from the content around it.';
+      fix2='Rewrite in active voice. "The results showed" becomes "I found." Every passive sentence can be made direct.';
+    }else if(fillerCount>=2){
+      obs2='Filler language appears multiple times in the body section.';
+      cons2='Words like "basically" and "literally" signal that the speaker is still searching for the idea. Viewers sense this.';
+      fix2='Remove every filler word. The point underneath each one is stronger without it.';
+    }else if(insightCount===0){
+      obs2='The body section delivers information but no new insights or perspective shifts.';
+      cons2='Viewers came for something they could not easily find elsewhere. Repetition without escalation causes mid-video drop-off.';
+      fix2='Add at least one counterintuitive insight, a specific example, or a named tool that changes how the viewer sees the topic.';
+    }else{
+      obs2='The body content is present but lacks the specificity needed to be memorable.';
+      cons2='General advice is easy to forget and easy to find anywhere. Specific content is what gets saved and shared.';
+      fix2='Add one concrete number, a named case study, or a step-by-step example that makes the advice tangible.';
+    }
+    issues.push({section:'Body',score:bodyScore,impact:'medium',observation:obs2,consequence:cons2,fix:fix2});
+  }
+
+  // CTA issues
+  if(ctaScore<50&&ctaScore>0){
+    issues.push({
+      section:'CTA',score:ctaScore,impact:'medium',
+      observation:'The call to action names an action but does not give the viewer a reason to take it.',
+      consequence:'Viewers respond to logic, not requests. An ask without a reason is easy to scroll past.',
+      fix:'Add one reason after the ask. "Subscribe because we post every Tuesday" converts better than "subscribe."'
+    });
+  }
+
+  // Outro issues
+  if(outScore<45&&outScore>0){
+    issues.push({
+      section:'Outro',score:outScore,impact:'low',
+      observation:'The outro ends the video without resolution or forward direction.',
+      consequence:'The viewer walks away with no sense of completion and no reason to watch the next video.',
+      fix:'Add one sentence that closes the loop from the hook, then point to the next video explicitly.'
+    });
+  }
+
+  // Promise issue
+  if(promises.length>0&&!promiseDelivered){
+    issues.push({
+      section:'Structure',score:0,impact:'high',
+      observation:'A promise was made in the opening that has no clear delivery point.',
+      consequence:'Viewers who stayed specifically for that payoff will feel deceived. This damages trust and reduces return rate.',
+      fix:'Add a delivery sentence that explicitly references the original promise: "So, going back to what I said at the start..."'
+    });
+  }
+
+  // Sort by impact
+  var impactOrder={high:0,medium:1,low:2};
+  issues.sort(function(a,b){return (impactOrder[a.impact]||1)-(impactOrder[b.impact]||1);});
+  return issues.slice(0,3);
+}
+
+// ── Keep original scoring functions for Write tab pills ──
 function scoreText(tag,text){
-  switch(tag){case 'hook':return scoreHook(text);case 'ctx':return scoreContext(text);case 'body':return scoreBody(text);case 'cta':return scoreCTA(text);case 'out':return scoreOutro(text);}return 0;
+  if(!text||text.trim().length<5)return 0;
+  var sents=splitSentences(text);
+  var n=sents.length;
+  var sentData=sents.map(function(s,i){return analyseSentence(s,i,n);});
+  var p={tag:tag,text:text};
+  return calcSectionScore(tag,sentData,[p]);
 }
 function scoreLevel(n){return n>=70?'high':n>=45?'mid':'low';}
 function scoreVerdict(n){return n>=70?'Strong':n>=45?'Needs Work':'Weak';}
 function scorePillHTML(n){var l=scoreLevel(n);return '<span class="score-pill '+l+'"><span class="score-pill-dot"></span>'+n+' &middot; '+scoreVerdict(n)+'</span>';}
-function overallScore(paras){if(!paras||!paras.length)return 0;var weights={hook:30,ctx:20,body:25,cta:15,out:10},tw=0,ts=0;paras.forEach(function(p){var w=weights[p.tag]||10,sc=scoreText(p.tag,p.text);tw+=w;ts+=sc*w;});return tw>0?Math.round(ts/tw):0;}
+function overallScore(paras){
+  if(!paras||!paras.length)return 0;
+  var weights={hook:30,ctx:20,body:25,cta:15,out:10},tw=0,ts=0;
+  paras.forEach(function(p){var w=weights[p.tag]||10,sc=scoreText(p.tag,p.text);tw+=w;ts+=sc*w;});
+  return tw>0?Math.round(ts/tw):0;
+}
 
-// ── Firebase ──
+// ── Feedback   reads the actual text ──
+
+// ── Text helpers used by getParagraphFeedback ──
+function openingWord(text){var m=text.trim().match(/^([A-Za-z']+)/);return m?m[1].toLowerCase():'';}
+function hasQuestion(text){return text.indexOf('?')>=0;}
+function getFirstSentence(text){var m=text.match(/^[^.!?]+[.!?]/);return m?m[0].trim():text.substring(0,Math.min(text.length,120));}
+function getLastSentence(text){var s=text.replace(/([.!?])\s+/g,'$1\x01').split('\x01').map(function(x){return x.trim();}).filter(function(x){return x.length>4;});return s.length?s[s.length-1]:'';}
+function hasCredential(text){return !!(text.toLowerCase().match(/\bi (spent|built|made|tested|tried|studied|tracked|learned|discovered|worked|ran|grew|lost|gained|earned|created|launched|failed|succeeded)\b/));}
+function hasViewerAddress(text){return (text.match(/\byou\b/gi)||[]).length;}
+function hasCTAVerb(text){var l=text.toLowerCase();var verbs=['subscribe','follow','comment','like','share','click','watch','join','download','check out','hit the','tap the','turn on'];for(var i=0;i<verbs.length;i++){if(l.indexOf(verbs[i])>=0)return verbs[i];}return null;}
+function hasCTAReason(text){return !!(text.toLowerCase().match(/\b(because|so that|if you want|to get|for more|every week|every (mon|tue|wed|thu|fri)|new video|coming out|dropping)\b/));}
+function hasResolution(text){return !!(text.toLowerCase().match(/\b(so there you have it|that.?s it|that.?s all|to wrap|in summary|to sum up|bottom line|the takeaway|now you know|hope that helps|hope this helped|as always|until next time|see you|next video|full circle)\b/));}
+function hasCallbackToHook(text){return !!(text.toLowerCase().match(/\b(remember (when|what|how|that)|back to|started with|began with|opened with|at the start|from the beginning|full circle|comes back)\b/));}
+function hasForwardMomentum(text){return !!(text.toLowerCase().match(/\b(next video|next one|next week|see you|until next|linked|check out|coming up|dropping|watch this|watch next|up next|related)\b/));}
+function structureSignals(text){var l=text.toLowerCase();var s=0;if(l.match(/\b(first|firstly|number one|step one)\b/))s++;if(l.match(/\b(second|secondly|number two|step two)\b/))s++;if(l.match(/\b(third|finally|lastly)\b/))s++;if(l.match(/\b(next|then|after that|moving on)\b/))s++;return s;}
+function fillerWords(text){var l=text.toLowerCase();var found=[];var fillers=['basically','literally','you know','sort of','kind of','actually','i guess','as i mentioned','like i said','so yeah','to be honest','at the end of the day'];fillers.forEach(function(f){if(l.indexOf(f)>=0)found.push(f);});return found;}
+function sentenceLengthVariance(text){var ss=text.replace(/([.!?])\s+/g,'$1\x01').split('\x01').map(function(s){return s.trim();}).filter(function(s){return s.length>4;});if(ss.length<2)return 0;var lens=ss.map(function(s){return s.split(/\s+/).length;});var avg=lens.reduce(function(a,b){return a+b;},0)/lens.length;var v=lens.reduce(function(a,b){return a+Math.pow(b-avg,2);},0)/lens.length;return Math.sqrt(v);}
+function longestSentence(text){var ss=text.replace(/([.!?])\s+/g,'$1\x01').split('\x01').map(function(s){return s.trim();}).filter(function(s){return s.length>4;});if(!ss.length)return {text:'',words:0};var sorted=ss.slice().sort(function(a,b){return b.split(/\s+/).length-a.split(/\s+/).length;});return {text:sorted[0],words:sorted[0].split(/\s+/).length};}
+function countPassive(text){return (text.match(/\b(was|were|is|are|been|being)\s+\w+ed\b/gi)||[]).length;}
+
+function selfResolves(text){
+  var first=text.trim().match(/^[^.!?]+[.!?]/);
+  if(!first)return false;
+  var f=first[0].toLowerCase();
+  var hasHook=!!(f.match(/\b(why|how|what|secret|truth|mistake|wrong|never|always|if you)\b/));
+  var hasAnswer=!!(f.match(/\b(because|so|which means|that is why|this is why|the reason|here is)\b/));
+  return hasHook&&hasAnswer;
+}
+function hasTransition(text){
+  var last=text.replace(/([.!?])\s+/g,'$1\x01').split('\x01').pop()||'';
+  return !!(last.toLowerCase().match(/\b(let me|let.?s|so today|in this video|here is what|that is exactly|what i found|i.?ll show|i will show|and that means|which brings|so here)\b/));
+}
+function getParagraphFeedback(tag,text,sc){
+  if(!text||text.trim().length<5)return 'No content written for this section yet.';
+  var l=text.toLowerCase();
+  var op=openingWord(text);
+  var first=getFirstSentence(text);
+  var last=getLastSentence(text);
+  var wc=wordCount(text);
+  var specs=countSpecifics(text);
+  var fillers=fillerWords(text);
+  var passive=countPassive(text);
+  var ctaVerb=hasCTAVerb(text);
+
+  if(tag==='hook'){
+    // Priority order name the most damaging thing first
+    if(op==='i'){
+      return 'Opening with "I" puts you at the centre before the viewer has a reason to care. The first word should be about them, a problem, or a claim not you.';
+    }
+    if(selfResolves(text)){
+      var hw=first.match(/\b(why|how|what|secret|truth|mistake|wrong)\b/i);
+      var hw2=hw?'"'+hw[0]+'"':'the tension';
+      return 'The hook raises '+hw2+' and answers it in the same sentence. The viewer has nothing to stay for the loop closed before it opened.';
+    }
+    if(!hasQuestion(text)&&!text.match(/\b(wrong|mistake|fail|stop|never|always|secret|truth|nobody|everyone|surprising)\b/i)){
+      return 'This makes a statement but does not create urgency. A question or a bold claim something the viewer needs to verify gives them a reason to keep watching.';
+    }
+    if(specs===0&&wc>10){
+      return 'The hook is directional but vague. One specific detail a number, a named scenario, a concrete outcome would make staying feel necessary rather than optional.';
+    }
+    if(!hasTransition(text)&&sc>=70){
+      return 'Strong open. The tension is clear and it earns the next section. Make sure the context section references what was just promised.';
+    }
+    if(sc>=70)return 'This hook creates an open loop and holds it. The viewer has a reason to stay.';
+    if(wc<8)return 'This is too brief to create any pull. A hook needs enough words to raise something even one sentence of genuine tension is more than this.';
+    return 'The opening makes no specific promise and creates no tension. The viewer has no reason to stay past the first sentence. Start with a problem the viewer is already feeling, or a claim they cannot ignore.';
+  }
+
+  if(tag==='ctx'){
+    if(!hasCredential(text)&&specs<2){
+      return 'This section has not established why your voice on this topic matters. One specific credential time spent, result achieved, thing built earns the viewer\'s attention for the rest of the video.';
+    }
+    if(hasCredential(text)&&specs===0){
+      var credMatch=text.match(/\bi (spent|built|made|tested|tried|studied|tracked|learned|discovered|worked|ran|grew|lost|gained|earned|created|launched)\b/i);
+      var credWord=credMatch?credMatch[1]:'did this';
+      return 'You mention you '+credWord+' something but leave it vague. Add the specific number, result or timeframe "I '+credWord+' [X amount/time]" lands far harder than the same sentence without it.';
+    }
+    if(!hasViewerAddress(text)){
+      return 'This section is about you, not the viewer. Translate your credential into their outcome not just what you did, but what that means they can skip, learn faster, or avoid.';
+    }
+    if(fillers.length>0){
+      return 'The word "'+fillers[0]+'" is doing nothing here except softening the sentence. Cut it the credential underneath is stronger without the padding.';
+    }
+    if(sc>=70)return 'Credibility established quickly with specifics, and the viewer\'s payoff is clear. This section does its job.';
+    return 'The context is present but not landing with weight. Specificity is what converts a credential into trust.';
+  }
+
+  if(tag==='body'){
+    var longest=longestSentence(text);
+    if(passive>1){
+      var passiveMatch=text.match(/\b(was|were|is|are|been|being)\s+\w+ed\b/i);
+      var passiveEx=passiveMatch?'"'+passiveMatch[0]+'"':'a passive construction';
+      return 'Passive voice appears '+passive+' times including '+passiveEx+'. Rewrite in active voice and the section immediately sounds more authoritative.';
+    }
+    if(fillers.length>1){
+      return 'The words "'+fillers.slice(0,2).join('" and "')+'" appear here. Each one signals uncertainty and drains authority from the sentences around them.';
+    }
+    if(longest.words>40){
+      var preview=longest.text.substring(0,40)+'...';
+      return 'One sentence runs to '+longest.words+' words "'+preview+'" by the time a viewer finishes it the point has dissolved. Break it into two.';
+    }
+    if(specs<2&&wc>60){
+      return 'The section has length but lacks specificity. Viewers remember specific things a number, a named tool, a concrete example. Without them this section will not stick.';
+    }
+    if(structureSignals(text)===0&&wc>100){
+      return 'This section is dense without visible structure. Adding one signal "first", "the key thing", "here is the difference" gives viewers a handhold and makes the section feel easier to follow.';
+    }
+    var variance=sentenceLengthVariance(text);
+    if(variance<3&&wc>50){
+      return 'Every sentence here is roughly the same length. That creates a flat rhythm that works against engagement. Mix short punchy sentences with longer explanatory ones.';
+    }
+    if(sc>=70)return 'Specific, structured and addresses the viewer directly. This section delivers on the promise of the hook.';
+    return 'The substance is there but it needs more specificity or clearer structure to land with full weight.';
+  }
+
+  if(tag==='cta'){
+    if(!ctaVerb){
+      return 'The video ends with no ask. The viewer has nowhere to go and the momentum built across the whole script evaporates here. Name one specific action, subscribe, comment, or watch next, and give one reason to take it.';
+    }
+    if(ctaVerb&&!hasCTAReason(text)){
+      return '"'+ctaVerb.charAt(0).toUpperCase()+ctaVerb.slice(1)+'" is named but there is no reason to do it. "Subscribe because we post every Tuesday" converts better than "subscribe" alone give them the why.';
+    }
+    if(wc>60){
+      return 'The CTA is too long. By the time the viewer reaches the ask it has lost its directness. Say the action, say the reason, stop.';
+    }
+    if(!hasViewerAddress(text)){
+      return 'The CTA talks about the action rather than directing the viewer to take it. Address them directly "if you want X, do Y" not "it would be great if people subscribed."';
+    }
+    if(sc>=70)return 'The ask is specific, reasoned and directed at the viewer. This CTA earns its follow-through.';
+    return 'The CTA is present but not compelling enough to act on. Specific ask plus a real reason is the formula.';
+  }
+
+  if(tag==='out'){
+    if(!hasResolution(text)&&!hasCallbackToHook(text)){
+      return 'The video stops rather than ends. There is no resolution and no forward direction. Acknowledge what was just covered, close the loop from the hook, and point the viewer to what comes next.';
+    }
+    if(!hasForwardMomentum(text)){
+      return 'The outro resolves the video but does not send the viewer anywhere. Without forward momentum a next video, a linked resource, a reason to stay in your world this is where the session ends.';
+    }
+    if(hasCallbackToHook(text)&&hasForwardMomentum(text)&&sc>=70){
+      return 'The outro closes the loop opened in the hook and moves the viewer forward. This is exactly how an outro should work.';
+    }
+    if(wc<10){
+      return 'The outro is too abrupt. Even one sentence of resolution acknowledging what was covered and where to go next is enough to make the ending feel complete.';
+    }
+    if(sc>=70)return 'Clean resolution. The video feels complete and the viewer has somewhere to go next.';
+    return 'The outro needs either a callback to the opening or a clear direction forward ideally both.';
+  }
+  return '';
+}
+
+// ── Smart paragraph splitting ──
+function splitBySentenceSignals(text){
+  // Split a single block into sections by recognising sentence-level boundaries
+  var sentences=text.match(/[^.!?]+[.!?]+/g)||[text];
+  if(sentences.length<=2)return [text];
+  var sections=[],current='';
+  var CTX_SIGNALS=/\b(let me|today i|in this video|what i found|i('ve| have) (spent|built|tested|studied)|i('m going| will) show)/i;
+  var CTA_SIGNALS=/\b(subscribe|follow|comment|hit the|tap the|if you (want|enjoyed)|smash that)/i;
+  var OUTRO_SIGNALS=/\b(so there you have it|that('s| is) it|to wrap|in summary|until next|see you|hope (this|that) helped)/i;
+  sentences.forEach(function(s,i){
+    current+=s;
+    var atEnd=i===sentences.length-1;
+    // Break before context signals (when we already have content)
+    if(!atEnd&&current.trim().length>30){
+      var next=sentences[i+1]||'';
+      if(CTX_SIGNALS.test(next)||CTA_SIGNALS.test(next)||OUTRO_SIGNALS.test(next)){
+        sections.push(current.trim());
+        current='';
+      }
+    }
+  });
+  if(current.trim())sections.push(current.trim());
+  return sections.length>1?sections:[text];
+}
+function guessParagraphs(text){
+  // Split on blank lines first   respects natural writing structure
+  var blocks=text.split(/\n\s*\n/).map(function(b){return b.trim();}).filter(function(b){return b.length>0;});
+  // Fall back to single newlines
+  if(blocks.length===1){
+    var single=text.split(/\n/).map(function(b){return b.trim();}).filter(function(b){return b.length>0;});
+    if(single.length>1)blocks=single;
+  }
+  // If still one block, try to split by sentence-level section signals
+  if(blocks.length===1&&wordCount(blocks[0])>60){
+    blocks=splitBySentenceSignals(blocks[0]);
+  }
+  if(!blocks.length)blocks=[text.trim()];
+  var n=blocks.length;
+
+  return blocks.map(function(b,i){
+    var tag=assignTag(b,i,n,blocks);
+    return {id:uid(),tag:tag,text:b,score:scoreText(tag,b)};
+  });
+}
+
+function assignTag(block,idx,total,allBlocks){
+  var l=block.toLowerCase();
+  var wc=wordCount(block);
+
+  // Outro signals are reliable regardless of position
+  if(hasResolution(block)){return 'out';}
+  if(hasForwardMomentum(block)&&idx===total-1){return 'out';}
+
+  // Hook: first block, under 80 words, no credential
+  if(idx===0&&wc<80&&!hasCredential(block)){return 'hook';}
+
+  // Context: credential verb with specificity, in first third of script
+  if(hasCredential(block)&&countSpecifics(block)>=1&&idx<=Math.ceil(total/3)){return 'ctx';}
+
+  // CTA: requires strong evidence to avoid false positives
+  // Must have action verb AND a reason AND appear in the second half AND be short
+  var ctaVerb=hasCTAVerb(block);
+  if(ctaVerb&&hasCTAReason(block)&&idx>=Math.floor(total*0.5)&&wc<80){return 'cta';}
+  // Very obvious CTA: short, late, viewer-addressed, has action verb
+  if(ctaVerb&&wc<40&&idx>=Math.floor(total*0.7)&&hasViewerAddress(block)){return 'cta';}
+
+  // Position fallback
+  if(total===1)return 'body';
+  if(total===2)return idx===0?'hook':'out';
+  if(total===3){var map=['hook','body','out'];return map[idx]||'body';}
+  if(total===4){var map4=['hook','ctx','body','out'];return map4[idx]||'body';}
+  if(idx===0)return 'hook';
+  if(idx===1)return 'ctx';
+  if(idx===total-1)return 'out';
+  if(idx===total-2)return 'cta';
+  return 'body';
+}
+
+
+
+
 function syncToCloud(){
   if(!db||!S.currentUser||S.isGuest)return;
-  db.collection('users').doc(S.currentUser.uid).set({data:JSON.stringify(S.scripts),updatedAt:new Date().toISOString()},{merge:true}).catch(function(){});
+  db.collection('users').doc(S.currentUser.uid).set({
+    data:JSON.stringify(S.scripts),
+    updatedAt:new Date().toISOString()
+  },{merge:true}).catch(function(){});
 }
 function loadFromCloud(){
   if(!db||!S.currentUser||S.isGuest)return;
   db.collection('users').doc(S.currentUser.uid).get().then(function(doc){
     if(doc.exists&&doc.data().data){
       var cloud=JSON.parse(doc.data().data||'[]');
-      if(cloud.length>S.scripts.length){S.scripts=cloud;save();renderScripts();}
+      if(cloud.length>S.scripts.length){S.scripts=cloud;save();setTimeout(renderScripts,0);}
       if(doc.data().pro){localStorage.setItem(PRO_KEY,'true');}
     }
   }).catch(function(){});
 }
 function checkProCode(code){
   if(!code)return;
-  if(!db){showToast('Sign in to use promo codes','error');return;}
   var c=code.toUpperCase().trim();
+  // Dev bypass
+  if(c==='DEVMODE'||c==='SELERII'){
+    localStorage.setItem(PRO_KEY,'true');
+    showToast('Pro unlocked','success');
+    setTimeout(renderProfile,0);
+    return;
+  }
+  if(!db){showToast('Sign in to use promo codes','error');return;}
   db.collection('promo_codes').doc(c).get().then(function(doc){
     if(!doc.exists||doc.data().used){showToast('Invalid or used code','error');return;}
     db.collection('promo_codes').doc(c).update({used:true,used_by:S.currentUser?S.currentUser.uid:'guest',used_at:new Date().toISOString()}).then(function(){
       localStorage.setItem(PRO_KEY,'true');
       if(S.currentUser){db.collection('users').doc(S.currentUser.uid).set({pro:true,pro_code:c,pro_unlocked_at:new Date().toISOString()},{merge:true});}
       showToast('Pro unlocked! Welcome.','success');
-      renderProfile();
+      setTimeout(renderProfile,0);
       safeGtag('event','pro_unlock',{method:'coupon'});
     });
   }).catch(function(){showToast('Could not verify code','error');});
@@ -1168,7 +1875,7 @@ function goScreen(name){
     if(nt)nt.classList.toggle('on',s===name);
   });
   updateHeader(name);
-  if(name==='scripts')renderScripts();
+  if(name==='scripts'){if(S.bulkMode)exitBulkMode();else setTimeout(renderScripts,0);}
   if(name==='write')renderWrite();
   if(name==='hub'){S.hubPillOpen=false;renderHub();}
   if(name==='profile')renderProfile();
@@ -1213,8 +1920,8 @@ function setHubTab(tab){
     var el=document.getElementById(id);
     if(el)el.classList.toggle('hide',t!==tab);
   });
-  if(tab==='stats')renderStats();
-  if(tab==='analyse')renderAnalyse();
+  if(tab==='stats')setTimeout(renderStats,0);
+  if(tab==='analyse')setTimeout(renderAnalyse,0);
 }
 
 // ── Scripts screen ──
@@ -1223,14 +1930,14 @@ function toggleSearch(){
   searchOpen=!searchOpen;
   document.getElementById('searchBar').classList.toggle('hide',!searchOpen);
   if(searchOpen)document.getElementById('searchInp').focus();
-  else{document.getElementById('searchInp').value='';renderScripts();}
+  else{document.getElementById('searchInp').value='';setTimeout(renderScripts,0);}
 }
 function clearSearch(){document.getElementById('searchInp').value='';toggleSearch();}
 function setFilter(btn,f){
   // Double-tap same pill to deselect (show all)
   if(activeFilter===f){activeFilter=null;document.querySelectorAll('.fpill').forEach(function(p){p.classList.remove('on');});}
   else{activeFilter=f;document.querySelectorAll('.fpill').forEach(function(p){p.classList.toggle('on',p.dataset.filter===f);});}
-  renderScripts();
+  setTimeout(renderScripts,0);
 }
 function renderScripts(){
   var el=document.getElementById('scriptsList');
@@ -1242,17 +1949,18 @@ function renderScripts(){
   });
   if(list.length===0){
     if(S.scripts.length===0){
-      el.innerHTML='<div class="empty-state"><div class="eico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></div><h3>Your first script is waiting</h3><p>Structure your Hook, build your Context, nail your CTA. Every great video starts here.</p><button class="add-btn" onclick="openModal(\'newScript\')" style="margin:0 auto;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>Write your first script</button><div class="empty-hint">Scripts save automatically as you write.<br/>Sign in anytime to back them up.</div></div>';
+      el.innerHTML='<div class="empty-state"><div class="eico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></div><h3>Your first script is waiting</h3><p>Structure your Hook, build your Context, nail your CTA. Every great video starts here.</p><button class="add-btn" id="emptyCreateBtn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>Write your first script</button><div class="empty-hint">Scripts save automatically as you write.<br/>Sign in anytime to back them up.</div></div>';
     }else{
       el.innerHTML='<div class="empty-state"><div class="eico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div><h3>No matches</h3><p>Try a different search or filter.</p></div>';
     }
     return;
   }
+  setTimeout(function(){var eb=document.getElementById('emptyCreateBtn');if(eb)eb.onclick=function(){openModal('newScript');};},0);
   var statusCls={Draft:'draft','In Progress':'progress',Ready:'ready',Filmed:'filmed'};
   el.innerHTML=list.map(function(s){
     var wc=totalWords(s),pc=(s.paragraphs||[]).length,sc=s.lastScore;
     var chipHTML=sc!=null?'<span class="score-chip '+scoreLevel(sc)+'"><span class="score-chip-dot"></span>'+sc+'</span>':'';
-    return '<div class="scard" id="sc_'+s.id+'" ontouchstart="" >'+
+    return '<div class="scard'+(S.bulkMode&&S.bulkSelected.indexOf(s.id)>=0?' selected':'')+' " id="sc_'+s.id+'" ontouchstart="onScardTouchStart(\''+s.id+'\',event)" ontouchend="onScardTouchEnd()" ontouchmove="onScardTouchMove()">'+
       '<div class="scard-inner" onclick="openScript(\''+s.id+'\')">'+
       '<div class="scard-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>'+
       '<div class="scard-info"><div class="scard-name">'+escHtml(s.title)+'</div>'+
@@ -1263,7 +1971,63 @@ function renderScripts(){
   }).join('');
 }
 
-function openScript(id){S.activeId=id;goScreen('write');}
+// ── Long press + bulk select ──
+var _lpTimer=null;
+function onScardTouchStart(id,evt){
+  _lpTimer=setTimeout(function(){
+    _lpTimer=null;
+    enterBulkMode(id);
+  },500);
+}
+function onScardTouchEnd(){
+  if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null;}
+}
+function onScardTouchMove(){
+  if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null;}
+}
+function enterBulkMode(firstId){
+  S.bulkMode=true;S.bulkSelected=[firstId];
+  document.getElementById('bulkBar').classList.remove('hide');
+  setTimeout(renderScripts,0);
+  updateBulkCount();
+}
+function exitBulkMode(){
+  S.bulkMode=false;S.bulkSelected=[];
+  document.getElementById('bulkBar').classList.add('hide');
+  setTimeout(renderScripts,0);
+}
+function toggleBulkSelect(id){
+  var idx=S.bulkSelected.indexOf(id);
+  if(idx>=0)S.bulkSelected.splice(idx,1);
+  else S.bulkSelected.push(id);
+  // Update card visual
+  var card=document.getElementById('sc_'+id);
+  if(card)card.classList.toggle('selected',S.bulkSelected.indexOf(id)>=0);
+  updateBulkCount();
+  if(S.bulkSelected.length===0)exitBulkMode();
+}
+function updateBulkCount(){
+  var el=document.getElementById('bulkCount');
+  var n=S.bulkSelected.length;
+  if(el)el.textContent=n+' selected';
+}
+function bulkDelete(){
+  if(!S.bulkSelected.length)return;
+  var n=S.bulkSelected.length;
+  openModal('_raw','<div class="mhandle"></div><div class="modal-title">Delete '+n+' script'+(n===1?'':'s')+'?</div><p style="font-size:.78rem;color:var(--muted);margin-bottom:16px;">This cannot be undone.</p><div class="modal-acts"><button class="btn-g" onclick="closeMoForce()">Cancel</button><button class="btn-danger active" onclick="event.stopPropagation();confirmBulkDelete();">Delete all</button></div>');
+}
+function confirmBulkDelete(){
+  S.scripts=S.scripts.filter(function(s){return S.bulkSelected.indexOf(s.id)<0;});
+  if(S.bulkSelected.indexOf(S.activeId)>=0)S.activeId=null;
+  save();syncToCloud();
+  closeMoForce();
+  exitBulkMode();
+  showToast('Deleted','default');
+}
+function openScript(id){
+  if(S.bulkMode){toggleBulkSelect(id);return;}
+  S.activeId=id;goScreen('write');
+}
 
 function openScriptMenu(id){
   var s=S.scripts.find(function(x){return x.id===id;});
@@ -1288,22 +2052,23 @@ function setScriptStatus(id,status){
   var s=S.scripts.find(function(x){return x.id===id;});
   if(!s)return;
   s.status=status;s.updatedAt=new Date().toISOString();
-  save();syncToCloud();renderScripts();
+  save();syncToCloud();
+  setTimeout(renderScripts,0);
 }
 
 function confirmDeleteScript(id){
   var s=S.scripts.find(function(x){return x.id===id;});
   if(!s)return;
-  openModal('_raw','<div class="mhandle"></div><div class="modal-title">Delete script?</div><div class="modal-sub" style="color:var(--text);font-weight:600;">'+escHtml(s.title)+'</div><p style="font-size:.76rem;color:var(--muted);margin:8px 0 16px;">This cannot be undone.</p><div class="modal-acts"><button class="btn-g" onclick="closeMoForce()">Cancel</button><button class="btn-danger active" onclick="deleteScript(\''+id+'\');closeMoForce();">Yes, delete</button></div>');
+  openModal('_raw','<div class="mhandle"></div><div class="modal-title">Delete script?</div><div class="modal-sub" style="color:var(--text);font-weight:600;">'+escHtml(s.title)+'</div><p style="font-size:.76rem;color:var(--muted);margin:8px 0 16px;">This cannot be undone.</p><div class="modal-acts"><button class="btn-g" onclick="closeMoForce()">Cancel</button><button class="btn-danger active" onclick="event.stopPropagation();deleteScript(\''+id+'\');closeMoForce();">Yes, delete</button></div>');
 }
 function deleteScript(id){
   S.scripts=S.scripts.filter(function(s){return s.id!==id;});
   if(S.activeId===id)S.activeId=null;
-  save();syncToCloud();renderScripts();
+  save();syncToCloud();
+  setTimeout(renderScripts,0);
   showToast('Script deleted','default');
 }
-</script>
-<script>
+
 // ── Write screen ──
 function renderWrite(){
   var script=getActive();
@@ -1329,7 +2094,6 @@ function renderWrite(){
     return '<div class="pb '+tag.cls+'" id="pb_'+p.id+'">'+
       '<div class="pb-hd">'+
       '<span class="pb-tag">'+tag.label+'</span>'+
-      scorePillHTML(sc)+
       '</div>'+
       '<div class="pb-body"><textarea class="pb-ta" rows="3" placeholder="Write your '+tag.label.toLowerCase()+'..." onblur="saveParagraph(\''+p.id+'\',this.value)" oninput="autoResize(this);liveScore(\''+p.id+'\',\''+p.tag+'\',this.value)">'+escHtml(p.text)+'</textarea></div>'+
       '<div class="pb-ft"><span class="pb-wc" id="wc_'+p.id+'">'+wc+' words</span>'+
@@ -1357,14 +2121,15 @@ function saveScriptTitle(){
   save();syncToCloud();
   document.getElementById('writeTitleLbl').textContent=val;
   closeMoForce();
+  setTimeout(renderScripts,0);
   showToast('Renamed','success');
+}
+function analyseCurrentScript(btn){
+  showToast('Section scoring coming soon','default');
 }
 function autoResize(ta){ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';}
 
 function liveScore(pid,tag,text){
-  var sc=scoreText(tag,text);
-  var pill=document.querySelector('#pb_'+pid+' .score-pill');
-  if(pill){pill.className='score-pill '+scoreLevel(sc);pill.innerHTML='<span class="score-pill-dot"></span>'+sc+' &middot; '+scoreVerdict(sc);}
   var wcel=document.getElementById('wc_'+pid);
   if(wcel)wcel.textContent=wordCount(text)+' words';
 }
@@ -1383,18 +2148,18 @@ function moveParagraph(pid,dir){
   for(var x=0;x<ps.length;x++){if(ps[x].id===pid){i=x;break;}}
   var j=i+dir;if(j<0||j>=ps.length)return;
   var tmp=ps[i];ps[i]=ps[j];ps[j]=tmp;
-  script.updatedAt=new Date().toISOString();save();renderWrite();
+  script.updatedAt=new Date().toISOString();save();setTimeout(renderWrite,0);
 }
 
 function confirmDeleteParagraph(pid){
-  openModal('_raw','<div class="mhandle"></div><div class="modal-title">Delete this paragraph?</div><p style="font-size:.78rem;color:var(--muted);margin-bottom:16px;">This cannot be undone.</p><div class="modal-acts"><button class="btn-g" onclick="closeMoForce()">Cancel</button><button class="btn-danger active" onclick="deleteParagraph(\''+pid+'\');closeMoForce();">Delete</button></div>');
+  openModal('_raw','<div class="mhandle"></div><div class="modal-title">Delete this paragraph?</div><p style="font-size:.78rem;color:var(--muted);margin-bottom:16px;">This cannot be undone.</p><div class="modal-acts"><button class="btn-g" onclick="closeMoForce()">Cancel</button><button class="btn-danger active" onclick="event.stopPropagation();deleteParagraph(\''+pid+'\');closeMoForce();">Delete</button></div>');
 }
 function deleteParagraph(pid){
   var script=getActive();if(!script)return;
   script.paragraphs=script.paragraphs.filter(function(p){return p.id!==pid;});
   script.updatedAt=new Date().toISOString();
   script.lastScore=overallScore(script.paragraphs);
-  save();renderWrite();
+  save();setTimeout(renderWrite,0);
 }
 
 function changeParagraphTag(pid){
@@ -1408,7 +2173,7 @@ function changeParagraphTag(pid){
 function applyTagChange(pid,tag){
   var script=getActive();if(!script)return;
   script.paragraphs.forEach(function(p){if(p.id===pid){p.tag=tag;p.score=scoreText(tag,p.text);}});
-  script.updatedAt=new Date().toISOString();save();renderWrite();
+  script.updatedAt=new Date().toISOString();save();setTimeout(renderWrite,0);
 }
 
 // ── Drawer ──
@@ -1456,7 +2221,7 @@ function renderDrawerTab(){
 }
 function deleteNote(tab,idx){
   var script=getActive();if(!script||!script.notes)return;
-  script.notes[tab].splice(idx,1);save();renderDrawerTab();
+  script.notes[tab].splice(idx,1);save();setTimeout(renderDrawerTab,0);
 }
 
 // ── View Script ──
@@ -1478,7 +2243,7 @@ function closeViewScript(){document.getElementById('viewScriptScreen').classList
 
 function copyScript(){
   var script=getActive();if(!script)return;
-  var txt=script.title+'\n\n'+(script.paragraphs||[]).map(function(p){return (TAGS[p.tag]||TAGS.hook).label+':\n'+p.text;}).join('\n\n');
+  var txt=script.title+'\n\n'+(script.paragraphs||[]).map(function(p){return p.text;}).join('\n\n');
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(txt).then(function(){showToast('Copied to clipboard','success');}).catch(function(){copyFallback(txt);});
   }else{copyFallback(txt);}
@@ -1488,12 +2253,12 @@ function copyFallback(txt){
   ta.value=txt;ta.style.cssText='position:fixed;top:0;left:0;opacity:0;';
   document.body.appendChild(ta);ta.focus();ta.select();
   try{document.execCommand('copy');showToast('Copied to clipboard','success');}
-  catch(e){showToast('Copy failed — try long-pressing the text','error');}
+  catch(e){showToast('Copy failed   try long-pressing the text','error');}
   document.body.removeChild(ta);
 }
 function downloadScript(){
   var script=getActive();if(!script)return;
-  var txt=script.title+'\n\n'+(script.paragraphs||[]).map(function(p){return (TAGS[p.tag]||TAGS.hook).label+':\n'+p.text;}).join('\n\n');
+  var txt=script.title+'\n\n'+(script.paragraphs||[]).map(function(p){return p.text;}).join('\n\n');
   var a=document.createElement('a');
   a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(txt);
   a.download=script.title.replace(/[^a-z0-9]/gi,'_')+'.txt';
@@ -1560,8 +2325,7 @@ function exportPortfolio(){
   showToast('Portfolio exported','success');
   safeGtag('event','portfolio_export');
 }
-</script>
-<script>
+
 // ── Stats helpers ──
 function calcStreak(sessions){
   if(!sessions||!sessions.length)return 0;
@@ -1612,7 +2376,7 @@ var statsFilterVal='all';
 function setStatsFilter(btn){
   statsFilterVal=btn.dataset.sf;
   document.querySelectorAll('.sseg-btn').forEach(function(b){b.classList.toggle('on',b===btn);});
-  renderStats();
+  setTimeout(renderStats,0);
 }
 
 function renderStats(){
@@ -1708,14 +2472,16 @@ function renderStats(){
   }
 
   // Pro locked teaser
-  html+='<div class="pro-lock-card" onclick="openProSheet()">'+
-    '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>'+
-    '<div><div class="pro-lock-lbl">Script Score Trends</div><div class="pro-lock-sub">Track how your writing improves over time. Pro feature.</div></div></div>';
+  html+='<div style="background:linear-gradient(135deg,var(--accent-soft),rgba(184,115,51,.04));border:1px solid var(--accent-border);border-radius:14px;padding:16px;margin-top:4px;">'+
+    '<div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Coming with Pro</div>'+
+    '<div style="font-size:.84rem;font-weight:600;color:var(--text);margin-bottom:5px;">Score Trends Over Time</div>'+
+    '<div style="font-size:.72rem;color:var(--muted);line-height:1.6;margin-bottom:12px;">See how your Hook, CTA and overall script scores move across every video you write. Spot your consistent weak spots and track real improvement.</div>'+
+    '<button onclick="openProSheet()" style="padding:8px 18px;border-radius:8px;background:var(--accent);color:#0A0D14;border:none;font-size:.76rem;font-weight:700;cursor:pointer;">See Pro Features</button>'+
+    '</div>';
 
   el.innerHTML=html;
 }
-</script>
-<script>
+
 // ── Analyse tab ──
 function renderAnalyse(){
   var el=document.getElementById('analyseScroll');if(!el)return;
@@ -1726,13 +2492,16 @@ function renderAnalyse(){
       '<div class="eico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></div>'+
       '<h3 style="display:flex;align-items:center;gap:6px;">Analyse your script<button onclick="openModal(\'analyseHelp\')" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:15px;height:15px;color:var(--muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.12 2.6-2.842 3.183C12.405 13.546 12 14.02 12 14.5V15m0 3.5v.5"/><circle cx="12" cy="12" r="10"/></svg></button></h3>'+
       '<p>Paste your script below or pick one you have already written to see how it scores.</p>'+
+      '<input class="modal-inp" id="pasteTitle" placeholder="Script title (optional)" style="margin-bottom:8px;font-size:.78rem;"/>'+
       '<textarea class="paste-area" id="pasteArea" placeholder="Paste your script text here..." rows="4"></textarea>'+
       '<div class="analyse-btns">'+
       '<button class="abtn-p" onclick="runAnalyseFromPaste()">Analyse</button>'+
       '<button class="abtn-g" onclick="openModal(\'pickScript\')">My Scripts</button>'+
       '</div></div>';
   }else{
-    var recent=hist.slice(-2).reverse();
+    var q=(S._aSearch||'').toLowerCase().trim();
+    var filtered=q?hist.filter(function(h){return (h.title||'').toLowerCase().indexOf(q)>=0;}):hist;
+    var recent=filtered.slice(-3).reverse();
     el.innerHTML='<div class="analyse-compact-card">'+
       '<div class="analyse-compact-title" style="display:flex;align-items:center;gap:6px;">Analyse a script<button onclick="openModal(\'analyseHelp\')" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:15px;height:15px;color:var(--muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.12 2.6-2.842 3.183C12.405 13.546 12 14.02 12 14.5V15m0 3.5v.5"/><circle cx="12" cy="12" r="10"/></svg></button></div>'+
       '<textarea class="paste-area" id="pasteArea" placeholder="Paste script text..." rows="3"></textarea>'+
@@ -1740,12 +2509,13 @@ function renderAnalyse(){
       '<button class="abtn-p" onclick="runAnalyseFromPaste()">Analyse</button>'+
       '<button class="abtn-g" onclick="openModal(\'pickScript\')">My Scripts</button>'+
       '</div></div>'+
+      
       '<div class="history-label">Recent Analyses</div>'+
       recent.map(function(h){
         return '<div class="history-card" onclick="openAnalyseResult(\''+h.id+'\')">'+
           '<div class="hscore '+scoreLevel(h.score)+'">'+h.score+'</div>'+
           '<div class="hinfo"><div class="htitle">'+escHtml(h.title)+'</div><div class="hmeta">'+timeAgo(h.date)+'</div></div>'+
-          '<button class="pb-action" onclick="event.stopPropagation();deleteAnalyseSession(\''+h.id+'\');" title="Remove" style="color:var(--faint);padding:6px;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>';
+          '<button class="pb-action" onclick="event.stopPropagation();renameAnalyseSession(\''+h.id+'\');" title="Rename" style="color:var(--faint);padding:6px;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button class="pb-action" onclick="event.stopPropagation();deleteAnalyseSession(\''+h.id+'\');" title="Remove" style="color:var(--faint);padding:6px;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>';
       }).join('')+
       (hist.length>2?'<button class="view-all-btn" onclick="openModal(\'allHistory\')">View all sessions</button>':'');
   }
@@ -1755,72 +2525,33 @@ function runAnalyseFromPaste(){
   var ta=document.getElementById('pasteArea');
   if(!ta||!ta.value||!ta.value.trim()){showToast('Paste some script text first','error');return;}
   var text=ta.value.trim();
-  var wordCt=wordCount(text);
-  if(wordCt<20){showToast('Add more text — need at least 20 words','error');return;}
-  // Show loading state
+  var wct=wordCount(text);
+  if(wct<20){showToast('Add more text. Need at least 20 words','error');return;}
+  var titleEl=document.getElementById('pasteTitle');
+  S._pasteTitle=(titleEl&&titleEl.value.trim())||'';
   var btn=document.querySelector('.abtn-p');
-  if(btn){btn.textContent='Analysing...';btn.disabled=true;}
+  if(btn){
+    btn.innerHTML='<svg viewBox="0 0 24 24" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;" fill="none" class="spinning"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" stroke-dasharray="28" stroke-dashoffset="10" stroke-linecap="round"/></svg>Analysing...';
+    btn.disabled=true;
+  }
+  var minDelay=wct>200?5000:3000;
+  var started=Date.now();
   aiTagAndAnalyse(text,function(){
-    if(btn){btn.textContent='Analyse';btn.disabled=false;}
+    var elapsed=Date.now()-started;
+    var remaining=Math.max(0,minDelay-elapsed);
+    setTimeout(function(){
+      if(btn){btn.innerHTML='Analyse';btn.disabled=false;}
+      S._pasteTitle='';
+    },remaining);
   });
 }
 
 function aiTagAndAnalyse(text,onDone){
-  // Pull user stats to give contextual feedback
-  var userStats=JSON.parse(localStorage.getItem('sp_stats')||'{}');
-  var totalScripts=S.scripts.length;
-  var avgWordsPerScript=totalScripts>0?Math.round(S.scripts.reduce(function(a,s){return a+(s.paragraphs||[]).reduce(function(b,p){return b+(p.text?p.text.trim().split(/\s+/).length:0);},0);},0)/totalScripts):0;
-  var streak=(userStats.sessions||[]).length>0?calcStreak(userStats.sessions||[]):0;
-  var statsContext=totalScripts>1?'The creator has written '+totalScripts+' scripts in Scripora with an average of '+avgWordsPerScript+' words per script.'+(streak>1?' They have a '+streak+'-day writing streak.':''):'';
-
-  var prompt='You are a script coach who deeply understands how YouTube audiences behave. You have read thousands of scripts and you know exactly where attention drops, where trust is built, and what makes someone stay or leave.\n\nYour job: split the following script into sections and give one sentence of feedback per section that tells the creator the specific consequence of what they wrote — what it will do to a real viewer watching on their phone.\n\n'+
-  (statsContext?'Context about this creator: '+statsContext+'\n\n':'')+
-  'Rules you must follow:\n'+
-  '- Read the actual words written. Your feedback must reference something specific from that section — a phrase, a word choice, a structural decision.\n'+
-  '- Never say "consider adding" or "try including" — say what the current writing does or fails to do.\n'+
-  '- Never give generic YouTube advice that could apply to any script. If your comment could appear on a different script unchanged, rewrite it.\n'+
-  '- Write like a sharp, experienced human — direct, specific, no padding.\n'+
-  '- One sentence per section. Make it count.\n\n'+
-  'Return ONLY a JSON array. No markdown, no explanation. Each item: {"tag":"hook","text":"...","comment":"one specific sentence about what this section does to the viewer"}.\n'+
-  'Tags: hook, ctx, body (can repeat for multiple body sections), cta, out.\n\n'+
-  'Script:\n\n'+text;
-  fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model:'claude-sonnet-4-20250514',
-      max_tokens:1200,
-      messages:[{role:'user',content:prompt}]
-    })
-  }).then(function(r){return r.json();})
-  .then(function(data){
-    try{
-      var raw=data.content[0].text.replace(/```json|```/g,'').trim();
-      var paras=JSON.parse(raw);
-      if(!Array.isArray(paras)||!paras.length)throw new Error('bad response');
-      var validTags=['hook','ctx','body','cta','out'];
-      paras=paras.map(function(p){
-        return {
-          id:uid(),
-          tag:validTags.indexOf(p.tag)>=0?p.tag:'body',
-          text:(p.text||'').trim(),
-          aiComment:(p.comment||'').trim(),
-          score:0
-        };
-      });
-      if(onDone)onDone();
-      runAnalyse(text,'Pasted Script',null,paras);
-    }catch(e){
-      if(onDone)onDone();
-      runAnalyse(text,'Pasted Script');
-    }
-  })
-  .catch(function(){
-    if(onDone)onDone();
-    runAnalyse(text,'Pasted Script');
-  });
+  // AI call removed   rule engine now reads actual text and generates specific feedback
+  // AI-powered analysis will be introduced as a Pro feature with proper API proxy
+  if(onDone)onDone();
+  runAnalyse(text,'Pasted Script');
 }
-
 function runAnalyseForScript(id){
   var s=S.scripts.find(function(x){return x.id===id;});
   if(!s)return;
@@ -1848,114 +2579,214 @@ function runAnalyse(text,title,scriptId,paragraphs){
   if(S.analyseHistory.length>20)S.analyseHistory=S.analyseHistory.slice(-20);
   saveAnalyseHistory();
   safeGtag('event','script_analysed',{score:overall});
-  openAnalyseResult(result.id);
+  // Small delay so the analysing state is visible before results appear
+  var _resultId=result.id;
+  setTimeout(function(){openAnalyseResult(_resultId);},200);
 }
 
-function guessParagraphs(text){
-  // Split on blank lines — this respects how writers naturally separate sections
-  var blocks=text.split(/\n\s*\n/).map(function(b){return b.trim();}).filter(function(b){return b.length>0;});
 
-  // If no blank lines found, try single newlines as section breaks
-  if(blocks.length===1){
-    var singleBreaks=text.split(/\n/).map(function(b){return b.trim();}).filter(function(b){return b.length>0;});
-    if(singleBreaks.length>1)blocks=singleBreaks;
+function getScriptVerdict(scores,overall){
+  var hookSc=scores.hook||0,ctaSc=scores.cta||0,bodySc=scores.body||0;
+  if(overall>=75)return 'Ready to film.';
+  if(overall>=60&&hookSc>=65)return 'Strong start, loose finish.';
+  if(overall>=60&&hookSc<45)return 'Good content, weak entry.';
+  if(hookSc>=70&&ctaSc<40)return 'Earns attention, loses the ask.';
+  if(hookSc<40&&overall>=50)return 'The content is there. The hook is not.';
+  if(ctaSc>=70&&hookSc<50)return 'Converts well, opens poorly.';
+  if(bodySc>=70&&hookSc<45)return 'Substance without pull.';
+  if(overall>=45&&overall<60)return 'Promising but unfinished.';
+  if(hookSc<40&&bodySc<40)return 'Needs significant work.';
+  if(overall<40)return 'Not ready to film.';
+  return 'Solid structure, needs polish.';
+}
+function getScriptVerdictSub(scores,overall,tags){
+  var hookSc=scores.hook||0,ctaSc=scores.cta||0,bodySc=scores.body||0;
+  var ctxSc=scores.ctx||0,outSc=scores.out||0;
+
+  // Build three consequence statements based on score pattern
+  var s1='',s2='',s3='';
+
+  // Statement 1: What they did (strongest area)
+  if(hookSc>=70&&bodySc>=65){
+    s1='The hook earns attention and the main body delivers on it.';
+  }else if(hookSc>=70){
+    s1='The hook is strong and creates a reason to keep watching.';
+  }else if(bodySc>=70){
+    s1='The main content is specific and well structured.';
+  }else if(ctaSc>=70){
+    s1='The call to action is clear and gives the viewer a direction.';
+  }else if(hookSc<45&&bodySc<45){
+    s1='The script opens without tension and the body section stays general throughout.';
+  }else if(hookSc<45){
+    s1='The script opens without creating a reason to stay.';
+  }else{
+    s1='The structure is partially in place but not consistently strong.';
   }
 
-  // Still one block — could be a single long paragraph. Leave as body for scoring.
-  if(!blocks.length)blocks=[text.trim()];
+  // Statement 2: What it costs them (the consequence)
+  if(hookSc<45&&overall<55){
+    s2='Viewers decide in the first three seconds. Without a hook that creates urgency, most will leave before the value is delivered.';
+  }else if(ctaSc<40&&overall>=55){
+    s2='The video builds trust and delivers value but ends without a direction. That momentum disappears instead of converting.';
+  }else if(bodySc<40&&hookSc>=60){
+    s2='A strong hook raises expectations that the body does not meet. Viewers who stayed for the promise will leave when it is not delivered.';
+  }else if(outSc<40&&overall>=55){
+    s2='Without a proper close the video ends abruptly. Viewers leave without resolution and are less likely to return.';
+  }else if(overall>=70){
+    s2='The main risk is losing viewers between the hook and the body if pacing drops. Keep the middle as tight as the opening.';
+  }else{
+    s2='The gaps in structure create drop-off points where viewers disengage before reaching the sections that work.';
+  }
 
-  var n=blocks.length;
-  // Tag assignment: follows the natural YouTube structure order
-  // Hook → Context → Body (can be multiple) → CTA → Outro
-  return blocks.map(function(b,i){
-    var tag;
-    if(n===1){tag='body';}
-    else if(n===2){tag=i===0?'hook':'out';}
-    else if(n===3){tag=i===0?'hook':i===1?'body':'out';}
-    else if(n===4){tag=i===0?'hook':i===1?'ctx':i===2?'cta':'out';}
-    else{
-      // 5+ sections: hook, ctx, body (all middle), cta, out
-      if(i===0)tag='hook';
-      else if(i===1)tag='ctx';
-      else if(i===n-1)tag='out';
-      else if(i===n-2)tag='cta';
-      else tag='body';
-    }
-    return {id:uid(),tag:tag,text:b,score:0};
-  });
+  // Statement 3: What to fix (specific action)
+  if(hookSc<45){
+    s3='Rewrite the first sentence as a direct question or a claim the viewer needs to verify before they can leave.';
+  }else if(ctaSc<40&&tags.indexOf('cta')>=0){
+    s3='Add one reason to the call to action. Not just what to do, but why doing it matters to the viewer right now.';
+  }else if(bodySc<50&&bodySc>0){
+    s3='Add one concrete example, real number, or named tool to the main body. Specificity is what makes content stick.';
+  }else if(outSc<45&&tags.indexOf('out')>=0){
+    s3='Close the loop from the hook in the outro and name the next video or resource before signing off.';
+  }else if(ctxSc<45&&tags.indexOf('ctx')>=0){
+    s3='Make the context section viewer-focused. Translate your credential into their outcome, not just what you did.';
+  }else{
+    s3='Review the annotated sections below for specific improvements on each part.';
+  }
+
+  return s1+' '+s2+' '+s3;
 }
-
 function openAnalyseResult(id){
   loadAnalyseHistory();
   var result=S.analyseHistory.find(function(h){return h.id===id;});
   if(!result)return;
   document.getElementById('analyseResultsScreen').classList.remove('hide');
-  document.getElementById('resTitle').textContent=result.title;
-  document.getElementById('resDate').textContent=timeAgo(result.date);
+  document.getElementById('resTitle').textContent=result.title||'Analysis';
+  document.getElementById('resDate').textContent=result.date?new Date(result.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
 
-  var lvl=scoreLevel(result.score);
-  // Score banner — reads like a human producer's first impression
-  var totalSc=S.scripts.length;
-  var prevScores=S.analyseHistory.slice(0,-1).map(function(h){return h.score;});
-  var avgPrev=prevScores.length?Math.round(prevScores.reduce(function(a,b){return a+b;},0)/prevScores.length):null;
-  var trend=avgPrev?result.score-avgPrev:null;
-  var verdicts={
-    high:'This script holds together.',
-    mid:'Promising, but there are gaps where viewers will drift.',
-    low:'The structure is not working for the viewer yet.'
-  };
-  var subs={
-    high:'The structure earns attention and delivers on its promise. The annotated view shows where it is strongest.',
-    mid:'There is a solid foundation here. The sections below show exactly where momentum drops and what is costing you.',
-    low:'Review the sections below — each one tells you specifically what the viewer experiences and what needs to change before you film.'
-  };
-  var trendNote='';
-  if(trend!==null&&Math.abs(trend)>=5){
-    trendNote=trend>0?' Your score is up '+trend+' points from your recent average.':' Your score is down '+Math.abs(trend)+' points from your recent average.';
-  }
-  document.getElementById('scoreBanner').innerHTML=
-    '<div class="score-banner-num '+lvl+'">'+result.score+'</div>'+
-    '<div><div class="score-banner-lbl">Script Score</div>'+
-    '<div class="score-banner-verdict">'+verdicts[lvl]+'</div>'+
-    '<div class="score-banner-sub">'+subs[lvl]+trendNote+'</div></div>';
-
-  // Section grid
-  var tagOrder=['hook','ctx','body','cta','out'];
+  // Run full intelligence analysis
+  var paras=result.paragraphs||[];
+  var intel=analyseScript(paras);
+  var scores=intel.sectionScores;
+  var overall=intel.overall||result.score||0;
+  var level=scoreLevel(overall);
   var tagNames={hook:'Hook',ctx:'Context',body:'Main Body',cta:'CTA',out:'Outro'};
-  // Only show sections that are actually present in the result
-  var presentTags=[];
-  (result.paragraphs||[]).forEach(function(p){if(presentTags.indexOf(p.tag)<0)presentTags.push(p.tag);});
-  var gridHTML='<div class="section-grid">'+tagOrder.filter(function(tag){return presentTags.indexOf(tag)>=0;}).map(function(tag){
-    var sc=result.sectionScores[tag]||0,lvl2=scoreLevel(sc);
-    var note=getSectionNote(tag,sc);
-    return '<div class="sgrid-cell"><div class="sgrid-top"><div class="sgrid-name">'+tagNames[tag]+'</div><div class="sgrid-num '+lvl2+'">'+sc+'</div></div>'+
-      '<div class="sgrid-bar"><div class="sgrid-fill '+lvl2+'" style="width:'+sc+'%"></div></div>'+
-      '<div class="sgrid-note">'+note+'</div></div>';
-  }).join('')+'</div>';
-  // If not all 5 sections present, show a hint
-  if(presentTags.length<5){
-    gridHTML+='<div style="margin:0 14px 8px;padding:10px 12px;background:var(--s2);border:1px solid var(--border);border-radius:10px;font-size:.72rem;color:var(--muted);line-height:1.55;">Showing '+presentTags.length+' of 5 sections. Add a Hook, Context, Main Body, CTA and Outro for a full score.</div>';
+  var tagOrder=['hook','ctx','body','cta','out'];
+
+  var out='';
+
+  // ── HERO: score ring + verdict ──
+  var circ=Math.PI*2*28; // r=28
+  var fill=Math.round(circ*(1-overall/100)*10)/10;
+  out+='<div class="res-hero">';
+  out+='<div class="res-hero-top">';
+  out+='<div class="res-score-ring">';
+  out+='<svg viewBox="0 0 72 72"><circle class="res-ring-track" cx="36" cy="36" r="28"/>';
+  out+='<circle class="res-ring-fill '+level+'" cx="36" cy="36" r="28" stroke-dasharray="'+circ+'" stroke-dashoffset="'+fill+'"/></svg>';
+  out+='<div class="res-score-num"><span class="res-score-val '+level+'">'+overall+'</span><span class="res-score-lbl">score</span></div>';
+  out+='</div>';
+  out+='<div class="res-hero-info">';
+  out+='<div class="res-verdict">'+getScriptVerdict(scores,overall)+'</div>';
+  out+='</div></div>';
+
+  // Section bars
+  out+='<div class="res-section-bars">';
+  tagOrder.forEach(function(tag){
+    var sc=scores[tag];
+    if(!sc&&sc!==0)return;
+    if(!paras.find(function(p){return p.tag===tag;}))return;
+    var lv=scoreLevel(sc);
+    out+='<div class="res-sbar">';
+    out+='<span class="res-sbar-name">'+tagNames[tag]+'</span>';
+    out+='<div class="res-sbar-track"><div class="res-sbar-fill '+lv+'" style="width:'+sc+'%"></div></div>';
+    out+='<span class="res-sbar-val '+lv+'">'+sc+'</span>';
+    out+='</div>';
+  });
+  out+='</div></div>';
+
+  // ── ATTENTION CURVE ──
+  out+='<div class="res-curve-card">';
+  out+='<div class="res-card-title" style="display:flex;align-items:center;gap:5px;">Attention Curve<button onclick="showStatHelp(\'curve\')" style="background:none;border:none;padding:0 2px;cursor:pointer;color:var(--faint);font-size:.65rem;">[?]</button></div>';
+  out+='<div class="res-curve">';
+  var curve=intel.curve||[];
+  var maxAbs=Math.max(0.1,Math.max.apply(null,curve.map(function(v){return Math.abs(v);})));
+  curve.forEach(function(v,i){
+    var pct=Math.round(((v+maxAbs)/(maxAbs*2))*100);
+    var h=Math.max(8,Math.round((pct/100)*48));
+    var cls=v>0.3?'pos':v<-0.3?'neg':'neu';
+    out+='<div class="res-curve-bar '+cls+'" style="height:'+h+'px" title="'+(i*10)+'%: '+v+'"></div>';
+  });
+  out+='</div>';
+  out+='<div class="res-curve-labels"><span class="res-curve-lbl">0%</span><span class="res-curve-lbl">50%</span><span class="res-curve-lbl">100%</span></div>';
+  out+='</div>';
+
+  // ── STATS ROW ──
+  out+='<div class="res-stats-row">';
+  out+='<div class="res-stat-chip"><div class="res-stat-num">'+intel.totalWords+'</div><div class="res-stat-lbl">Words</div></div>';
+  out+='<div class="res-stat-chip"><div class="res-stat-num">'+intel.totalSentences+'</div><div class="res-stat-lbl">Sentences</div></div>';
+  out+='<div class="res-stat-chip" onclick="showStatHelp(\'insight\')" style="cursor:pointer;"><div class="res-stat-num">'+intel.rewardDensity+'</div><div class="res-stat-lbl">Insight/100w ?</div></div>';
+  out+='<div class="res-stat-chip" onclick="showStatHelp(\'pace\')" style="cursor:pointer;"><div class="res-stat-num">'+intel.sentenceLenVariance+'</div><div class="res-stat-lbl">Pace Var. ?</div></div>';
+  out+='</div>';
+
+  // ── FAILURE PATTERNS ──
+  if(intel.failurePatterns&&intel.failurePatterns.length){
+    intel.failurePatterns.forEach(function(p){
+      out+='<div class="res-pattern-card"><div class="res-pattern-tag">Pattern detected</div>';
+      out+='<div class="res-pattern-name">'+p.name+'</div>';
+      out+='<div class="res-pattern-desc">'+p.desc+'</div></div>';
+    });
   }
 
-  // Annotated script
-  var annoHTML='<div class="anno-lbl">Annotated Script</div>';
-  (result.paragraphs||[]).filter(function(p){return p.text&&p.text.trim().length>0;}).forEach(function(p){
-    var sc=result.sectionScores[p.tag]||scoreText(p.tag,p.text);
-    var lvl3=scoreLevel(sc);
-    // Use AI comment if available, otherwise fall back to rule-based feedback
-    var fb=p.aiComment||getParagraphFeedback(p.tag,p.text,sc);
-    var tagCls=p.tag==='body'?'tag-body':'tag-'+p.tag;
-    annoHTML+='<div class="anno-block '+tagCls+'">'+
-      '<div class="anno-hd"><span class="anno-tag-lbl">'+(tagNames[p.tag]||p.tag)+'</span>'+scorePillHTML(sc)+'</div>'+
-      '<div class="anno-text'+(p.text?'':' empty')+'">'+highlightText(p.text||'No content in this section.')+'</div>'+
-      '<div class="anno-fb'+(lvl3==='high'?' ok':'')+'" ><span class="anno-fb-ico">'+(lvl3==='high'?'':'')+'</span>'+escHtml(fb)+'</div>'+
-      '</div>';
+  // ── TOP ISSUES ──
+  if(intel.issues&&intel.issues.length){
+    out+='<div class="res-issues"><div class="res-issues-title">Top Issues</div>';
+    intel.issues.forEach(function(issue){
+      out+='<div class="res-issue">';
+      out+='<div class="res-issue-hd">';
+      out+='<span class="res-issue-section">'+issue.section+'</span>';
+      out+='<span class="res-issue-impact '+issue.impact+'">'+issue.impact+' impact</span>';
+      if(issue.score>0)out+='<span class="res-issue-score">'+issue.score+'</span>';
+      out+='</div>';
+      out+='<div class="res-issue-body">';
+      out+='<div class="res-oi"><div class="res-oi-dot obs"></div><div class="res-oi-text obs">'+issue.observation+'</div></div>';
+      out+='<div class="res-oi"><div class="res-oi-dot cons"></div><div class="res-oi-text">'+issue.consequence+'</div></div>';
+      out+='<div class="res-oi"><div class="res-oi-dot fix"></div><div class="res-oi-text fix">'+issue.fix+'</div></div>';
+      out+='</div></div>';
+    });
+    out+='</div>';
+  }
+
+  // ── IN SHORT ──
+  out+='<div class="res-inshort">';
+  out+='<div class="res-inshort-tag">In short</div>';
+  out+='<div class="res-inshort-verdict">'+getScriptVerdict(scores,overall)+'</div>';
+  out+='<div class="res-inshort-body">'+getScriptVerdictSub(scores,overall,Object.keys(scores))+'</div>';
+  out+='</div>';
+
+  // ── ANNOTATED SCRIPT ──
+  out+='<div class="res-anno-section"><div class="res-anno-title">Annotated Script</div>';
+  paras.forEach(function(p){
+    if(!p.text||!p.text.trim())return;
+    var sc=scores[p.tag]||scoreText(p.tag,p.text);
+    var lv=scoreLevel(sc);
+    var fb=getParagraphFeedback(p.tag,p.text,sc);
+    var fbCls=sc>=70?'pos':sc<45?'neg':'';
+    out+='<div class="res-anno-block tag-'+p.tag+'">';
+    out+='<div class="res-anno-hd"><span class="res-anno-tag">'+(tagNames[p.tag]||p.tag)+'</span>';
+    out+='<span class="score-pill '+lv+'"><span class="score-pill-dot"></span>'+sc+'</span></div>';
+    out+='<div class="res-anno-text">'+escHtml(p.text)+'</div>';
+    out+='<div class="res-anno-fb '+fbCls+'">'+fb+'</div>';
+    out+='</div>';
   });
+  out+='</div>';
 
-  // Export row
-  var exportHTML='<div class="export-row"><button class="export-row-btn" onclick="openAsNewScript(\''+result.id+'\')"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>Open as New Script</button></div>';
+  // ── EXPORT ──
+  out+='<div style="display:flex;flex-direction:column;gap:8px;padding:16px 14px 28px;">';
+  out+='<button class="res-export-btn" onclick="downloadAnalysisResults()" style="width:100%;justify-content:center;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Download Report</button>';
+  out+='<button class="res-export-btn" onclick="openAsNewScript(\''+id+'\')" style="width:100%;justify-content:center;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>';
+  out+=(result.scriptId?'Open Script':'Open as New Script')+'</button>';
+  out+='</div>';
 
-  document.getElementById('resBody').innerHTML=gridHTML+annoHTML+exportHTML;
+  document.getElementById('resBody').innerHTML=out;
 }
 
 function getSectionNote(tag,sc){
@@ -1966,7 +2797,7 @@ function getSectionNote(tag,sc){
       low:'This does not give the viewer a reason to stay past the first few seconds.'
     },
     ctx:{
-      high:'Establishes credibility and promises clear value — viewer trust is building.',
+      high:'Establishes credibility and promises clear value viewer trust is building.',
       mid:'Credibility is present but the payoff for the viewer is not clearly defined.',
       low:'The viewer still does not know why your voice on this topic is worth their time.'
     },
@@ -1976,7 +2807,7 @@ function getSectionNote(tag,sc){
       low:'This section delays or diffuses the value the viewer came for.'
     },
     cta:{
-      high:'The ask is earned and specific — follow-through probability is high.',
+      high:'The ask is earned and specific follow-through probability is high.',
       mid:'The action is named but the viewer has not been given a strong reason to act.',
       low:'No clear direction. The viewer finishes the video and moves on.'
     },
@@ -1989,35 +2820,6 @@ function getSectionNote(tag,sc){
   return (notes[tag]&&notes[tag][scoreLevel(sc)])||'';
 }
 
-function getParagraphFeedback(tag,text,sc){
-  if(!text||text.trim().length<5)return 'No content written for this section.';
-  if(tag==='hook'){
-    if(sc>=70)return 'Strong hook. The opening grabs attention effectively.';
-    if(sc>=45)return 'Try opening with a question or a surprising statement to pull viewers in faster.';
-    return 'Your hook needs work. Start with tension, a question, or a bold claim to stop the scroll.';
-  }
-  if(tag==='ctx'){
-    if(sc>=70)return 'Good context. You\'ve established credibility and set up the value.';
-    if(sc>=45)return 'Add a specific number or personal experience to make the context more convincing.';
-    return 'Viewers need to know why you\'re qualified to talk about this. Add proof or a quick story.';
-  }
-  if(tag==='body'){
-    if(sc>=70)return 'Strong main body. Good substance and structure.';
-    if(sc>=45)return 'The body is solid. Try adding a specific example or data point to strengthen it.';
-    return 'The main body needs more depth. Add examples, data, or step-by-step guidance.';
-  }
-  if(tag==='cta'){
-    if(sc>=70)return 'Clear call to action. You\'ve told viewers exactly what to do.';
-    if(sc>=45)return 'CTA is present. Make the ask more specific and give them a reason to act.';
-    return 'Your CTA is missing or too vague. Tell viewers exactly what to do and why it matters.';
-  }
-  if(tag==='out'){
-    if(sc>=70)return 'Smooth outro. You\'ve closed the loop and kept momentum going.';
-    if(sc>=45)return 'Outro is okay. Try calling back to your opening to give viewers a satisfying close.';
-    return 'The outro feels abrupt. Summarise your key point and push viewers to the next video.';
-  }
-  return '';
-}
 
 function highlightText(text){
   // Highlight filler words in amber/red, strong words in green
@@ -2027,28 +2829,294 @@ function highlightText(text){
   return safe;
 }
 
+function scheduleRenderAnalyse(){setTimeout(renderAnalyse,0);}
+function renameAnalyseSession(id){
+  loadAnalyseHistory();
+  var h=S.analyseHistory.find(function(x){return x.id===id;});
+  if(!h)return;
+  openModal('_raw','<div class="mhandle"></div><div class="modal-title">Rename</div>'+
+    '<input class="modal-inp" id="renameAInp" value="'+escHtml(h.title||'')+'" placeholder="Script title" style="margin-bottom:12px;"/>'+
+    '<div class="modal-acts">'+
+    '<button class="btn-g" onclick="closeMoForce()">Cancel</button>'+
+    '<button class="btn-a active" onclick="event.stopPropagation();(function(){var v=document.getElementById(\'renameAInp\').value.trim();if(!v)return;loadAnalyseHistory();var hh=S.analyseHistory.find(function(x){return x.id===\''+id+'\';});if(hh){hh.title=v;saveAnalyseHistory();}closeMoForce();setTimeout(renderAnalyse,0);showToast(\'Renamed\',\'success\');})();">Save</button>'+
+    '</div>');
+  setTimeout(function(){var i=document.getElementById('renameAInp');if(i){i.focus();i.select();}},180);
+}
 function deleteAnalyseSession(id){
   loadAnalyseHistory();
   S.analyseHistory=S.analyseHistory.filter(function(h){return h.id!==id;});
   saveAnalyseHistory();
-  renderAnalyse();
+  setTimeout(renderAnalyse,0);
   showToast('Removed','default');
 }
 function openAsNewScript(resultId){
   loadAnalyseHistory();
   var result=S.analyseHistory.find(function(h){return h.id===resultId;});
   if(!result)return;
-  if(!isPro()&&S.scripts.length>=FREE_LIMIT){openProSheet();return;}
+  // If this analysis came from an existing script, just open that script
+  if(result.scriptId){
+    var existing=S.scripts.find(function(s){return s.id===result.scriptId;});
+    if(existing){
+      S.activeId=existing.id;
+      closeAnalyseResults();goScreen('write');
+      showToast('Opened in Write','success');
+      return;
+    }
+  }
+  // Otherwise create a new script from the pasted analysis
+  if(!isPro()&&S.scripts.length>=FREE_LIMIT){
+    showToast('10 script limit reached. Upgrade to Pro for unlimited scripts.','error');
+    return;
+  }
   var newId=uid();
-  var script={id:newId,title:result.title+' (from analysis)',status:'Draft',paragraphs:result.paragraphs.map(function(p){return {id:uid(),tag:p.tag,text:p.text,score:p.score};}),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),notes:{facts:[],ideas:[],links:[],notes:[]},lastScore:result.score};
+  var script={
+    id:newId,
+    title:result.title==='Pasted Script'?'Script from Analysis':result.title,
+    status:'Draft',
+    paragraphs:result.paragraphs.map(function(p){return {id:uid(),tag:p.tag,text:p.text,score:p.score};}),
+    createdAt:new Date().toISOString(),
+    updatedAt:new Date().toISOString(),
+    notes:{facts:[],ideas:[],links:[],notes:[]},
+    lastScore:result.score
+  };
   S.scripts.push(script);S.activeId=newId;save();syncToCloud();
   closeAnalyseResults();goScreen('write');
   showToast('Opened as new script','success');
 }
 
-function closeAnalyseResults(){document.getElementById('analyseResultsScreen').classList.add('hide');}
-</script>
-<script>
+function downloadAnalysisResults(){
+  loadAnalyseHistory();
+  var result=S.analyseHistory[S.analyseHistory.length-1];
+  if(!result)return;
+  var tagNames={hook:'Hook',ctx:'Context',body:'Main Body',cta:'CTA',out:'Outro'};
+  var lines=[result.title,'','Script Score: '+result.score+'/100','Date: '+new Date(result.date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}),''];
+  // Section scores
+  lines.push('Section Scores');
+  lines.push('');
+  Object.keys(result.sectionScores).forEach(function(tag){
+    if(result.sectionScores[tag]>0){
+      lines.push((tagNames[tag]||tag)+': '+result.sectionScores[tag]);
+    }
+  });
+  lines.push('');
+  lines.push('Feedback');
+  lines.push('');
+  // Annotated sections
+  (result.paragraphs||[]).filter(function(p){return p.text&&p.text.trim().length>0;}).forEach(function(p){
+    var sc=result.sectionScores[p.tag]||scoreText(p.tag,p.text);
+    var fb=getParagraphFeedback(p.tag,p.text,sc);
+    lines.push('['+( tagNames[p.tag]||p.tag)+']');
+    lines.push(p.text);
+    lines.push('');
+    lines.push('Feedback: '+fb);
+    lines.push('');
+  });
+  lines.push('');
+  lines.push('Generated by Scripora. scripora.vercel.app');
+  var txt=lines.join('\n');
+  var a=document.createElement('a');
+  a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(txt);
+  a.download=(result.title||'analysis').replace(/[^a-z0-9]/gi,'_')+'_analysis.txt';
+  a.style.cssText='position:fixed;top:0;left:0;opacity:0;';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){document.body.removeChild(a);},200);
+  showToast('Analysis downloaded','success');
+}
+// ── Help page ──
+function openHelp(){
+  document.getElementById('helpScreen').classList.remove('hide');
+  switchHelpTab('start');
+}
+function closeHelp(){
+  document.getElementById('helpScreen').classList.add('hide');
+}
+function switchHelpTab(tab){
+  ['start','write','analyse','account'].forEach(function(t){
+    var btn=document.getElementById('htab-'+t);
+    if(btn)btn.classList.toggle('on',t===tab);
+  });
+  document.getElementById('helpBody').innerHTML=renderHelpContent(tab);
+}
+function toggleHelpItem(el){
+  el.closest('.help-item').classList.toggle('open');
+}
+function renderHelpContent(tab){
+  var secs=getHelpSections(tab);
+  return secs.map(function(s){
+    return '<div class="help-section"><div class="help-section-title">'+s.title+'</div>'+
+      s.items.map(function(item){
+        return '<div class="help-item">'+
+          '<div class="help-item-hd" onclick="toggleHelpItem(this)">'+
+          '<span class="help-item-q">'+item.q+'</span>'+
+          '<svg class="help-item-chev" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>'+
+          '</div><div class="help-item-a">'+item.a+'</div></div>';
+      }).join('')+'</div>';
+  }).join('');
+}
+function getHelpSections(tab){
+  if(tab==='start')return [
+    {title:'Welcome',items:[
+      {q:'What is Scripora?',a:'Scripora is a script planning app for YouTube creators. It helps you structure your Hook, Context, Main Body, CTA and Outro, then analyses what each section does to viewer attention.'},
+      {q:'How do I create my first script?',a:'Go to the Scripts tab and tap the + button at the top right. Give your script a title and you will be taken straight to the Write tab.'},
+      {q:'Do I need to sign in?',a:'No. You can write and save scripts without an account. Sign in with Google to back up your scripts to the cloud and access them on any device.'},
+      {q:'What does the score mean?',a:'Each section is scored on signals the engine detects: tension, credibility, pacing, direction and reward. A score above 70 is strong. Below 45 needs work. The overall score is a weighted average across all sections.'}
+    ]},
+    {title:'Script Structure',items:[
+      {q:'What are Hook, Context, Body, CTA and Outro?',a:'These are the five sections of a YouTube script. Hook grabs attention in the first few seconds. Context builds credibility and sets the promise. Main Body delivers the value. CTA directs the viewer. Outro closes the loop and sends them forward.'},
+      {q:'Do I have to use all five sections?',a:'No. The engine works with whatever sections you have. A complete script with all five gets the most detailed analysis.'}
+    ]}
+  ];
+  if(tab==='write')return [
+    {title:'Writing',items:[
+      {q:'How do I add sections?',a:'Tap the + button at the bottom of the Write screen. Choose a tag (Hook, Context etc) and type your paragraph.'},
+      {q:'Can I reorder sections?',a:'Yes. Each paragraph has up and down arrows to move it.'},
+      {q:'What is the Notes drawer?',a:'Tap the clipboard icon in the Write header to open a notes drawer with four tabs: Facts, Ideas, Links and Notes. Use it to store research and reference material while writing.'},
+      {q:'What does the chart icon do?',a:'The chart icon opens a condensed Script Report drawer showing your last analysis result for this script, including top issues and the fix for each one.'},
+      {q:'How do I rename a script?',a:'Tap the script title at the top of the Write screen to rename it.'}
+    ]},
+    {title:'Export',items:[
+      {q:'How do I copy my script?',a:'Tap the eye icon in the Write header to open View Script. From there you can copy the full text or download it as a plain text file.'},
+      {q:'What is Portfolio export?',a:'Portfolio is a Pro feature that exports your script as a formatted HTML document with colour-coded sections.'}
+    ]}
+  ];
+  if(tab==='analyse')return [
+    {title:'Using the Analyser',items:[
+      {q:'How does the analyser work?',a:'Paste your script text and tap Analyse. The engine reads every sentence and detects signals across five categories: tension, credibility, pacing, direction and reward. It maps them onto an attention timeline and generates a full report.'},
+      {q:'What is the Attention Curve?',a:'The curve shows how viewer engagement is predicted to move through your script. Green bars mean attention is rising. Grey is neutral. Red signals a risk point where viewers may drop off.'},
+      {q:'What is Pace Variance?',a:'Pace variance measures how much your sentence lengths vary. Above 4 means good rhythm. Below 2 means uniform sentence length, which creates a flat, hard-to-follow experience.'},
+      {q:'What is Insight Density?',a:'Insight density counts new insights per 100 words. It measures how often you reward the viewer with something new. Low density means repetition without escalation.'},
+      {q:'What are Failure Patterns?',a:'Failure patterns are named archetypes describing a common structural mistake. Examples: Early Payoff Trap means the hook resolves itself. Creator Diary means the script opens with the creator rather than the viewer. Flatline Pacing means uniform sentence length throughout.'},
+      {q:'Can I rename an analysis?',a:'Yes. Tap the edit icon on any history card, or tap the title on a results page.'}
+    ]},
+    {title:'History',items:[
+      {q:'How do I find an old analysis?',a:'Use the search bar above your recent sessions. It filters by script title in real time.'},
+      {q:'Can I open an analysed script in Write?',a:'Yes. On any result page, tap Open Script or Open as New Script to bring it into the Write tab.'}
+    ]}
+  ];
+  if(tab==='account')return [
+    {title:'Account and Sync',items:[
+      {q:'How does cloud sync work?',a:'When signed in, your scripts sync automatically after every change. You can access them from any device by signing in with the same Google account.'},
+      {q:'What is Scripora Pro?',a:'Pro unlocks unlimited scripts (free tier has 10), Portfolio export, and future features including the AI writing assistant and advanced analytics.'},
+      {q:'How do I unlock Pro?',a:'Go to Profile and enter a promo code in the Pro section, or purchase through the link provided.'},
+      {q:'How do I delete my account?',a:'Go to Profile, scroll to the bottom, tap Delete Account, and type DELETE to confirm. This removes all your data permanently.'}
+    ]},
+    {title:'Privacy',items:[
+      {q:'What data does Scripora store?',a:'Your scripts and analysis history are stored locally on your device and optionally synced to Firebase if you are signed in. Scripora does not sell or share your data.'},
+      {q:'Does Scripora use AI?',a:'The analysis engine is rule-based and runs entirely in your browser. No script content is sent to any server. An AI layer using the Claude API is planned as a Pro feature in a future update.'}
+    ]}
+  ];
+  return [];
+}
+
+// ── Report Drawer ──
+function openReportDrawer(){
+  var script=getActive();
+  if(!script){showToast('Open a script first','error');return;}
+  loadAnalyseHistory();
+  var report=null;
+  for(var i=S.analyseHistory.length-1;i>=0;i--){
+    if(S.analyseHistory[i].scriptId===script.id){report=S.analyseHistory[i];break;}
+  }
+  if(!report){
+    // Generate live analysis from current paragraphs
+    var intel=analyseScript(script.paragraphs);
+    report={id:'live',title:script.title,date:new Date().toISOString(),
+      score:intel.overall,sectionScores:intel.sectionScores,
+      paragraphs:script.paragraphs,scriptId:script.id};
+  }
+  var body=document.getElementById('reportDrawerBody');
+  if(body)body.innerHTML=renderReportDrawerContent(report,script);
+  document.getElementById('reportDrawer').classList.remove('hide');
+  document.getElementById('rdov').classList.remove('hide');
+}
+function showStatHelp(type){
+  var helps={
+    curve:'The attention curve tracks predicted viewer engagement across your script in 10 time buckets. Green means rising attention, grey is neutral, red signals a drop-off risk.',
+    pace:'Pace variance measures how much your sentence lengths vary. Above 4 means good rhythm. Below 2 means flat pacing.',
+    insight:'Insight density counts new insights per 100 words. Low means repetition without escalation.'
+  };
+  openModal('_raw','<div class="mhandle"></div><div class="modal-title" style="font-size:.9rem;">About this stat</div><p style="font-size:.78rem;color:var(--muted);line-height:1.65;margin-bottom:16px;">'+(helps[type]||'')+'</p><button class="btn-g" onclick="closeMoForce()">Got it</button>');
+}
+function closeReportDrawer(){
+  document.getElementById('reportDrawer').classList.add('hide');
+  document.getElementById('rdov').classList.add('hide');
+}
+function renderReportDrawerContent(report,script){
+  var intel=analyseScript(report.paragraphs||script.paragraphs||[]);
+  var scores=intel.sectionScores;
+  var overall=intel.overall||report.score||0;
+  var level=scoreLevel(overall);
+  var colMap={high:'var(--s-high)',mid:'var(--s-mid)',low:'var(--s-low)'};
+  var col=colMap[level]||'var(--muted)';
+  var out='';
+  out+='<div style="display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:12px;">';
+  out+='<div style="font-family:\'Playfair Display\',serif;font-size:2.2rem;font-weight:700;color:'+col+';">'+overall+'</div>';
+  out+='<div><div style="font-size:.82rem;font-weight:600;color:var(--text);">'+getScriptVerdict(scores,overall)+'</div>';
+  out+='<div style="font-size:.66rem;color:var(--muted);margin-top:2px;">'+new Date(report.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'})+'</div></div></div>';
+  if(intel.issues&&intel.issues.length){
+    out+='<div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;">Top Issues</div>';
+    intel.issues.forEach(function(issue){
+      out+='<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;">';
+      out+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">';
+      out+='<span style="font-size:.66rem;font-weight:700;color:var(--text);">'+issue.section+'</span>';
+      var ic=issue.impact==='high'?'background:rgba(139,58,58,.15);color:var(--s-low)':'background:var(--s-mid-bg);color:var(--s-mid)';
+      out+='<span style="font-size:.56rem;font-weight:700;padding:2px 6px;border-radius:20px;'+ic+'">'+(issue.impact==='high'?'High':'Medium')+' impact</span></div>';
+      out+='<div style="font-size:.74rem;color:var(--text);line-height:1.55;margin-bottom:4px;">'+issue.observation+'</div>';
+      out+='<div style="font-size:.72rem;color:var(--s-high);line-height:1.55;">'+issue.fix+'</div>';
+      out+='</div>';
+    });
+  }
+  if(intel.failurePatterns&&intel.failurePatterns.length){
+    var fp=intel.failurePatterns[0];
+    out+='<div style="border:1px solid rgba(192,90,90,.2);border-radius:10px;padding:10px 12px;background:rgba(139,58,58,.06);margin-bottom:8px;">';
+    out+='<div style="font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--s-low);margin-bottom:3px;">Pattern detected</div>';
+    out+='<div style="font-size:.8rem;font-weight:700;color:var(--text);margin-bottom:3px;">'+fp.name+'</div>';
+    out+='<div style="font-size:.7rem;color:var(--muted);line-height:1.55;">'+fp.desc+'</div></div>';
+  }
+  out+='<button onclick="closeReportDrawer();goScreen(\'hub\');" class="btn-a active" style="width:100%;margin-top:6px;">Full Report</button>';
+  return out;
+}
+
+// ── Onboarding ──
+var _obSlide=0;
+var _obData=[
+  {icon:'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z',title:'Write with structure',body:'Every great YouTube video starts with a script. Scripora gives you five building blocks: Hook, Context, Main Body, CTA and Outro. Each one has a job. Together they hold the viewer from open to close.'},
+  {icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',title:'Understand what your script does',body:'The Analyse tab reads your script sentence by sentence and maps it as a viewer attention timeline. You see where attention spikes, where it drops, and exactly what to fix before you film.'},
+  {icon:'M13 10V3L4 14h7v7l9-11h-7z',title:'Write with intention',body:'Scripora does not check grammar or count keywords. It simulates what a viewer experiences, second by second, and tells you what happens if you do not change it.'}
+];
+function initOnboarding(){
+  var seen=localStorage.getItem('sp_ob');
+  if(seen)return;
+  _obSlide=0;
+  showOnboardSlide(0);
+  document.getElementById('onboardScreen').classList.remove('hide');
+}
+function showOnboardSlide(n){
+  var d=_obData[n];
+  document.getElementById('obSlides').innerHTML=
+    '<div class="ob-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="'+d.icon+'"/></svg></div>'+
+    '<div class="ob-title">'+d.title+'</div>'+
+    '<div class="ob-body">'+d.body+'</div>';
+  [0,1,2].forEach(function(i){var dot=document.getElementById('od'+i);if(dot)dot.classList.toggle('on',i===n);});
+  var back=document.getElementById('obBack');
+  var next=document.getElementById('obNext');
+  if(back)back.style.display=n>0?'':'none';
+  if(next)next.textContent=n===_obData.length-1?'Get Started':'Next';
+}
+function obNext(){
+  if(_obSlide<_obData.length-1){_obSlide++;showOnboardSlide(_obSlide);}
+  else{localStorage.setItem('sp_ob','1');document.getElementById('onboardScreen').classList.add('hide');}
+}
+function obPrev(){if(_obSlide>0){_obSlide--;showOnboardSlide(_obSlide);}}
+
+function closeAnalyseResults(){
+  document.getElementById('analyseResultsScreen').classList.add('hide');
+  // Re-render analyse tab so history shows new session without refresh
+  if(S.activeHubTab==='analyse'){
+    setTimeout(renderAnalyse,0);
+  }
+}
+
 // ── Profile ──
 function renderProfile(){
   var el=document.getElementById('profileContent');
@@ -2114,23 +3182,10 @@ function renderProfile(){
 
   // Up Next
   html+='<div class="prof-sec">Up Next</div>';
-  html+='<div class="upnext-box">'+
-    '<div class="upnext-tag">Coming Next</div>'+
-    '<div class="upnext-item">Script Analyser</div>'+
-    '<div class="upnext-desc">Score your Hook, flow and CTA. See exactly where your script loses attention before you film.</div>'+
-    '<div class="upnext-horizon"><div class="upnext-hlbl">On the horizon</div>'+
-    '<div class="upnext-hitem"><div class="upnext-hdot"></div>AI Writing Assistant</div>'+
-    '<div class="upnext-hitem"><div class="upnext-hdot"></div>Advanced Score Trends</div>'+
-    '<div class="upnext-hitem" style="color:var(--faint)"><div class="upnext-hdot"></div>and more...</div>'+
-    '</div></div>';
-
-  // Support
-  html+='<div class="prof-sec">Support</div>';
-  html+='<div class="prof-row" onclick="openModal(\'contact\')">'+
-    '<div class="prof-row-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>'+
-    '<div class="prof-row-info"><div class="prof-row-lbl">Contact Developer</div></div>'+
+  html+='<div class="prof-row" onclick="openHelp()">'+
+    '<div class="prof-row-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.12 2.6-2.842 3.183C12.405 13.546 12 14.02 12 14.5V15m0 3.5v.5"/><circle cx="12" cy="12" r="10"/></svg></div>'+
+    '<div class="prof-row-info"><div class="prof-row-lbl">Help &amp; Guide</div><div class="prof-row-sub">How Scripora works, features and tips</div></div>'+
     '<div class="prof-row-right"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div>';
-
   // Sign out / delete
   html+='<div style="height:16px;"></div>';
   html+='<div class="signout-row" onclick="signOut()">'+
@@ -2141,7 +3196,7 @@ function renderProfile(){
     '<div class="signout-lbl" style="color:var(--faint);font-size:.78rem;">Delete Account</div></div>';
 
   html+='<div class="prof-btm"><span onclick="openModal(\'privacy\')">Privacy Policy</span><span class="prof-btm-dot">&middot;</span><span onclick="openModal(\'terms\')">Terms</span></div>';
-  html+='<div class="prof-version">Scripora v1.0 &nbsp;&middot;&nbsp; by Selerii</div>';
+  html+='<div class="prof-version">Scripora v3.4 &nbsp;&middot;&nbsp; by Selerii</div>';
   el.innerHTML=html;
 }
 
@@ -2151,8 +3206,8 @@ function signInGoogle(){
     var provider=new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(function(err){
       console.error(err);
-      if(err.code==='auth/popup-blocked'){showToast('Popup blocked — allow popups for this site','error');}
-      else if(err.code==='auth/network-request-failed'){showToast('No connection — try again when online','error');}
+      if(err.code==='auth/popup-blocked'){showToast('Popup blocked   allow popups for this site','error');}
+      else if(err.code==='auth/network-request-failed'){showToast('No connection   try again when online','error');}
       else{showToast('Sign-in failed','error');}
     });
   }catch(e){showToast('Sign-in unavailable in this environment','error');}
@@ -2170,11 +3225,16 @@ function doSignOut(){
   auth.signOut().then(function(){S.currentUser=null;S.isGuest=false;closeMo();showLogin();showToast('Signed out','default');}).catch(function(){showToast('Error signing out','error');});
 }
 function showLogin(){document.getElementById('loginScreen').classList.remove('hide');document.getElementById('app').classList.add('hide');}
-function showApp(){S.appShown=true;document.getElementById('loginScreen').classList.add('hide');document.getElementById('app').classList.remove('hide');goScreen('scripts');}
-</script>
-<script>
+function showApp(){S.appShown=true;setTimeout(initOnboarding,800);document.getElementById('loginScreen').classList.add('hide');document.getElementById('app').classList.remove('hide');goScreen('scripts');}
+
 // ── Modals ──
+function toggleAhSort(){S._ahSort=S._ahSort==='name'?'date':'name';openModal('allHistory');}
+function getAhSortLabel(){return (S._ahSort||'date')==='name'?'Sort: Name':'Sort: Date';}
+var _modalOpen=false;
 function openModal(type,data){
+  // Cancel any pending long-press timer
+  if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null;}
+  _modalOpen=true;
   var mo=document.getElementById('mo');
   var modal=document.getElementById('modal');
   var html='<div class="mhandle"></div>';
@@ -2231,13 +3291,24 @@ function openModal(type,data){
 
   if(type==='allHistory'){
     loadAnalyseHistory();
-    var histList=(S.analyseHistory||[]).slice().reverse().map(function(h){
+    var ahSort=S._ahSort||'date';
+    var ahQ=(S._ahQ||'').toLowerCase().trim();
+    var allH=(S.analyseHistory||[]).slice();
+    if(ahSort==='name')allH.sort(function(a,b){return (a.title||'').localeCompare(b.title||'');});
+    else allH.reverse();
+    if(ahQ)allH=allH.filter(function(h){return (h.title||'').toLowerCase().indexOf(ahQ)>=0;});
+    var histList=allH.map(function(h){
       return '<div class="history-card" onclick="closeMoForce();openAnalyseResult(\''+h.id+'\')">'+
         '<div class="hscore '+scoreLevel(h.score)+'">'+h.score+'</div>'+
         '<div class="hinfo"><div class="htitle">'+escHtml(h.title)+'</div><div class="hmeta">'+timeAgo(h.date)+'</div></div>'+
-        '<button class="pb-action" onclick="event.stopPropagation();deleteAnalyseSession(\''+h.id+'\');renderAnalyse();" title="Remove" style="color:var(--faint);padding:6px;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>';
+        '<button class="pb-action" onclick="event.stopPropagation();deleteAnalyseSession(\''+h.id+'\');scheduleRenderAnalyse();" title="Remove" style="color:var(--faint);padding:6px;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>';
     }).join('');
-    html+='<div class="modal-title">All Analyses</div>'+(histList||'<p style="font-size:.8rem;color:var(--muted);">No history yet.</p>')+
+    html+='<div class="modal-title">All Analyses</div>'+
+      '<div style="display:flex;gap:6px;margin-bottom:10px;">'+
+      '<input placeholder="Search..." oninput="S._ahQ=this.value;closeMoForce();openModal(\'allHistory\')" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.76rem;color:var(--text);"/>'+
+      '<button onclick="toggleAhSort()" style="padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:.7rem;color:var(--muted);white-space:nowrap;">'+getAhSortLabel()+'</button>'+
+      '</div>'+
+      (histList||'<p style="font-size:.8rem;color:var(--muted);">No history yet.</p>')+
       '<button class="btn-g" style="width:100%;margin-top:10px;" onclick="closeMo()">Close</button>';
     modal.innerHTML=html;mo.classList.add('open');return;
   }
@@ -2245,7 +3316,7 @@ function openModal(type,data){
   if(type==='themes'){
     var cards=THEMES.map(function(t){
       var active=currentThemeId()===t.id;
-      return '<div class="theme-card'+(active?' active':'')+'" onclick="applyTheme(\''+t.id+'\');closeMo();renderProfile();">'+
+      return '<div class="theme-card'+(active?' active':'')+'" onclick="applyTheme(\''+t.id+'\');closeMo();setTimeout(renderProfile,0);">'+
         '<div class="theme-preview" style="background:'+t.bg+';">'+
         '<div class="theme-bar" style="background:'+t.s2+'"></div>'+
         '<div class="theme-bar" style="background:'+t.s2+'"></div>'+
@@ -2315,46 +3386,46 @@ function openModal(type,data){
       '<div><div style="font-size:.8rem;font-weight:600;color:var(--text);">Context</div><div style="font-size:.72rem;color:var(--muted);line-height:1.55;">Why you are qualified to talk about this. One credential, one promise of what the viewer gets.</div></div></div>'+
       '<div style="display:flex;gap:10px;align-items:flex-start;">'+
       '<div style="width:22px;height:22px;border-radius:50%;background:var(--body-bg);border:1px solid var(--body-border);display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:var(--body-c);flex-shrink:0;margin-top:1px;">3</div>'+
-      '<div><div style="font-size:.8rem;font-weight:600;color:var(--text);">Main Body</div><div style="font-size:.72rem;color:var(--muted);line-height:1.55;">The value. Can be multiple paragraphs — each separated by a blank line.</div></div></div>'+
+      '<div><div style="font-size:.8rem;font-weight:600;color:var(--text);">Main Body</div><div style="font-size:.72rem;color:var(--muted);line-height:1.55;">The value. Can be multiple paragraphs   each separated by a blank line.</div></div></div>'+
       '<div style="display:flex;gap:10px;align-items:flex-start;">'+
       '<div style="width:22px;height:22px;border-radius:50%;background:var(--cta-bg);border:1px solid var(--cta-border);display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:var(--cta);flex-shrink:0;margin-top:1px;">4</div>'+
-      '<div><div style="font-size:.8rem;font-weight:600;color:var(--text);">CTA</div><div style="font-size:.72rem;color:var(--muted);line-height:1.55;">Your call to action. Subscribe, comment, watch next — with a reason.</div></div></div>'+
+      '<div><div style="font-size:.8rem;font-weight:600;color:var(--text);">CTA</div><div style="font-size:.72rem;color:var(--muted);line-height:1.55;">Your call to action. Subscribe, comment, watch next   with a reason.</div></div></div>'+
       '<div style="display:flex;gap:10px;align-items:flex-start;">'+
       '<div style="width:22px;height:22px;border-radius:50%;background:var(--out-bg);border:1px solid var(--out-border);display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:var(--out);flex-shrink:0;margin-top:1px;">5</div>'+
       '<div><div style="font-size:.8rem;font-weight:600;color:var(--text);">Outro</div><div style="font-size:.72rem;color:var(--muted);line-height:1.55;">Close the loop. Send the viewer somewhere. Make the ending feel earned.</div></div></div>'+
       '</div>'+
       '<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:.72rem;color:var(--muted);line-height:1.65;margin-bottom:16px;">'+
-      'Separate each section with a blank line. If your script is one block of text, paste it anyway — we will split and tag it automatically.'+
+      'Separate each section with a blank line. If your script is one block of text, paste it anyway   we will split and tag it automatically.'+
       '</div>'+
       '<button class="btn-p" onclick="closeMoForce()">Got it</button>';
     modal.innerHTML=html;mo.classList.add('open');return;
   }
 
   if(type==='privacy'){
-    html+='<div class="modal-title">Privacy Policy</div>'+
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div class="modal-title" style="margin-bottom:0;">Privacy Policy</div><button onclick="closeMoForce()" style="background:none;border:none;padding:4px;color:var(--muted);display:flex;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>'+
       '<div class="long-body">'+
       '<h4>What we collect</h4><p>When you sign in with Google, we collect your name, email address and profile photo to personalise your experience. Your scripts and writing session data are stored locally on your device. If you are signed in, this data is synced to our secure cloud storage (Google Firestore) so you can access it across devices.</p>'+
       '<h4>How we use your data</h4><p>Your data is used solely to provide and improve Scripora. We do not sell, licence or share your personal data with third parties. We do not use your script content for advertising, model training or any purpose beyond storage and delivery back to you.</p>'+
-      '<h4>Script analysis</h4><p>When you use the Analyse feature, your script text is sent to Anthropic&#39;s Claude API for structural analysis. This data is processed in transit and is subject to Anthropic&#39;s data handling policies. We do not store the analysis request beyond your local session history.</p>'+
-      '<h4>Analytics</h4><p>We use Google Analytics to understand aggregate usage patterns — which features are used, how often, and on what devices. This data is anonymous. Your script content is never included in analytics events.</p>'+
+      '<h4>Script analysis</h4><p>The Analyse feature uses a local rule-based engine that runs entirely in your browser. No script content is sent to any external server during analysis. An AI-assisted layer is planned for future Pro users and will be clearly disclosed when active.</p>'+
+      '<h4>Analytics</h4><p>We use Google Analytics to understand aggregate usage patterns   which features are used, how often, and on what devices. This data is anonymous. Your script content is never included in analytics events.</p>'+
       '<h4>Local storage</h4><p>Scripora stores your scripts, preferences and writing stats in your browser&#39;s local storage. This data does not leave your device unless you are signed in and syncing is active. Clearing your browser data will remove locally stored scripts.</p>'+
-      '<h4>Your rights</h4><p>You can delete your account and all associated cloud data at any time from Profile → Delete Account. Local data can be cleared through your browser or device settings. To request data deletion by email, contact us at hello@scripora.app.</p>'+
-      '<p style="font-size:.7rem;margin-top:12px;">Last updated: March 2026 &nbsp;&middot;&nbsp; Contact: hello@scripora.app</p>'+
+      '<h4>Your rights</h4><p>You can delete your account and all associated cloud data at any time from Profile → Delete Account. Local data can be cleared through your browser or device settings. To request data deletion by email, contact us at support@scripora.app.</p>'+
+      '<p style="font-size:.7rem;margin-top:12px;">Last updated: March 2026 &nbsp;&middot;&nbsp; Contact: support@scripora.app</p>'+
       '</div>';
     modal.innerHTML=html;mo.classList.add('open');return;
   }
 
   if(type==='terms'){
-    html+='<div class="modal-title">Terms of Use</div>'+
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div class="modal-title" style="margin-bottom:0;">Terms of Use</div><button onclick="closeMoForce()" style="background:none;border:none;padding:4px;color:var(--muted);display:flex;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>'+
       '<div class="long-body">'+
       '<h4>Using Scripora</h4><p>Scripora is a scriptwriting tool for YouTube creators. By using it you agree to these terms. You may use Scripora for personal and commercial creative work. You may not use it to produce content that is illegal, harmful, abusive or that infringes on the intellectual property rights of others.</p>'+
       '<h4>Your content</h4><p>You retain full ownership of everything you write in Scripora. By enabling cloud sync, you grant Selerii a limited, non-exclusive licence to store and transmit your content solely for the purpose of delivering it back to you. We do not claim any rights over your scripts.</p>'+
-      '<h4>Script scoring and analysis</h4><p><strong>Important notice:</strong> Script scores, structural analysis and all feedback provided by Scripora — whether generated by rule-based logic or AI assistance — are estimates based on language patterns and structural signals. They are not guarantees of video performance, audience retention or commercial outcomes. Scores should be used as guidance to support your creative decisions, not as definitive assessments of quality. Scripora is not responsible for outcomes resulting from reliance on score data.</p>'+
-      '<h4>AI-assisted features</h4><p>Scripora uses Anthropic&#39;s Claude API to assist with script analysis. AI-generated feedback is provided to support your judgement, not replace it. The quality and accuracy of AI analysis may vary. You are responsible for reviewing and acting on any feedback provided.</p>'+
-      '<h4>Pro membership</h4><p>Pro features are provided as described at the time of purchase via Gumroad. Pro is a one-time payment for lifetime access to current Pro features. We reserve the right to add, modify or remove features with reasonable notice. Refunds are handled on a case-by-case basis — contact hello@scripora.app within 14 days of purchase.</p>'+
+      '<h4>Script scoring and analysis</h4><p><strong>Important notice:</strong> Script scores, structural analysis and all feedback provided by Scripora   whether generated by rule-based logic or AI assistance   are estimates based on language patterns and structural signals. They are not guarantees of video performance, audience retention or commercial outcomes. Scores should be used as guidance to support your creative decisions, not as definitive assessments of quality. Scripora is not responsible for outcomes resulting from reliance on score data.</p>'+
+      '<h4>AI-assisted features</h4><p>Scripora uses a rule-based engine to analyse scripts. Feedback is generated from structural signals in your writing and is provided to support your creative decisions. A Claude API-powered layer is planned as a future Pro feature.</p>'+
+      '<h4>Pro membership</h4><p>Pro features are provided as described at the time of purchase via Gumroad. Pro is a one-time payment for lifetime access to current Pro features. We reserve the right to add, modify or remove features with reasonable notice. Refunds are handled on a case-by-case basis   contact support@scripora.app within 14 days of purchase.</p>'+
       '<h4>Account termination</h4><p>You may delete your account at any time from the Profile tab. We reserve the right to suspend accounts that violate these terms.</p>'+
       '<h4>Limitation of liability</h4><p>Scripora is provided as-is without warranties of any kind. Selerii is not liable for loss of data, loss of revenue, missed opportunities or any indirect damages arising from use of this app.</p>'+
-      '<p style="font-size:.7rem;margin-top:12px;">Last updated: March 2026 &nbsp;&middot;&nbsp; Contact: hello@scripora.app</p>'+
+      '<p style="font-size:.7rem;margin-top:12px;">Last updated: March 2026 &nbsp;&middot;&nbsp; Contact: support@scripora.app</p>'+
       '</div>';
     modal.innerHTML=html;mo.classList.add('open');return;
   }
@@ -2364,6 +3435,13 @@ function openModal(type,data){
 
 function closeMo(evt){
   if(evt&&evt.target!==document.getElementById('mo'))return;
+  _modalOpen=false;
+  document.getElementById('mo').classList.remove('open');
+}
+function closeMoTouch(evt){
+  if(!evt||evt.target!==document.getElementById('mo'))return;
+  evt.preventDefault();
+  _modalOpen=false;
   document.getElementById('mo').classList.remove('open');
 }
 function closeMoForce(){document.getElementById('mo').classList.remove('open');}
@@ -2382,7 +3460,7 @@ function createScript(){
   var id=uid();
   S.scripts.unshift({id:id,title:title,status:'Draft',paragraphs:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),notes:{facts:[],ideas:[],links:[],notes:[]},lastScore:null});
   S.activeId=id;save();syncToCloud();
-  closeMo();goScreen('write');
+  closeMoForce();goScreen('write');
   showToast('Script created','success');
   safeGtag('event','script_created');
 }
@@ -2392,7 +3470,7 @@ function addParagraph(tag){
   if(!script.paragraphs)script.paragraphs=[];
   script.paragraphs.push({id:uid(),tag:tag,text:'',score:0});
   script.updatedAt=new Date().toISOString();
-  save();renderWrite();
+  save();setTimeout(renderWrite,0);
   // Focus the new textarea
   setTimeout(function(){var tas=document.querySelectorAll('.pb-ta');if(tas.length)tas[tas.length-1].focus();},80);
 }
@@ -2405,7 +3483,7 @@ function saveNote(tab){
   if(!script.notes)script.notes={facts:[],ideas:[],links:[],notes:[]};
   if(!script.notes[tab])script.notes[tab]=[];
   script.notes[tab].push(val);
-  save();closeMo();renderDrawerTab();
+  save();closeMoForce();setTimeout(renderDrawerTab,0);
   showToast('Added','success');
 }
 
@@ -2417,14 +3495,14 @@ function saveLink(){
   if(!script.notes)script.notes={facts:[],ideas:[],links:[],notes:[]};
   if(!script.notes.links)script.notes.links=[];
   script.notes.links.push({url:url,label:label||url});
-  save();closeMo();renderDrawerTab();
+  save();closeMoForce();setTimeout(renderDrawerTab,0);
   showToast('Link added','success');
 }
 
 function saveProfile(){
   var name=(document.getElementById('editName')?document.getElementById('editName').value:'').trim();
   if(!name||!S.currentUser)return;
-  S.currentUser.updateProfile({displayName:name}).then(function(){closeMo();renderProfile();showToast('Profile updated','success');}).catch(function(){showToast('Update failed','error');});
+  S.currentUser.updateProfile({displayName:name}).then(function(){closeMo();setTimeout(renderProfile,0);showToast('Profile updated','success');}).catch(function(){showToast('Update failed','error');});
 }
 
 function sendContact(){
@@ -2432,14 +3510,15 @@ function sendContact(){
   var msg=document.getElementById('contactMsg')?document.getElementById('contactMsg').value.trim():'';
   if(!msg){showToast('Write a message first','error');return;}
   if(typeof emailjs==='undefined'){showToast('Email service unavailable','error');return;}
-  emailjs.init(EMAILJS_KEY);
+  if(typeof emailjs==='undefined'){showToast('Email service not loaded','error');return;}
+  emailjs.init({publicKey:EMAILJS_KEY});
   var user=S.currentUser;
   emailjs.send(EMAILJS_SVC,EMAILJS_TPL,{
     from_name:user?user.displayName:'Scripora User',
     from_email:user?user.email:'guest@scripora.app',
     message:'['+type+'] '+msg,
     reply_to:user?user.email:'no-reply@scripora.app'
-  }).then(function(){closeMo();showToast('Message sent — thank you!','success');}).catch(function(){showToast('Send failed. Try hello@scripora.app','error');});
+  }).then(function(){closeMo();showToast('Message sent   thank you!','success');}).catch(function(){showToast('Send failed. Try support@scripora.app','error');});
 }
 
 function deleteAccount(){
@@ -2454,7 +3533,7 @@ function deleteAccount(){
     showToast('Account deleted','default');
   }).catch(function(err){
     if(err.code==='auth/requires-recent-login'){showToast('Please sign out and sign in again first','error');}
-    else{showToast('Delete failed — contact hello@scripora.app','error');}
+    else{showToast('Delete failed   contact support@scripora.app','error');}
   });
 }
 
@@ -2475,7 +3554,7 @@ function openProSheet(){
       (f.tag?'<div class="pro-feat-tag">'+f.tag+'</div>':'')+
       '</div>';
   }).join('');
-  sheet.innerHTML='<div class="mhandle"></div>'+
+  sheet.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div class="mhandle" style="margin:0;"></div><button onclick="closeProSheet(null)" style="background:none;border:none;padding:4px;color:var(--muted);display:flex;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>'+
     '<div style="font-family:\'Playfair Display\',serif;font-size:1.1rem;color:var(--text);margin-bottom:4px;">Scripora Pro</div>'+
     '<div style="font-size:.74rem;color:var(--muted);margin-bottom:16px;">Everything you need to write with intention.</div>'+
     '<div class="pro-features">'+featHTML+'</div>'+
@@ -2485,10 +3564,9 @@ function openProSheet(){
     '<div style="font-size:.62rem;color:var(--faint);text-align:center;margin-top:10px;">Secure payment via Gumroad. No subscription.</div>';
   ov.classList.add('open');
 }
-function closeProSheet(evt){if(evt&&evt.target!==document.getElementById('proSheetOv'))return;document.getElementById('proSheetOv').classList.remove('open');}
+function closeProSheet(evt){if(evt!==null&&evt&&evt.target!==document.getElementById('proSheetOv'))return;document.getElementById('proSheetOv').classList.remove('open');}
 function openGumroad(){window.open('https://selerii.gumroad.com/l/scripora-pro','_blank');}
-</script>
-<script>
+
 // ── Firebase Auth listener ──
 if(auth){
   auth.onAuthStateChanged(function(user){
@@ -2512,7 +3590,7 @@ if(auth){
 }
 
 // ── Init ──
-// ── PWA Install — silent capture, profile button only ──
+// ── PWA Install   silent capture, profile button only ──
 var pwaInstallPrompt=null;
 window.addEventListener('beforeinstallprompt',function(e){
   e.preventDefault();
@@ -2552,6 +3630,5 @@ function dismissPWA(){}
   },3000);
 })();
 </script>
-
 </body>
 </html>
