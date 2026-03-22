@@ -3,18 +3,47 @@
   "short_name": "Scripora",
   "description": "Write with intention. Plan, structure and score your YouTube scripts.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#12161F",
   "theme_color": "#12161F",
   "orientation": "portrait-primary",
   "lang": "en-GB",
-  "categories": ["productivity", "utilities"],
-  "icons": [
-    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
-    {"src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml"}
+  "categories": [
+    "productivity",
+    "utilities"
   ],
-  "screenshots": [],
-  "related_applications": [],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
   "prefer_related_applications": false
 }
