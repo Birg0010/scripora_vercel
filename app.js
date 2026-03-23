@@ -12,8 +12,7 @@ var THEMES=[
   {id:'obsidian',name:'Obsidian',cls:'theme-obsidian',bg:'#0D0D0D',s2:'#181818',ac:'#C9962A',tx:'#F0EBE3',desc:'Pure black with amber gold.'},
   {id:'slate',name:'Slate',cls:'theme-slate',bg:'#1A1C20',s2:'#24272D',ac:'#7B9FD4',tx:'#DCE4F0',desc:'Cool grey with steel blue.'},
   {id:'rouge',name:'Rouge',cls:'theme-rouge',bg:'#1A1218',s2:'#251C22',ac:'#C4657A',tx:'#F0E8EC',desc:'Dark plum with rose.'},
-  {id:'forest',name:'Forest',cls:'theme-forest',bg:'#111A14',s2:'#182019',ac:'#5A9E6F',tx:'#E0EDDF',desc:'Deep green editorial.'},
-  {id:'parchment',name:'Parchment',cls:'theme-parchment',bg:'#F7F4EE',s2:'#EDE9E1',ac:'#8B5E3C',tx:'#2A221A',desc:'Warm cream. Light mode.'}
+  {id:'forest',name:'Forest',cls:'theme-forest',bg:'#111A14',s2:'#182019',ac:'#5A9E6F',tx:'#E0EDDF',desc:'Deep green editorial.'}
 ];
 
 var TAGS={
@@ -24,7 +23,7 @@ var TAGS={
   out:{label:'Outro',cls:'tag-out',color:'#8A6AC9'}
 };
 
-var S={scripts:[],activeId:null,currentUser:null,isGuest:false,appShown:false,activeHubTab:'stats',statsFilter:'all',drawerTab:'facts',analyseHistory:[],hubPillOpen:false,bulkMode:false,bulkSelected:[],analysing:false};
+var S={scripts:[],activeId:null,currentUser:null,isGuest:false,appShown:false,activeHubTab:'stats',statsFilter:'all',drawerTab:'facts',analyseHistory:[],hubPillOpen:false,bulkMode:false,bulkSelected:[],analysing:false,syncEnabled:false,_liveIntel:null,_currentResultId:null,_aSearch:'',_ahSort:'date',_ahQ:'',_pasteTitle:''};
 
 
 // ── Firebase init   wrapped so offline/CDN failure can't break the app ──
@@ -1065,14 +1064,18 @@ function saveScriptTitle(){
   setTimeout(renderScripts,0);
   showToast('Renamed','success');
 }
-function analyseCurrentScript(btn){
-  showToast('Section scoring coming soon','default');
-}
+
 function autoResize(ta){ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';}
 
+var _liveSyncTimer=null;
 function liveScore(pid,tag,text){
   var wcel=document.getElementById('wc_'+pid);
   if(wcel)wcel.textContent=wordCount(text)+' words';
+  // Debounced live sync - only if Pro and enabled
+  if(S.syncEnabled&&isPro()){
+    if(_liveSyncTimer)clearTimeout(_liveSyncTimer);
+    _liveSyncTimer=setTimeout(runLiveSync,1500);
+  }
 }
 
 function saveParagraph(pid,text){
@@ -1168,17 +1171,20 @@ function deleteNote(tab,idx){
 // ── View Script ──
 function openViewScript(){
   var script=getActive();if(!script)return;
-  document.getElementById('viewScriptScreen').classList.remove('hide');
   document.getElementById('viewTitle').textContent=script.title;
-  var wc=totalWords(script),pc=(script.paragraphs||[]).length,mins=Math.max(1,Math.round(wc/130));
-  document.getElementById('viewMeta').innerHTML=wc+' words <div class="view-meta-dot"></div> '+pc+' section'+(pc===1?'':'s')+' <div class="view-meta-dot"></div> ~'+mins+' min read';
-  var html='<div class="view-script-title">'+escHtml(script.title)+'</div>';
+  var wct=totalWords(script),pc=(script.paragraphs||[]).length,mins=Math.max(1,Math.round(wct/130));
+  document.getElementById('viewMeta').innerHTML=wct+' words <div class="view-meta-dot"></div> '+pc+' section'+(pc===1?'':'s')+' <div class="view-meta-dot"></div> ~'+mins+' min read';
+  var out='<div class="view-script-title">'+escHtml(script.title)+'</div>';
   (script.paragraphs||[]).forEach(function(p){
     var barCls=p.tag==='body'?'body-t':p.tag;
-    html+='<div class="view-section"><div class="view-bar '+barCls+'"></div><div class="view-para">'+escHtml(p.text)+'</div></div>';
+    out+='<div class="view-section"><div class="view-bar '+barCls+'"></div><div class="view-para">'+escHtml(p.text)+'</div></div>';
   });
-  html+='<div class="view-footer"><span>Scripora</span><span>scripora.app</span></div>';
-  document.getElementById('viewBody').innerHTML=html;
+  out+='<div class="view-footer"><span>Scripora</span><span>scripora.app</span></div>';
+  document.getElementById('viewBody').innerHTML=out;
+  // Show screen AFTER content is ready
+  setTimeout(function(){
+    document.getElementById('viewScriptScreen').classList.remove('hide');
+  },0);
 }
 function closeViewScript(){document.getElementById('viewScriptScreen').classList.add('hide');}
 
@@ -1214,7 +1220,6 @@ function downloadScript(){
 function openPortfolio(){
   if(!isPro()){openProSheet();return;}
   var script=getActive();if(!script)return;
-  document.getElementById('portfolioScreen').classList.remove('hide');
   document.getElementById('portTitle').textContent=script.title;
   var wc=totalWords(script),mins=Math.max(1,Math.round(wc/130));
   var email=S.currentUser?S.currentUser.email:'';
@@ -1237,6 +1242,7 @@ function openPortfolio(){
     '<div class="port-script-body"><div class="port-script-lbl">Script</div>'+prevParas+'</div></div>'+
     '<p class="port-info">A beautifully designed document ready to share with brands, sponsors and collaborators.</p>'+
     '<button class="port-export-btn" onclick="exportPortfolio()"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Export Portfolio</button>';
+  setTimeout(function(){document.getElementById('portfolioScreen').classList.remove('hide');},0);
 }
 function closePortfolio(){document.getElementById('portfolioScreen').classList.add('hide');}
 
@@ -1445,6 +1451,7 @@ function renderAnalyse(){
     var recent=filtered.slice(-3).reverse();
     el.innerHTML='<div class="analyse-compact-card">'+
       '<div class="analyse-compact-title" style="display:flex;align-items:center;gap:6px;">Analyse a script<button onclick="openModal(\'analyseHelp\')" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:15px;height:15px;color:var(--muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.12 2.6-2.842 3.183C12.405 13.546 12 14.02 12 14.5V15m0 3.5v.5"/><circle cx="12" cy="12" r="10"/></svg></button></div>'+
+      '<input id="pasteTitle" placeholder="Script title (optional)" style="display:block;width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:.78rem;color:var(--text);margin-bottom:7px;outline:none;"/>'+
       '<textarea class="paste-area" id="pasteArea" placeholder="Paste script text..." rows="3"></textarea>'+
       '<div class="analyse-btns">'+
       '<button class="abtn-p" onclick="runAnalyseFromPaste()">Analyse</button>'+
@@ -1600,11 +1607,15 @@ function openAnalyseResult(id){
   loadAnalyseHistory();
   var result=S.analyseHistory.find(function(h){return h.id===id;});
   if(!result)return;
-  document.getElementById('analyseResultsScreen').classList.remove('hide');
-  document.getElementById('resTitle').textContent=result.title||'Analysis';
-  document.getElementById('resDate').textContent=result.date?new Date(result.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
+  S._currentResultId=id;
 
-  // Run full intelligence analysis
+  document.getElementById('analyseResultsScreen').classList.remove('hide');
+  var titleEl=document.getElementById('resTitle');
+  if(titleEl)titleEl.textContent=result.title||'Analysis';
+  var dateEl=document.getElementById('resDate');
+  if(dateEl)dateEl.textContent=result.date?new Date(result.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
+
+  // Run full intelligence
   var paras=result.paragraphs||[];
   var intel=analyseScript(paras);
   var scores=intel.sectionScores;
@@ -1613,122 +1624,206 @@ function openAnalyseResult(id){
   var tagNames={hook:'Hook',ctx:'Context',body:'Main Body',cta:'CTA',out:'Outro'};
   var tagOrder=['hook','ctx','body','cta','out'];
 
-  var out='';
-
-  // ── HERO: score ring + verdict ──
-  var circ=Math.PI*2*28; // r=28
+  // Build all three panels
+  var circ=Math.PI*2*28;
   var fill=Math.round(circ*(1-overall/100)*10)/10;
-  out+='<div class="res-hero">';
-  out+='<div class="res-hero-top">';
-  out+='<div class="res-score-ring">';
-  out+='<svg viewBox="0 0 72 72"><circle class="res-ring-track" cx="36" cy="36" r="28"/>';
-  out+='<circle class="res-ring-fill '+level+'" cx="36" cy="36" r="28" stroke-dasharray="'+circ+'" stroke-dashoffset="'+fill+'"/></svg>';
-  out+='<div class="res-score-num"><span class="res-score-val '+level+'">'+overall+'</span><span class="res-score-lbl">score</span></div>';
-  out+='</div>';
-  out+='<div class="res-hero-info">';
-  out+='<div class="res-verdict">'+getScriptVerdict(scores,overall)+'</div>';
-  out+='</div></div>';
+  var colMap={high:'var(--s-high)',mid:'var(--s-mid)',low:'var(--s-low)'};
+  var col=colMap[level];
 
-  // Section bars
-  out+='<div class="res-section-bars">';
+  // ── HERO (shared across all tabs) ──
+  var hero='<div class="res-hero">';
+  hero+='<div class="res-hero-top">';
+  hero+='<div class="res-score-ring"><svg viewBox="0 0 72 72"><circle class="res-ring-track" cx="36" cy="36" r="28"/>';
+  hero+='<circle class="res-ring-fill '+level+'" cx="36" cy="36" r="28" stroke-dasharray="'+circ+'" stroke-dashoffset="'+fill+'"/></svg>';
+  hero+='<div class="res-score-num"><span class="res-score-val '+level+'">'+overall+'</span><span class="res-score-lbl">score</span></div></div>';
+  hero+='<div class="res-hero-info"><div class="res-verdict">'+getScriptVerdict(scores,overall)+'</div>';
+  hero+='<div class="res-summary">'+getScriptVerdictSub(scores,overall,Object.keys(scores))+'</div></div></div>';
+  hero+='<div class="res-section-bars">';
   tagOrder.forEach(function(tag){
     var sc=scores[tag];
     if(!sc&&sc!==0)return;
     if(!paras.find(function(p){return p.tag===tag;}))return;
     var lv=scoreLevel(sc);
-    out+='<div class="res-sbar">';
-    out+='<span class="res-sbar-name">'+tagNames[tag]+'</span>';
-    out+='<div class="res-sbar-track"><div class="res-sbar-fill '+lv+'" style="width:'+sc+'%"></div></div>';
-    out+='<span class="res-sbar-val '+lv+'">'+sc+'</span>';
-    out+='</div>';
+    hero+='<div class="res-sbar"><span class="res-sbar-name">'+tagNames[tag]+'</span>';
+    hero+='<div class="res-sbar-track"><div class="res-sbar-fill '+lv+'" style="width:'+sc+'%"></div></div>';
+    hero+='<span class="res-sbar-val '+lv+'">'+sc+'</span></div>';
   });
-  out+='</div></div>';
+  hero+='</div></div>';
 
-  // ── ATTENTION CURVE ──
-  out+='<div class="res-curve-card">';
-  out+='<div class="res-card-title" style="display:flex;align-items:center;gap:5px;">Attention Curve<button onclick="showStatHelp(\'curve\')" style="background:none;border:none;padding:0 2px;cursor:pointer;color:var(--faint);font-size:.65rem;">[?]</button></div>';
-  out+='<div class="res-curve">';
+  // ── OVERVIEW PANEL ──
+  var ov=hero;
+
+  // Top issue
+  if(intel.issues&&intel.issues.length){
+    var issue=intel.issues[0];
+    ov+='<div class="top-issue-card">';
+    ov+='<div class="top-issue-hd"><span class="tih-label">Top Issue</span><span class="tih-section">'+issue.section+'</span>';
+    ov+='<span class="tih-impact '+issue.impact+'">'+issue.impact+' impact</span></div>';
+    ov+='<div class="tih-body">';
+    ov+='<div class="tih-row"><div class="tih-dot obs"></div><div class="tih-text obs">'+issue.observation+'</div></div>';
+    ov+='<div class="tih-row"><div class="tih-dot cons"></div><div class="tih-text">'+issue.consequence+'</div></div>';
+    ov+='<div class="tih-row"><div class="tih-dot fix"></div><div class="tih-text fix">'+issue.fix+'</div></div>';
+    ov+='</div></div>';
+  }
+
+  // Attention curve
+  ov+='<div class="res-curve-card"><div class="res-card-title" style="display:flex;align-items:center;gap:5px;">Attention Curve';
+  ov+='<button onclick="showStatHelp(\'curve\')" style="background:none;border:none;color:var(--faint);font-size:.6rem;cursor:pointer;">[?]</button></div>';
+  ov+='<div class="res-curve">';
   var curve=intel.curve||[];
   var maxAbs=Math.max(0.1,Math.max.apply(null,curve.map(function(v){return Math.abs(v);})));
-  curve.forEach(function(v,i){
+  curve.forEach(function(v){
     var pct=Math.round(((v+maxAbs)/(maxAbs*2))*100);
     var h=Math.max(8,Math.round((pct/100)*48));
     var cls=v>0.3?'pos':v<-0.3?'neg':'neu';
-    out+='<div class="res-curve-bar '+cls+'" style="height:'+h+'px" title="'+(i*10)+'%: '+v+'"></div>';
+    ov+='<div class="res-curve-bar '+cls+'" style="height:'+h+'px"></div>';
   });
-  out+='</div>';
-  out+='<div class="res-curve-labels"><span class="res-curve-lbl">0%</span><span class="res-curve-lbl">50%</span><span class="res-curve-lbl">100%</span></div>';
-  out+='</div>';
+  ov+='</div><div class="res-curve-labels"><span class="res-curve-lbl">0%</span><span class="res-curve-lbl">50%</span><span class="res-curve-lbl">100%</span></div></div>';
 
-  // ── STATS ROW ──
-  out+='<div class="res-stats-row">';
-  out+='<div class="res-stat-chip"><div class="res-stat-num">'+intel.totalWords+'</div><div class="res-stat-lbl">Words</div></div>';
-  out+='<div class="res-stat-chip"><div class="res-stat-num">'+intel.totalSentences+'</div><div class="res-stat-lbl">Sentences</div></div>';
-  out+='<div class="res-stat-chip" onclick="showStatHelp(\'insight\')" style="cursor:pointer;"><div class="res-stat-num">'+intel.rewardDensity+'</div><div class="res-stat-lbl">Insight/100w ?</div></div>';
-  out+='<div class="res-stat-chip" onclick="showStatHelp(\'pace\')" style="cursor:pointer;"><div class="res-stat-num">'+intel.sentenceLenVariance+'</div><div class="res-stat-lbl">Pace Var. ?</div></div>';
-  out+='</div>';
+  // Stats row
+  ov+='<div class="res-stats-row">';
+  ov+='<div class="res-stat-chip"><div class="res-stat-num">'+intel.totalWords+'</div><div class="res-stat-lbl">Words</div></div>';
+  ov+='<div class="res-stat-chip"><div class="res-stat-num">'+intel.totalSentences+'</div><div class="res-stat-lbl">Sentences</div></div>';
+  ov+='<div class="res-stat-chip" onclick="showStatHelp(\'pace\')" style="cursor:pointer;"><div class="res-stat-num">'+intel.sentenceLenVariance+'</div><div class="res-stat-lbl">Pace Var ?</div></div>';
+  ov+='<div class="res-stat-chip" onclick="showStatHelp(\'insight\')" style="cursor:pointer;"><div class="res-stat-num">'+intel.rewardDensity+'</div><div class="res-stat-lbl">Insight ?</div></div>';
+  ov+='</div>';
 
-  // ── FAILURE PATTERNS ──
-  if(intel.failurePatterns&&intel.failurePatterns.length){
-    intel.failurePatterns.forEach(function(p){
-      out+='<div class="res-pattern-card"><div class="res-pattern-tag">Pattern detected</div>';
-      out+='<div class="res-pattern-name">'+p.name+'</div>';
-      out+='<div class="res-pattern-desc">'+p.desc+'</div></div>';
-    });
-  }
+  // Promise + Voice tracking
+  var promiseStatus=intel.promises&&intel.promises.length?(intel.promiseDelivered?'Delivered':'Not delivered'):'None made';
+  var promiseCol=intel.promises&&intel.promises.length?(intel.promiseDelivered?'var(--s-high)':'var(--s-low)'):'var(--muted)';
+  var totalSents=intel.sentenceData?intel.sentenceData.length:1;
+  var youCount=intel.sentenceData?intel.sentenceData.filter(function(s){return s.viewerBenefit>0||(/you/i.test(s.sentence));}).length:0;
+  var voiceRatio=totalSents>0?Math.round((youCount/totalSents)*100):0;
+  var voiceCol=voiceRatio>=40?'var(--s-high)':voiceRatio>=25?'var(--s-mid)':'var(--s-low)';
+  ov+='<div style="display:flex;gap:6px;padding:10px 14px 0;">';
+  ov+='<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;">';
+  ov+='<div style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:5px;">Promise <button onclick="showStatHelp(\'promise\')" style="background:none;border:none;color:var(--faint);font-size:.55rem;cursor:pointer;">[?]</button></div>';
+  ov+='<div style="font-size:.8rem;font-weight:600;color:'+promiseCol+';">'+promiseStatus+'</div></div>';
+  ov+='<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;">';
+  ov+='<div style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:5px;">Voice <button onclick="showStatHelp(\'voice\')" style="background:none;border:none;color:var(--faint);font-size:.55rem;cursor:pointer;">[?]</button></div>';
+  ov+='<div style="font-size:.8rem;font-weight:600;color:'+voiceCol+';">Viewer '+voiceRatio+'%</div></div></div>';
 
-  // ── TOP ISSUES ──
-  if(intel.issues&&intel.issues.length){
-    out+='<div class="res-issues"><div class="res-issues-title">Top Issues</div>';
-    intel.issues.forEach(function(issue){
-      out+='<div class="res-issue">';
-      out+='<div class="res-issue-hd">';
-      out+='<span class="res-issue-section">'+issue.section+'</span>';
-      out+='<span class="res-issue-impact '+issue.impact+'">'+issue.impact+' impact</span>';
-      if(issue.score>0)out+='<span class="res-issue-score">'+issue.score+'</span>';
-      out+='</div>';
-      out+='<div class="res-issue-body">';
-      out+='<div class="res-oi"><div class="res-oi-dot obs"></div><div class="res-oi-text obs">'+issue.observation+'</div></div>';
-      out+='<div class="res-oi"><div class="res-oi-dot cons"></div><div class="res-oi-text">'+issue.consequence+'</div></div>';
-      out+='<div class="res-oi"><div class="res-oi-dot fix"></div><div class="res-oi-text fix">'+issue.fix+'</div></div>';
-      out+='</div></div>';
-    });
-    out+='</div>';
-  }
+  // Section balance
+  ov+='<div style="margin:10px 14px 0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">';
+  ov+='<div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Section Balance</div>';
+  ov+='<div style="display:flex;gap:3px;height:28px;border-radius:6px;overflow:hidden;margin-bottom:6px;">';
+  var tagColors={hook:'var(--hook)',ctx:'var(--ctx)',body:'var(--body-c)',cta:'var(--cta)',out:'var(--out)'};
+  var tagBgs={hook:'var(--hook-bg)',ctx:'var(--ctx-bg)',body:'var(--body-bg)',cta:'var(--cta-bg)',out:'var(--out-bg)'};
+  var totalWds=Math.max(1,paras.reduce(function(a,p){return a+wc(p.text||'');},0));
+  tagOrder.forEach(function(tag){
+    var tagParas=paras.filter(function(p){return p.tag===tag;});
+    if(!tagParas.length)return;
+    var tagWds=tagParas.reduce(function(a,p){return a+wc(p.text||'');},0);
+    var pct=Math.max(5,Math.round((tagWds/totalWds)*100));
+    ov+='<div style="flex:'+pct+';background:'+tagBgs[tag]+';border:1px solid '+tagColors[tag]+';opacity:.8;display:flex;align-items:center;justify-content:center;font-size:.48rem;font-weight:700;color:'+tagColors[tag]+';">'+tagNames[tag].split(' ')[0]+'</div>';
+  });
+  ov+='</div></div>';
 
-  // ── IN SHORT ──
-  out+='<div class="res-inshort">';
-  out+='<div class="res-inshort-tag">In short</div>';
-  out+='<div class="res-inshort-verdict">'+getScriptVerdict(scores,overall)+'</div>';
-  out+='<div class="res-inshort-body">'+getScriptVerdictSub(scores,overall,Object.keys(scores))+'</div>';
-  out+='</div>';
+  // In short
+  ov+='<div class="res-inshort"><div class="res-inshort-tag">In short</div>';
+  ov+='<div class="res-inshort-verdict">'+getScriptVerdict(scores,overall)+'</div>';
+  ov+='<div class="res-inshort-body">'+getScriptVerdictSub(scores,overall,Object.keys(scores))+'</div></div>';
 
-  // ── ANNOTATED SCRIPT ──
-  out+='<div class="res-anno-section"><div class="res-anno-title">Annotated Script</div>';
+  // Actions
+  ov+='<div style="display:flex;flex-direction:column;gap:8px;padding:16px 14px 28px;">';
+  ov+='<button class="res-export-btn" onclick="openAsNewScript(\''+id+'\')" style="width:100%;justify-content:center;">';
+  ov+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-4-4m0 0l4-4m-4 4h14M3 12a9 9 0 1118 0 9 9 0 01-18 0z"/></svg>';
+  ov+=(result.scriptId?'Open Script':'Open as New Script')+'</button>';
+  ov+='<button class="res-export-btn" onclick="downloadAnalysisResults()" style="width:100%;justify-content:center;">';
+  ov+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
+  ov+='Download Report</button></div>';
+
+  // ── SECTIONS PANEL ──
+  var sec='';
   paras.forEach(function(p){
     if(!p.text||!p.text.trim())return;
     var sc=scores[p.tag]||scoreText(p.tag,p.text);
     var lv=scoreLevel(sc);
     var fb=getParagraphFeedback(p.tag,p.text,sc);
     var fbCls=sc>=70?'pos':sc<45?'neg':'';
-    out+='<div class="res-anno-block tag-'+p.tag+'">';
-    out+='<div class="res-anno-hd">';
-    out+='<button class="res-anno-tag" onclick="changeResultTag(\''+result.id+'\','+pi+',\''+p.tag+'\')" title="Tap to change section" style="cursor:pointer;background:none;border:none;font:inherit;padding:0;text-transform:uppercase;letter-spacing:.06em;">'+(tagNames[p.tag]||p.tag)+' <span style="font-size:.5rem;opacity:.5;">&#9660;</span></button>';
-    out+='<span class="score-pill '+lv+'"><span class="score-pill-dot"></span>'+sc+'</span></div>';
-    out+='<div class="res-anno-text">'+escHtml(p.text)+'</div>';
-    out+='<div class="res-anno-fb '+fbCls+'">'+fb+'</div>';
-    out+='</div>';
+    sec+='<div class="res-anno-block tag-'+p.tag+'" style="margin:10px 14px 0;" onclick="toggleAnnoBlock(this)">';
+    sec+='<div class="res-anno-hd"><span class="res-anno-tag">'+( tagNames[p.tag]||p.tag)+'</span>';
+    sec+='<span class="score-pill '+lv+'"><span class="score-pill-dot"></span>'+sc+'</span>';
+    sec+='<svg style="width:14px;height:14px;color:var(--faint);flex-shrink:0;transition:transform .2s;margin-left:4px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></div>';
+    sec+='<div class="res-anno-sec-body">';
+    sec+='<div class="res-anno-text">'+escHtml(p.text)+'</div>';
+    sec+='<div class="res-anno-fb '+fbCls+'">'+fb+'</div></div></div>';
   });
-  out+='</div>';
+  sec+='<div style="display:flex;flex-direction:column;gap:8px;padding:16px 14px 28px;">';
+  sec+='<button class="res-export-btn" onclick="downloadAnalysisResults()" style="width:100%;justify-content:center;">';
+  sec+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Download Report</button></div>';
 
-  // ── EXPORT ──
-  out+='<div style="display:flex;flex-direction:column;gap:8px;padding:16px 14px 28px;">';
-  out+='<button class="res-export-btn" onclick="downloadAnalysisResults()" style="width:100%;justify-content:center;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Download Report</button>';
-  out+='<button class="res-export-btn" onclick="openAsNewScript(\''+id+'\')" style="width:100%;justify-content:center;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>';
-  out+=(result.scriptId?'Open Script':'Open as New Script')+'</button>';
-  out+='</div>';
+  // ── DEEP PANEL ──
+  var deep='';
+  deep+='<div style="margin:12px 14px 0;padding:11px 13px;background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:10px;font-size:.72rem;color:var(--muted);line-height:1.6;">';
+  deep+='<strong style="color:var(--accent);">Hook and Context</strong> show full per-sentence feedback. Upgrade to <strong style="color:var(--accent);">Pro</strong> to unlock Body, CTA and Outro at the same depth.</div>';
 
-  document.getElementById('resBody').innerHTML=out;
+  // Per-sentence for hook and ctx
+  var freeTags=['hook','ctx'];
+  var proTags=['body','cta','out'];
+  freeTags.forEach(function(tag){
+    var tagParas=paras.filter(function(p){return p.tag===tag;});
+    tagParas.forEach(function(p){
+      if(!p.text||!p.text.trim())return;
+      var sents=p.text.replace(/([.!?])\s+/g,'$1').split('').filter(function(s){return s.trim().length>3;});
+      sents.forEach(function(s,si){
+        var sc=scoreText(tag,s);
+        var lv=scoreLevel(sc);
+        var fb=getParagraphFeedback(tag,s,sc);
+        var fbCls=sc>=70?'pos':sc<45?'neg':'';
+        deep+='<div class="res-anno-block tag-'+tag+'" style="margin:'+(si===0?'10px':'4px')+' 14px 0;">';
+        deep+='<div class="res-anno-hd"><span class="res-anno-tag">'+tagNames[tag]+' '+( sents.length>1?'&middot; '+(si+1):'')+'</span>';
+        deep+='<span class="score-pill '+lv+'"><span class="score-pill-dot"></span>'+sc+'</span></div>';
+        deep+='<div class="res-anno-text">'+escHtml(s)+'</div>';
+        deep+='<div class="res-anno-fb '+fbCls+'">'+fb+'</div></div>';
+      });
+    });
+  });
+
+  // Pro gate
+  var hasProContent=proTags.some(function(tag){return paras.some(function(p){return p.tag===tag&&p.text&&p.text.trim();});});
+  if(hasProContent){
+    deep+='<div style="margin:10px 14px 0;border:1px solid var(--accent-border);border-radius:12px;background:var(--accent-soft);padding:14px;">';
+    deep+='<div style="font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:5px;">Pro feature</div>';
+    deep+='<div style="font-size:.84rem;font-weight:700;color:var(--text);margin-bottom:4px;">Per-sentence feedback for Body, CTA and Outro</div>';
+    deep+='<div style="font-size:.7rem;color:var(--muted);line-height:1.6;margin-bottom:12px;">See exactly which sentences are costing you retention and what to replace them with.</div>';
+    deep+='<button onclick="openProSheet()" style="padding:8px 18px;border-radius:8px;background:var(--accent);color:#0A0D14;border:none;font-size:.76rem;font-weight:700;cursor:pointer;">See Pro Features</button></div>';
+  }
+
+  // Failure patterns  -  all shown, detail is the value
+  if(intel.failurePatterns&&intel.failurePatterns.length){
+    intel.failurePatterns.forEach(function(fp){
+      deep+='<div style="margin:10px 14px 0;border:1px solid rgba(192,90,90,.25);border-radius:12px;background:rgba(139,58,58,.08);padding:12px 14px;">';
+      deep+='<div style="font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--s-low);margin-bottom:4px;">Pattern detected</div>';
+      deep+='<div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:3px;">'+fp.name+'</div>';
+      deep+='<div style="font-size:.7rem;color:var(--muted);line-height:1.55;margin-bottom:8px;">'+fp.desc+'</div>';
+      deep+='</div>';
+    });
+  }
+
+  deep+='<div style="display:flex;flex-direction:column;gap:8px;padding:16px 14px 28px;">';
+  deep+='<button class="res-export-btn" onclick="openAsNewScript(\''+id+'\')" style="width:100%;justify-content:center;">';
+  deep+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-4-4m0 0l4-4m-4 4h14M3 12a9 9 0 1118 0 9 9 0 01-18 0z"/></svg>';
+  deep+=(result.scriptId?'Open Script':'Open as New Script')+'</button>';
+  deep+='<button class="res-export-btn" onclick="downloadAnalysisResults()" style="width:100%;justify-content:center;">';
+  deep+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Download Report</button>';
+  deep+='<div style="text-align:center;font-size:.58rem;color:var(--faint);padding-top:8px;">Scripora v3.9 &middot; by Selerii</div></div>';
+
+  // Store panels and render Overview by default
+  S._resPanels={overview:ov,sections:sec,deep:deep};
+  switchResTab('overview', document.getElementById('rtab-overview'));
+}
+
+function switchResTab(name,btn){
+  if(!btn)btn=document.getElementById('rtab-'+name);
+  document.querySelectorAll('.res-tab').forEach(function(t){t.classList.remove('on');});
+  if(btn)btn.classList.add('on');
+  var panel=S._resPanels?S._resPanels[name]:'';
+  var body=document.getElementById('resBody');
+  if(body){
+    body.innerHTML=panel;
+    body.scrollTop=0;
+  }
 }
 
 function getSectionNote(tag,sc){
@@ -1967,26 +2062,6 @@ function getHelpSections(tab){
 }
 
 // ── Report Drawer ──
-function openReportDrawer(){
-  var script=getActive();
-  if(!script){showToast('Open a script first','error');return;}
-  loadAnalyseHistory();
-  var report=null;
-  for(var i=S.analyseHistory.length-1;i>=0;i--){
-    if(S.analyseHistory[i].scriptId===script.id){report=S.analyseHistory[i];break;}
-  }
-  if(!report){
-    // Generate live analysis from current paragraphs
-    var intel=analyseScript(script.paragraphs);
-    report={id:'live',title:script.title,date:new Date().toISOString(),
-      score:intel.overall,sectionScores:intel.sectionScores,
-      paragraphs:script.paragraphs,scriptId:script.id};
-  }
-  var body=document.getElementById('reportDrawerBody');
-  if(body)body.innerHTML=renderReportDrawerContent(report,script);
-  document.getElementById('reportDrawer').classList.remove('hide');
-  document.getElementById('rdov').classList.remove('hide');
-}
 function changeResultTag(resultId,paraIdx,currentTag){
   var tagNames={hook:'Hook',ctx:'Context',body:'Main Body',cta:'CTA',out:'Outro'};
   var opts=Object.keys(tagNames).map(function(k){
@@ -2017,52 +2092,18 @@ function applyResultTagChange(resultId,paraIdx,newTag){
   setTimeout(function(){openAnalyseResult(resultId);},0);
   showToast('Section updated','success');
 }
+function toggleAnnoBlock(el){el.classList.toggle('open');}
 function showStatHelp(type){
   var helps={
-    curve:'The attention curve tracks predicted viewer engagement across your script in 10 time buckets. Green means rising attention, grey is neutral, red signals a drop-off risk.',
-    pace:'Pace variance measures how much your sentence lengths vary. Above 4 means good rhythm. Below 2 means flat pacing.',
-    insight:'Insight density counts new insights per 100 words. Low means repetition without escalation.'
+    curve:'The attention curve tracks predicted viewer engagement in 10 time buckets. Green means rising attention, grey is neutral, red signals a drop-off risk.',
+    pace:'Pace variance measures how much your sentence lengths vary. Above 4 means good rhythm. Below 2 means flat pacing that is harder for viewers to follow.',
+    insight:'Insight density counts new insights per 100 words. Low means the script may be repeating ideas without escalating value.',
+    promise:'Promise tracking checks whether a commitment made early in the script is delivered later. A promise made and not delivered damages viewer trust.',
+    voice:'Voice ratio measures how often the script addresses the viewer directly. Higher viewer address generally means better engagement.',
+    sync:'Live Sync keeps analysis up to date as you write. Runs the engine on every edit and saves results to Hub automatically. Pro only.',
+    sync:'Live Sync keeps your analysis up to date as you write. Every edit triggers a fresh analysis saved to your Hub history. This is a Pro feature because it runs the engine on every keystroke.'
   };
   openModal('_raw','<div class="mhandle"></div><div class="modal-title" style="font-size:.9rem;">About this stat</div><p style="font-size:.78rem;color:var(--muted);line-height:1.65;margin-bottom:16px;">'+(helps[type]||'')+'</p><button class="btn-g" onclick="closeMoForce()">Got it</button>');
-}
-function closeReportDrawer(){
-  document.getElementById('reportDrawer').classList.add('hide');
-  document.getElementById('rdov').classList.add('hide');
-}
-function renderReportDrawerContent(report,script){
-  var intel=analyseScript(report.paragraphs||script.paragraphs||[]);
-  var scores=intel.sectionScores;
-  var overall=intel.overall||report.score||0;
-  var level=scoreLevel(overall);
-  var colMap={high:'var(--s-high)',mid:'var(--s-mid)',low:'var(--s-low)'};
-  var col=colMap[level]||'var(--muted)';
-  var out='';
-  out+='<div style="display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:12px;">';
-  out+='<div style="font-family:\'Playfair Display\',serif;font-size:2.2rem;font-weight:700;color:'+col+';">'+overall+'</div>';
-  out+='<div><div style="font-size:.82rem;font-weight:600;color:var(--text);">'+getScriptVerdict(scores,overall)+'</div>';
-  out+='<div style="font-size:.66rem;color:var(--muted);margin-top:2px;">'+new Date(report.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'})+'</div></div></div>';
-  if(intel.issues&&intel.issues.length){
-    out+='<div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;">Top Issues</div>';
-    intel.issues.forEach(function(issue){
-      out+='<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;">';
-      out+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">';
-      out+='<span style="font-size:.66rem;font-weight:700;color:var(--text);">'+issue.section+'</span>';
-      var ic=issue.impact==='high'?'background:rgba(139,58,58,.15);color:var(--s-low)':'background:var(--s-mid-bg);color:var(--s-mid)';
-      out+='<span style="font-size:.56rem;font-weight:700;padding:2px 6px;border-radius:20px;'+ic+'">'+(issue.impact==='high'?'High':'Medium')+' impact</span></div>';
-      out+='<div style="font-size:.74rem;color:var(--text);line-height:1.55;margin-bottom:4px;">'+issue.observation+'</div>';
-      out+='<div style="font-size:.72rem;color:var(--s-high);line-height:1.55;">'+issue.fix+'</div>';
-      out+='</div>';
-    });
-  }
-  if(intel.failurePatterns&&intel.failurePatterns.length){
-    var fp=intel.failurePatterns[0];
-    out+='<div style="border:1px solid rgba(192,90,90,.2);border-radius:10px;padding:10px 12px;background:rgba(139,58,58,.06);margin-bottom:8px;">';
-    out+='<div style="font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--s-low);margin-bottom:3px;">Pattern detected</div>';
-    out+='<div style="font-size:.8rem;font-weight:700;color:var(--text);margin-bottom:3px;">'+fp.name+'</div>';
-    out+='<div style="font-size:.7rem;color:var(--muted);line-height:1.55;">'+fp.desc+'</div></div>';
-  }
-  out+='<button onclick="closeReportDrawer();goScreen(\'hub\');" class="btn-a active" style="width:100%;margin-top:6px;">Full Report</button>';
-  return out;
 }
 
 // ── Onboarding ──
@@ -2096,6 +2137,169 @@ function obNext(){
   else{localStorage.setItem('sp_ob','1');document.getElementById('onboardScreen').classList.add('hide');}
 }
 function obPrev(){if(_obSlide>0){_obSlide--;showOnboardSlide(_obSlide);}}
+
+// ══════════════════════════════════════════
+// WRITE TAB REPORT DRAWER
+// ══════════════════════════════════════════
+
+function openWriteReport(){
+  var script=getActive();
+  if(!script){showToast('Open a script first','error');return;}
+  if(!script.paragraphs||!script.paragraphs.length){showToast('Add some content first','default');return;}
+
+  // Run analysis on current paragraphs
+  var intel=analyseScript(script.paragraphs);
+  S._liveIntel=intel;
+
+  // Populate header
+  var overall=intel.overall||0;
+  var level=scoreLevel(overall);
+  var colMap={high:'var(--s-high)',mid:'var(--s-mid)',low:'var(--s-low)'};
+  var scoreEl=document.getElementById('wrScore');
+  if(scoreEl){scoreEl.textContent=overall;scoreEl.style.color=colMap[level]||'var(--muted)';}
+  var verdictEl=document.getElementById('wrVerdict');
+  if(verdictEl){verdictEl.textContent=getScriptVerdict(intel.sectionScores,overall);}
+
+  // Update sync toggle state
+  updateSyncToggleUI();
+
+  // Render body
+  renderWriteReportBody(intel,script);
+
+  // Open drawer
+  document.getElementById('wrDrawer').classList.remove('hide');
+  document.getElementById('wrDov').classList.remove('hide');
+}
+
+function goToFullReport(){closeWriteReport();goScreen('hub');setTimeout(function(){var pill=document.querySelector('.hub-pill[data-tab="analyse"]');if(pill)setHubTab(pill,'analyse');},120);}
+function closeWriteReport(){
+  document.getElementById('wrDrawer').classList.add('hide');
+  document.getElementById('wrDov').classList.add('hide');
+}
+
+function renderWriteReportBody(intel,script){
+  var out='';
+  var tagOrder=['hook','ctx','body','cta','out'];
+  var tagNames={hook:'Hook',ctx:'Context',body:'Main Body',cta:'CTA',out:'Outro'};
+  var scores=intel.sectionScores;
+
+  // Section bars
+  out+='<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px;">';
+  tagOrder.forEach(function(tag){
+    var sc=scores[tag];
+    if(!sc&&sc!==0)return;
+    if(!script.paragraphs.find(function(p){return p.tag===tag;}))return;
+    var lv=scoreLevel(sc);
+    out+='<div style="display:flex;align-items:center;gap:8px;">';
+    out+='<span style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;width:52px;flex-shrink:0;color:var(--muted);">'+tagNames[tag]+'</span>';
+    out+='<div style="flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;">';
+    out+='<div style="width:'+sc+'%;height:100%;border-radius:2px;background:var(--'+( lv==='high'?'s-high':lv==='mid'?'s-mid':'s-low')+');"></div></div>';
+    out+='<span style="font-size:.6rem;font-weight:700;width:22px;text-align:right;color:var(--'+( lv==='high'?'s-high':lv==='mid'?'s-mid':'s-low')+');">'+sc+'</span>';
+    out+='</div>';
+  });
+  out+='</div>';
+
+  // Top issue
+  if(intel.issues&&intel.issues.length){
+    var issue=intel.issues[0];
+    out+='<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;">';
+    out+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">';
+    out+='<span style="font-size:.66rem;font-weight:700;color:var(--text);">'+issue.section+'</span>';
+    var ic=issue.impact==='high'?'background:rgba(139,58,58,.15);color:var(--s-low)':'background:var(--s-mid-bg);color:var(--s-mid)';
+    out+='<span style="font-size:.56rem;font-weight:700;padding:2px 6px;border-radius:20px;'+ic+'">'+issue.impact+' impact</span></div>';
+    out+='<div style="font-size:.74rem;color:var(--text);line-height:1.55;margin-bottom:4px;">'+issue.observation+'</div>';
+    out+='<div style="font-size:.72rem;color:var(--s-high);line-height:1.55;">'+issue.fix+'</div>';
+    out+='</div>';
+  }
+
+  // Full report link
+    out+='<button onclick="goToFullReport()" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--accent-border);color:var(--accent);font-size:.8rem;font-weight:600;cursor:pointer;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Full Report on Hub</button>';
+
+  var body=document.getElementById('wrBody');
+  if(body)body.innerHTML=out;
+}
+
+function toggleLiveSync(){
+  if(!isPro()){
+    openProSheet();
+    return;
+  }
+  S.syncEnabled=!S.syncEnabled;
+  updateSyncToggleUI();
+  if(S.syncEnabled){
+    showToast('Live Sync on','success');
+    runLiveSync();
+  }else{
+    showToast('Live Sync off','default');
+  }
+  save();
+}
+
+function updateSyncToggleUI(){
+  var toggle=document.getElementById('wrSyncToggle');
+  var knob=document.getElementById('wrSyncKnob');
+  var sub=document.getElementById('wrSyncSub');
+  if(!toggle)return;
+  if(S.syncEnabled&&isPro()){
+    toggle.style.background='var(--accent)';
+    toggle.style.borderColor='var(--adk)';
+    if(knob)knob.style.transform='translateX(18px)';
+    if(sub)sub.textContent='Syncing as you write';
+  }else{
+    toggle.style.background='rgba(255,255,255,.1)';
+    toggle.style.borderColor='var(--border)';
+    if(knob)knob.style.transform='translateX(0)';
+    if(sub)sub.textContent='Updates analysis as you write';
+  }
+}
+
+function runLiveSync(){
+  // Called after every paragraph edit when syncEnabled is true
+  var script=getActive();
+  if(!script||!S.syncEnabled||!isPro())return;
+  var intel=analyseScript(script.paragraphs);
+  S._liveIntel=intel;
+  // Save as an analysis history entry for this script (upsert)
+  loadAnalyseHistory();
+  var existing=null;
+  for(var i=S.analyseHistory.length-1;i>=0;i--){
+    if(S.analyseHistory[i].scriptId===script.id&&S.analyseHistory[i]._liveSync){
+      existing=S.analyseHistory[i];break;
+    }
+  }
+  if(existing){
+    existing.score=intel.overall;
+    existing.sectionScores=intel.sectionScores;
+    existing.paragraphs=script.paragraphs;
+    existing.date=new Date().toISOString();
+  }else{
+    S.analyseHistory.push({
+      id:uid(),title:script.title,
+      date:new Date().toISOString(),
+      score:intel.overall,
+      sectionScores:intel.sectionScores,
+      paragraphs:script.paragraphs.map(function(p){return {id:p.id,tag:p.tag,text:p.text};}),
+      scriptId:script.id,
+      _liveSync:true
+    });
+    if(S.analyseHistory.length>20)S.analyseHistory=S.analyseHistory.slice(-20);
+  }
+  saveAnalyseHistory();
+  // Update score on script card
+  script.lastScore=intel.overall;
+  save();
+  // If drawer is open, refresh it
+  if(!document.getElementById('wrDrawer').classList.contains('hide')){
+    var overall=intel.overall;
+    var level=scoreLevel(overall);
+    var colMap={high:'var(--s-high)',mid:'var(--s-mid)',low:'var(--s-low)'};
+    var scoreEl=document.getElementById('wrScore');
+    if(scoreEl){scoreEl.textContent=overall;scoreEl.style.color=colMap[level]||'var(--muted)';}
+    var verdictEl=document.getElementById('wrVerdict');
+    if(verdictEl)verdictEl.textContent=getScriptVerdict(intel.sectionScores,overall);
+    renderWriteReportBody(intel,script);
+  }
+}
 
 function closeAnalyseResults(){
   document.getElementById('analyseResultsScreen').classList.add('hide');

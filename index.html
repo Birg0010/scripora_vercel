@@ -167,7 +167,7 @@
           <button class="hdr-btn" onclick="openViewScript()" title="View Script">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
           </button>
-          <button class="hdr-btn" onclick="openReportDrawer()" title="Script Report" id="writeAnalyseBtn" style="color:var(--accent);">
+          <button class="hdr-btn" onclick="openWriteReport()" title="Script Report" id="writeAnalyseBtn" style="color:var(--accent);">
             <svg id="writeAnalyseIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
           </button>
         </div>
@@ -280,13 +280,17 @@
 <div id="analyseResultsScreen" class="hide" style="position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;">
   <div class="res-hdr">
     <button class="res-back" onclick="closeAnalyseResults()"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
-    <div class="res-title" id="resTitle">Analysis Results</div>
+    <div class="res-title" id="resTitle" onclick="renameAnalyseSession(S._currentResultId)" style="cursor:pointer;flex:1;" title="Tap to rename">Analysis Results</div>
     <div class="res-date" id="resDate"></div>
-    <button class="hdr-btn" onclick="downloadAnalysisResults()" title="Download results" style="flex-shrink:0;">
+    <button class="hdr-btn" onclick="downloadAnalysisResults()" title="Download" style="flex-shrink:0;">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
     </button>
   </div>
-  <div id="scoreBanner" class="score-banner"></div>
+  <div id="resTabs" style="display:flex;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+    <button class="res-tab on" id="rtab-overview" onclick="switchResTab('overview',this)">Overview</button>
+    <button class="res-tab" id="rtab-sections" onclick="switchResTab('sections',this)">Sections</button>
+    <button class="res-tab" id="rtab-deep" onclick="switchResTab('deep',this)">Deep</button>
+  </div>
   <div style="flex:1;overflow-y:auto;" id="resBody"></div>
 </div>
 
@@ -301,13 +305,30 @@
   </div>
 </div>
 
-<!-- REPORT DRAWER -->
-<div class="dov hide" id="rdov" onclick="closeReportDrawer()"></div>
-<div class="drawer hide" id="reportDrawer">
-  <div class="drawer-hd"><span class="drawer-title">Script Report</span>
-    <button class="drawer-close" onclick="closeReportDrawer()"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+<!-- WRITE REPORT DRAWER -->
+<div class="dov hide" id="wrDov" onclick="closeWriteReport()"></div>
+<div class="drawer hide" id="wrDrawer">
+  <div class="drawer-hd">
+    <div style="flex:1;">
+      <span class="drawer-title">Script Report</span>
+      <div id="wrVerdict" style="font-size:.68rem;color:var(--muted);margin-top:1px;"></div>
+    </div>
+    <div id="wrScore" style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--s-mid);margin-right:8px;"></div>
+    <button class="drawer-close" onclick="closeWriteReport()"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
   </div>
-  <div class="drawer-body" id="reportDrawerBody" style="overflow-y:auto;padding:12px 14px 20px;"></div>
+  <div style="margin:10px 14px 0;padding:10px 12px;background:var(--s2);border:1px solid var(--border);border-radius:10px;flex-shrink:0;display:flex;align-items:center;gap:10px;">
+    <div style="flex:1;">
+      <div style="font-size:.76rem;font-weight:600;color:var(--text);display:flex;align-items:center;gap:5px;">Live Sync
+        <button onclick="showStatHelp('sync')" style="background:none;border:none;color:var(--faint);font-size:.6rem;cursor:pointer;padding:0;">[?]</button>
+        <span style="font-size:.52rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:20px;background:var(--accent-soft);border:1px solid var(--accent-border);color:var(--accent);">Pro</span>
+      </div>
+      <div id="wrSyncSub" style="font-size:.64rem;color:var(--muted);margin-top:2px;">Updates analysis as you write</div>
+    </div>
+    <div id="wrSyncToggle" onclick="toggleLiveSync()" style="width:40px;height:22px;border-radius:11px;background:rgba(255,255,255,.1);border:1px solid var(--border);position:relative;cursor:pointer;flex-shrink:0;transition:background .2s;">
+      <div id="wrSyncKnob" style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3);"></div>
+    </div>
+  </div>
+  <div class="drawer-body" id="wrBody" style="overflow-y:auto;padding:12px 14px 20px;"></div>
 </div>
 <!-- HELP SCREEN -->
 <div id="helpScreen" class="hide" style="position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;">
