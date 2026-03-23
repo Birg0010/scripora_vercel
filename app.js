@@ -1439,7 +1439,7 @@ function renderAnalyse(){
       '<div class="eico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></div>'+
       '<h3 style="display:flex;align-items:center;gap:6px;">Analyse your script<button onclick="openModal(\'analyseHelp\')" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:15px;height:15px;color:var(--muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.12 2.6-2.842 3.183C12.405 13.546 12 14.02 12 14.5V15m0 3.5v.5"/><circle cx="12" cy="12" r="10"/></svg></button></h3>'+
       '<p>Paste your script below or pick one you have already written to see how it scores.</p>'+
-      '<input id="pasteTitle" placeholder="Script title (optional)" style="display:block;width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:.78rem;color:var(--text);margin-bottom:8px;outline:none;"/>'+
+      '<input id="pasteTitle" placeholder="Script title (optional)" value="'+(S._pasteTitle||'')+'" oninput="S._pasteTitle=this.value" style="display:block;width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:.78rem;color:var(--text);margin-bottom:8px;outline:none;"/>'+
       '<textarea class="paste-area" id="pasteArea" placeholder="Paste your script text here..." rows="4"></textarea>'+
       '<div class="analyse-btns">'+
       '<button class="abtn-p" onclick="runAnalyseFromPaste()">Analyse</button>'+
@@ -1451,7 +1451,7 @@ function renderAnalyse(){
     var recent=filtered.slice(-3).reverse();
     el.innerHTML='<div class="analyse-compact-card">'+
       '<div class="analyse-compact-title" style="display:flex;align-items:center;gap:6px;">Analyse a script<button onclick="openModal(\'analyseHelp\')" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:15px;height:15px;color:var(--muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.12 2.6-2.842 3.183C12.405 13.546 12 14.02 12 14.5V15m0 3.5v.5"/><circle cx="12" cy="12" r="10"/></svg></button></div>'+
-      '<input id="pasteTitle" placeholder="Script title (optional)" style="display:block;width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:.78rem;color:var(--text);margin-bottom:7px;outline:none;"/>'+
+      '<input id="pasteTitle" placeholder="Script title (optional)" value="'+(S._pasteTitle||'')+'" oninput="S._pasteTitle=this.value" style="display:block;width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:.78rem;color:var(--text);margin-bottom:7px;outline:none;"/>'+
       '<textarea class="paste-area" id="pasteArea" placeholder="Paste script text..." rows="3"></textarea>'+
       '<div class="analyse-btns">'+
       '<button class="abtn-p" onclick="runAnalyseFromPaste()">Analyse</button>'+
@@ -1734,14 +1734,14 @@ function openAnalyseResult(id){
   ov+='Download Report</button></div>';
 
   // ── SECTIONS PANEL ──
-  var sec='';
+  var sec='';var _si=0;
   paras.forEach(function(p){
     if(!p.text||!p.text.trim())return;
     var sc=scores[p.tag]||scoreText(p.tag,p.text);
     var lv=scoreLevel(sc);
     var fb=getParagraphFeedback(p.tag,p.text,sc);
     var fbCls=sc>=70?'pos':sc<45?'neg':'';
-    sec+='<div class="res-anno-block tag-'+p.tag+'" style="margin:10px 14px 0;" onclick="toggleAnnoBlock(this)">';
+    sec+='<div class="res-anno-block tag-'+p.tag+(_si===0?' open':'')+' " style="margin:10px 14px 0;" onclick="toggleAnnoBlock(this)">'; _si++;
     sec+='<div class="res-anno-hd"><span class="res-anno-tag">'+( tagNames[p.tag]||p.tag)+'</span>';
     sec+='<span class="score-pill '+lv+'"><span class="score-pill-dot"></span>'+sc+'</span>';
     sec+='<svg style="width:14px;height:14px;color:var(--faint);flex-shrink:0;transition:transform .2s;margin-left:4px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></div>';
@@ -2144,8 +2144,15 @@ function obPrev(){if(_obSlide>0){_obSlide--;showOnboardSlide(_obSlide);}}
 
 function openWriteReport(){
   var script=getActive();
-  if(!script){showToast('Open a script first','error');return;}
-  if(!script.paragraphs||!script.paragraphs.length){showToast('Add some content first','default');return;}
+  if(!script){
+    // Try to find any script
+    if(S.scripts&&S.scripts.length){
+      S.activeId=S.scripts[S.scripts.length-1].id;
+      script=getActive();
+    }
+    if(!script){showToast('Open a script first','error');return;}
+  }
+  if(!script.paragraphs||!script.paragraphs.length){showToast('Add some content to analyse','default');return;}
 
   // Run analysis on current paragraphs
   var intel=analyseScript(script.paragraphs);
