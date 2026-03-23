@@ -411,94 +411,52 @@ function detectFailurePatterns(sentenceData,scores,promises,promiseDelivered){
 
 function buildTopIssues(scores,sentenceData,patterns,promises,promiseDelivered,variance){
   var issues=[];
-  var hookScore=scores.hook||0;
-  var ctaScore=scores.cta||0;
-  var bodyScore=scores.body||0;
-  var ctxScore=scores.ctx||0;
-  var outScore=scores.out||0;
+  var hookSc=scores.hook||0,ctaSc=scores.cta||0,bodySc=scores.body||0;
+  var ctxSc=scores.ctx||0,outSc=scores.out||0;
 
-  // Hook issues
-  if(hookScore<50){
-    var hookSents=sentenceData.filter(function(s){return s.tag==='hook';});
-    var hasCollapse=hookSents.some(function(s){return s.curiosityCollapsed;});
-    var hookText=hookSents.map(function(s){return s.sentence;}).join(' ');
-    var obs,cons,fix;
-    if(hasCollapse){
-      obs='The hook introduces a question or tension and resolves it in the same sentence.';
-      cons='The viewer has no open loop to stay for. The reason to keep watching disappears before it is established.';
-      fix='Separate the question from the answer. Raise the tension in the hook and delay the resolution until the body.';
-    }else if(hookText.toLowerCase().match(/^i[\s,]/)){
-      obs='The hook opens with the creator\'s perspective before establishing relevance to the viewer.';
-      cons='Viewers who do not already know you have no reason to care. The first word determines whether they stay.';
-      fix='Open with the viewer\'s problem, a claim they need to verify, or a scenario they recognise.';
-    }else{
-      obs='The hook makes a statement but does not create urgency or an open loop.';
-      cons='Without a question or a surprising claim, the viewer has no psychological pull to continue.';
-      fix='Rewrite the first sentence as a direct question or a bold claim that demands verification.';
-    }
-    issues.push({section:'Hook',score:hookScore,impact:'high',observation:obs,consequence:cons,fix:fix});
+  function pv(arr,s){if(!arr||!arr.length)return '';return arr[Math.abs(s)%arr.length];}
+  function sd(tag){var h=0;for(var i=0;i<tag.length;i++){h=((h<<5)-h)+tag.charCodeAt(i);h=h&h;}return Math.abs(h);}
+
+  if(typeof FB==='undefined')return [];
+
+  if(hookSc<55&&hookSc>0){
+    var s=sd('hook'+hookSc);
+    var e=hookSc<40?FB.hook.noTension:FB.hook.creatorFirst;
+    if(e)issues.push({section:'Hook',impact:hookSc<40?'high':'medium',observation:pv(e.observation,s),consequence:pv(e.consequence,s+1),fix:pv(e.direction,s+2)});
   }
-
-  // Body issues
-  if(bodyScore<55&&bodyScore>0){
-    var bodySents=sentenceData.filter(function(s){return s.tag==='body';});
-    var passiveCount=bodySents.filter(function(s){return s.passive;}).length;
-    var fillerCount=bodySents.filter(function(s){return s.filler;}).length;
-    var insightCount=bodySents.filter(function(s){return s.newInsight;}).length;
-    var obs2,cons2,fix2;
-    if(passiveCount>=2){
-      obs2='The body uses passive voice constructions '+passiveCount+' times.';
-      cons2='Passive voice creates distance and signals uncertainty. It drains authority from the content around it.';
-      fix2='Rewrite in active voice. "The results showed" becomes "I found." Every passive sentence can be made direct.';
-    }else if(fillerCount>=2){
-      obs2='Filler language appears multiple times in the body section.';
-      cons2='Words like "basically" and "literally" signal that the speaker is still searching for the idea. Viewers sense this.';
-      fix2='Remove every filler word. The point underneath each one is stronger without it.';
-    }else if(insightCount===0){
-      obs2='The body section delivers information but no new insights or perspective shifts.';
-      cons2='Viewers came for something they could not easily find elsewhere. Repetition without escalation causes mid-video drop-off.';
-      fix2='Add at least one counterintuitive insight, a specific example, or a named tool that changes how the viewer sees the topic.';
-    }else{
-      obs2='The body content is present but lacks the specificity needed to be memorable.';
-      cons2='General advice is easy to forget and easy to find anywhere. Specific content is what gets saved and shared.';
-      fix2='Add one concrete number, a named case study, or a step-by-step example that makes the advice tangible.';
-    }
-    issues.push({section:'Body',score:bodyScore,impact:'medium',observation:obs2,consequence:cons2,fix:fix2});
+  if(ctaSc<55&&ctaSc>0){
+    var s=sd('cta'+ctaSc);
+    var e=ctaSc<40?FB.cta.noAction:FB.cta.actionNoReason;
+    if(e)issues.push({section:'CTA',impact:ctaSc<40?'high':'medium',observation:pv(e.observation,s),consequence:pv(e.consequence,s+1),fix:pv(e.direction,s+2)});
   }
-
-  // CTA issues
-  if(ctaScore<50&&ctaScore>0){
-    issues.push({
-      section:'CTA',score:ctaScore,impact:'medium',
-      observation:'The call to action names an action but does not give the viewer a reason to take it.',
-      consequence:'Viewers respond to logic, not requests. An ask without a reason is easy to scroll past.',
-      fix:'Add one reason after the ask. "Subscribe because we post every Tuesday" converts better than "subscribe."'
-    });
+  if(ctxSc<55&&ctxSc>0){
+    var s=sd('ctx'+ctxSc);
+    var e=ctxSc<40?FB.ctx.noCredential:FB.ctx.credentialNoPayoff;
+    if(e)issues.push({section:'Context',impact:ctxSc<40?'high':'medium',observation:pv(e.observation,s),consequence:pv(e.consequence,s+1),fix:pv(e.direction,s+2)});
   }
-
-  // Outro issues
-  if(outScore<45&&outScore>0){
-    issues.push({
-      section:'Outro',score:outScore,impact:'low',
-      observation:'The outro ends the video without resolution or forward direction.',
-      consequence:'The viewer walks away with no sense of completion and no reason to watch the next video.',
-      fix:'Add one sentence that closes the loop from the hook, then point to the next video explicitly.'
-    });
+  if(outSc<50&&outSc>0){
+    var s=sd('out'+outSc);
+    var e=FB.out.abrupt;
+    if(e)issues.push({section:'Outro',impact:outSc<35?'high':'medium',observation:pv(e.observation,s),consequence:pv(e.consequence,s+1),fix:pv(e.direction,s+2)});
   }
-
-  // Promise issue
-  if(promises.length>0&&!promiseDelivered){
-    issues.push({
-      section:'Structure',score:0,impact:'high',
-      observation:'A promise was made in the opening that has no clear delivery point.',
-      consequence:'Viewers who stayed specifically for that payoff will feel deceived. This damages trust and reduces return rate.',
-      fix:'Add a delivery sentence that explicitly references the original promise: "So, going back to what I said at the start..."'
-    });
+  if(bodySc<50&&bodySc>0){
+    var s=sd('body'+bodySc);
+    var e=bodySc<40?FB.body.noMomentum:FB.body.noExamples;
+    if(e)issues.push({section:'Main Body',impact:bodySc<40?'high':'medium',observation:pv(e.observation,s),consequence:pv(e.consequence,s+1),fix:pv(e.direction,s+2)});
   }
-
-  // Sort by impact
-  var impactOrder={high:0,medium:1,low:2};
-  issues.sort(function(a,b){return (impactOrder[a.impact]||1)-(impactOrder[b.impact]||1);});
+  if(promises&&promises.length&&!promiseDelivered){
+    var s=sd('promise');
+    var obs=['A promise made in the opening has no clear delivery point.','The script commits to something early that is never explicitly fulfilled.','An expectation set for the viewer is not resolved in the body or outro.'];
+    var cons=['Viewers who stayed for that payoff will feel let down. This erodes trust beyond this video.','The unresolved promise is the last thing the viewer carries away from an otherwise strong script.','When a promise is not delivered, the viewer questions whether the rest of the content can be trusted.'];
+    var fix=['Add one delivery sentence in the body that directly references the original promise.','Name the promise again in the body and show how the content fulfils it.','End the main body with a sentence that explicitly answers the hook commitment.'];
+    issues.push({section:'Structure',impact:'high',observation:pv(obs,s),consequence:pv(cons,s+1),fix:pv(fix,s+2)});
+  }
+  if(variance<3&&sentenceData&&sentenceData.length>=8){
+    var s=sd('pace'+Math.round(variance*10));
+    var e=FB.body.flatPacing;
+    if(e)issues.push({section:'Pacing',impact:'medium',observation:pv(e.observation,s),consequence:pv(e.consequence,s+1),fix:pv(e.direction,s+2)});
+  }
+  issues.sort(function(a,b){var w={high:0,medium:1,low:2};return (w[a.impact]||1)-(w[b.impact]||1);});
   return issues.slice(0,3);
 }
 
@@ -1540,71 +1498,48 @@ function runAnalyse(text,title,scriptId,paragraphs){
 
 function getScriptVerdict(scores,overall){
   var hookSc=scores.hook||0,ctaSc=scores.cta||0,bodySc=scores.body||0;
-  if(overall>=75)return 'Ready to film.';
-  if(overall>=60&&hookSc>=65)return 'Strong start, loose finish.';
-  if(overall>=60&&hookSc<45)return 'Good content, weak entry.';
-  if(hookSc>=70&&ctaSc<40)return 'Earns attention, loses the ask.';
-  if(hookSc<40&&overall>=50)return 'The content is there. The hook is not.';
-  if(ctaSc>=70&&hookSc<50)return 'Converts well, opens poorly.';
-  if(bodySc>=70&&hookSc<45)return 'Substance without pull.';
-  if(overall>=45&&overall<60)return 'Promising but unfinished.';
-  if(hookSc<40&&bodySc<40)return 'Needs significant work.';
-  if(overall<40)return 'Not ready to film.';
-  return 'Solid structure, needs polish.';
+  var seed=Math.round(overall+hookSc);
+  function pv(arr){return arr[Math.abs(seed)%arr.length];}
+  if(overall>=80)return pv(['Ready to film.','This script is ready.','Strong across every section.','Built to hold attention.']);
+  if(overall>=70)return pv(['Nearly there.','One or two fixes from strong.','Good structure, sharpen the edges.','Close to ready.']);
+  if(overall>=60&&hookSc>=65)return pv(['Strong start, loose finish.','Good opening, weak close.','Hook earns it, CTA loses it.','Starts well, ends softly.']);
+  if(overall>=60&&hookSc<45)return pv(['Good content, weak entry.','Strong middle, soft opening.','Content is there, hook is not.','The body works, the hook does not.']);
+  if(hookSc>=70&&ctaSc<40)return pv(['Earns attention, loses the ask.','Hook lands, CTA does not.','Strong open, no close.','Attention earned, action lost.']);
+  if(hookSc<40&&overall>=50)return pv(['The content works, the opening does not.','Good ideas, wrong start.','Structure is there, entry is not.','Substance without a hook.']);
+  if(ctaSc<35&&overall>=50)return pv(['No clear ask at the close.','Ends without direction.','Strong through the body, no finish.','Good content, no call to action.']);
+  if(overall>=45)return pv(['Not ready to film.','Structural gaps throughout.','Needs work before filming.','The foundation is there but incomplete.']);
+  return pv(['Not ready to film.','Significant gaps in structure.','Rebuild before filming.','The script needs substantial work.']);
 }
 function getScriptVerdictSub(scores,overall,tags){
   var hookSc=scores.hook||0,ctaSc=scores.cta||0,bodySc=scores.body||0;
   var ctxSc=scores.ctx||0,outSc=scores.out||0;
+  var seed=Math.round(overall+hookSc);
+  function pv(arr,s){if(!arr||!arr.length)return '';return arr[Math.abs(s||seed)%arr.length];}
+  if(typeof FB==='undefined')return '';
 
-  // Build three consequence statements based on score pattern
-  var s1='',s2='',s3='';
+  var weakest='hook',weakestSc=hookSc;
+  if(ctaSc>0&&ctaSc<weakestSc){weakest='cta';weakestSc=ctaSc;}
+  if(bodySc>0&&bodySc<weakestSc){weakest='body';weakestSc=bodySc;}
+  if(ctxSc>0&&ctxSc<weakestSc){weakest='ctx';weakestSc=ctxSc;}
+  if(outSc>0&&outSc<weakestSc){weakest='out';weakestSc=outSc;}
 
-  // Statement 1: What they did (strongest area)
-  if(hookSc>=70&&bodySc>=65){
-    s1='The hook earns attention and the main body delivers on it.';
-  }else if(hookSc>=70){
-    s1='The hook is strong and creates a reason to keep watching.';
-  }else if(bodySc>=70){
-    s1='The main content is specific and well structured.';
-  }else if(ctaSc>=70){
-    s1='The call to action is clear and gives the viewer a direction.';
-  }else if(hookSc<45&&bodySc<45){
-    s1='The script opens without tension and the body section stays general throughout.';
-  }else if(hookSc<45){
-    s1='The script opens without creating a reason to stay.';
-  }else{
-    s1='The structure is partially in place but not consistently strong.';
-  }
+  var s1='';
+  if(hookSc>=65){s1=pv(['The hook creates a genuine open loop and earns the viewer\'s attention.','The opening lands well and gives the viewer a reason to stay.','The hook does its job: it creates tension without resolving it.'],seed);}
+  else if(bodySc>=65){s1=pv(['The main body delivers real value and maintains attention through the middle.','The content in the body is strong and consistently rewards the viewer.','The body section works well and justifies the viewer\'s patience.'],seed);}
+  else if(ctxSc>=65){s1=pv(['The context earns credibility early and sets a clear promise.','Strong context means the viewer enters the body with trust already built.','The context section establishes authority and gives the viewer direction.'],seed);}
+  else{s1=pv(['The structure has the right sections in the right order.','The core components are present, though each needs sharpening.','The foundation of a strong video is here.'],seed);}
 
-  // Statement 2: What it costs them (the consequence)
-  if(hookSc<45&&overall<55){
-    s2='Viewers decide in the first three seconds. Without a hook that creates urgency, most will leave before the value is delivered.';
-  }else if(ctaSc<40&&overall>=55){
-    s2='The video builds trust and delivers value but ends without a direction. That momentum disappears instead of converting.';
-  }else if(bodySc<40&&hookSc>=60){
-    s2='A strong hook raises expectations that the body does not meet. Viewers who stayed for the promise will leave when it is not delivered.';
-  }else if(outSc<40&&overall>=55){
-    s2='Without a proper close the video ends abruptly. Viewers leave without resolution and are less likely to return.';
-  }else if(overall>=70){
-    s2='The main risk is losing viewers between the hook and the body if pacing drops. Keep the middle as tight as the opening.';
-  }else{
-    s2='The gaps in structure create drop-off points where viewers disengage before reaching the sections that work.';
-  }
+  var s2='';
+  var entryMap={hook:[hookSc<40?FB.hook.noTension:FB.hook.creatorFirst],cta:[ctaSc<40?FB.cta.noAction:FB.cta.actionNoReason],ctx:[ctxSc<40?FB.ctx.noCredential:FB.ctx.credentialNoPayoff],body:[FB.body.noMomentum],out:[FB.out.abrupt]};
+  var e2=entryMap[weakest]?entryMap[weakest][0]:null;
+  if(e2)s2=pv(e2.consequence,seed+1);
+  if(!s2)s2=pv(['The weakest section is pulling the overall score down significantly.','One section is costing the script more than all the others combined.','The gaps are concentrated and fixable with targeted edits.'],seed+1);
 
-  // Statement 3: What to fix (specific action)
-  if(hookSc<45){
-    s3='Rewrite the first sentence as a direct question or a claim the viewer needs to verify before they can leave.';
-  }else if(ctaSc<40&&tags.indexOf('cta')>=0){
-    s3='Add one reason to the call to action. Not just what to do, but why doing it matters to the viewer right now.';
-  }else if(bodySc<50&&bodySc>0){
-    s3='Add one concrete example, real number, or named tool to the main body. Specificity is what makes content stick.';
-  }else if(outSc<45&&tags.indexOf('out')>=0){
-    s3='Close the loop from the hook in the outro and name the next video or resource before signing off.';
-  }else if(ctxSc<45&&tags.indexOf('ctx')>=0){
-    s3='Make the context section viewer-focused. Translate your credential into their outcome, not just what you did.';
-  }else{
-    s3='Review the annotated sections below for specific improvements on each part.';
-  }
+  var s3='';
+  var fixMap={hook:[hookSc<40?FB.hook.noTension:FB.hook.noViewerAddress],cta:[ctaSc<40?FB.cta.noAction:FB.cta.actionNoReason],ctx:[ctxSc<40?FB.ctx.noCredential:FB.ctx.credentialNoPayoff],body:[bodySc<40?FB.body.noMomentum:FB.body.noExamples],out:[FB.out.noCallback]};
+  var e3=fixMap[weakest]?fixMap[weakest][0]:null;
+  if(e3)s3=pv(e3.direction,seed+2);
+  if(!s3)s3=pv(['Fix the weakest section first before adjusting anything else.','One focused rewrite of the lowest-scoring section will move the overall score more than any other change.','Prioritise the section with the lowest score and address it with a single targeted edit.'],seed+2);
 
   return s1+' '+s2+' '+s3;
 }
@@ -1689,8 +1624,8 @@ function openAnalyseResult(id){
   ov+='<div class="res-stats-row">';
   ov+='<div class="res-stat-chip"><div class="res-stat-num">'+intel.totalWords+'</div><div class="res-stat-lbl">Words</div></div>';
   ov+='<div class="res-stat-chip"><div class="res-stat-num">'+intel.totalSentences+'</div><div class="res-stat-lbl">Sentences</div></div>';
-  ov+='<div class="res-stat-chip" onclick="showStatHelp(\'pace\')" style="cursor:pointer;"><div class="res-stat-num">'+intel.sentenceLenVariance+'</div><div class="res-stat-lbl">Pace Var ?</div></div>';
-  ov+='<div class="res-stat-chip" onclick="showStatHelp(\'insight\')" style="cursor:pointer;"><div class="res-stat-num">'+intel.rewardDensity+'</div><div class="res-stat-lbl">Insight ?</div></div>';
+  ov+='<div class="res-stat-chip" onclick="showStatHelp(\'pace\','+intel.sentenceLenVariance+')" style="cursor:pointer;"><div class="res-stat-num">'+intel.sentenceLenVariance+'</div><div class="res-stat-lbl">Pace Var ?</div></div>';
+  ov+='<div class="res-stat-chip" onclick="showStatHelp(\'insight\','+intel.rewardDensity+')" style="cursor:pointer;"><div class="res-stat-num">'+intel.rewardDensity+'</div><div class="res-stat-lbl">Insight ?</div></div>';
   ov+='</div>';
 
   // Promise + Voice tracking
@@ -1722,6 +1657,18 @@ function openAnalyseResult(id){
     var pct=Math.max(5,Math.round((tagWds/totalWds)*100));
     ov+='<div style="flex:'+pct+';background:'+tagBgs[tag]+';border:1px solid '+tagColors[tag]+';opacity:.8;display:flex;align-items:center;justify-content:center;font-size:.48rem;font-weight:700;color:'+tagColors[tag]+';">'+tagNames[tag].split(' ')[0]+'</div>';
   });
+  // Balance insight from library
+  var balanceKey='wellBalanced';
+  var ctaWds2=paras.filter(function(p){return p.tag==='cta';}).reduce(function(a,p){return a+wc(p.text||'');},0);
+  var hookWds2=paras.filter(function(p){return p.tag==='hook';}).reduce(function(a,p){return a+wc(p.text||'');},0);
+  var bodyWds2=paras.filter(function(p){return p.tag==='body';}).reduce(function(a,p){return a+wc(p.text||'');},0);
+  if(ctaWds2>0&&ctaWds2<15)balanceKey='ctaLight';
+  else if(hookWds2>0&&hookWds2<10)balanceKey='hookLight';
+  else if(totalWds>0&&bodyWds2/totalWds>0.72)balanceKey='bodyHeavy';
+  if(typeof getStatInsight==='function'){
+    var balTxt=getStatInsight('balance',balanceKey);
+    if(balTxt)ov+='<div style="font-size:.68rem;color:var(--muted);line-height:1.55;margin-top:6px;">'+balTxt+'</div>';
+  }
   ov+='</div></div>';
 
   // In short
@@ -1798,13 +1745,25 @@ function openAnalyseResult(id){
   // Failure patterns  -  all shown, detail is the value
   if(intel.failurePatterns&&intel.failurePatterns.length){
     intel.failurePatterns.forEach(function(fp){
+      var fpSeed=fp.id?fp.id.length*7+fp.id.charCodeAt(0):42;
+      var libEntry=typeof getPatternEntry==='function'?getPatternEntry(fp.id):null;
+      var fpDesc=libEntry&&typeof getPatternDescription==='function'?getPatternDescription(fp.id,fpSeed):fp.desc;
+      var fpCons=libEntry&&typeof getPatternConsequence==='function'?getPatternConsequence(fp.id,fpSeed+1):'';
+      var fpEx=libEntry&&typeof getPatternExample==='function'?getPatternExample(fp.id,fpSeed+2):'';
       deep+='<div style="margin:10px 14px 0;border:1px solid rgba(192,90,90,.25);border-radius:12px;background:rgba(139,58,58,.08);padding:12px 14px;">';
       deep+='<div style="font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--s-low);margin-bottom:4px;">Pattern detected</div>';
-      deep+='<div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:3px;">'+fp.name+'</div>';
-      deep+='<div style="font-size:.7rem;color:var(--muted);line-height:1.55;margin-bottom:8px;">'+fp.desc+'</div>';
+      deep+='<div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:5px;">'+fp.name+'</div>';
+      deep+='<div style="font-size:.7rem;color:var(--muted);line-height:1.6;margin-bottom:6px;">'+fpDesc+'</div>';
+      if(fpCons){deep+='<div style="font-size:.7rem;color:rgba(192,90,90,.85);line-height:1.6;margin-bottom:8px;padding:7px 10px;background:rgba(139,58,58,.1);border-radius:8px;">'+fpCons+'</div>';}
+      if(fpEx){
+        deep+='<div style="padding:8px 10px;background:rgba(255,255,255,.03);border-radius:8px;border-left:2px solid var(--s-high);">';
+        deep+='<div style="font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--s-high);margin-bottom:4px;">What good looks like</div>';
+        deep+='<div style="font-size:.7rem;color:var(--muted);line-height:1.6;">'+fpEx+'</div></div>';
+      }
       deep+='</div>';
     });
   }
+
 
   deep+='<div style="display:flex;flex-direction:column;gap:8px;padding:16px 14px 28px;">';
   deep+='<button class="res-export-btn" onclick="openAsNewScript(\''+id+'\')" style="width:100%;justify-content:center;">';
@@ -1816,7 +1775,13 @@ function openAnalyseResult(id){
 
   // Render hero into fixed div above panels
   var heroEl=document.getElementById('resHero');
-  if(heroEl)heroEl.innerHTML=hero;
+  if(heroEl){
+    heroEl.innerHTML=hero;
+    // Force repaint on Android Chrome
+    heroEl.style.display='none';
+    heroEl.offsetHeight; // trigger reflow
+    heroEl.style.display='';
+  }
 
   // Store panels (without hero) and render Overview by default
   S._resPanels={overview:ov,sections:sec,deep:deep};
@@ -2072,17 +2037,29 @@ function getHelpSections(tab){
 
 // ── Report Drawer ──
 function toggleAnnoBlock(el){el.classList.toggle('open');}
-function showStatHelp(type){
-  var helps={
-    curve:'The attention curve tracks predicted viewer engagement in 10 time buckets. Green means rising attention, grey is neutral, red signals a drop-off risk.',
-    pace:'Pace variance measures how much your sentence lengths vary. Above 4 means good rhythm. Below 2 means flat pacing that is harder for viewers to follow.',
-    insight:'Insight density counts new insights per 100 words. Low means the script may be repeating ideas without escalating value.',
-    promise:'Promise tracking checks whether a commitment made early in the script is delivered later. A promise made and not delivered damages viewer trust.',
-    voice:'Voice ratio measures how often the script addresses the viewer directly. Higher viewer address generally means better engagement.',
-    sync:'Live Sync keeps analysis up to date as you write. Runs the engine on every edit and saves results to Hub automatically. Pro only.',
-    sync:'Live Sync keeps your analysis up to date as you write. Every edit triggers a fresh analysis saved to your Hub history. This is a Pro feature because it runs the engine on every keystroke.'
-  };
-  openModal('_raw','<div class="mhandle"></div><div class="modal-title" style="font-size:.9rem;">About this stat</div><p style="font-size:.78rem;color:var(--muted);line-height:1.65;margin-bottom:16px;">'+(helps[type]||'')+'</p><button class="btn-g" onclick="closeMoForce()">Got it</button>');
+function showStatHelp(type,value){
+  var title='About this stat';
+  var body='';
+  if(type==='curve'){
+    title='Attention Curve';
+    body='The attention curve maps predicted viewer engagement across your script in 10 time buckets. Green bars mean attention is rising. Grey is neutral. Red signals a predicted drop-off point where viewers are likely to leave.';
+  }else if(type==='pace'){
+    title='Pace Variance';
+    body=(typeof getStatInsight==='function'?getStatInsight('pace',parseFloat(value)||0):'')||'Pace variance measures sentence length variation. Above 4 is strong rhythm. Below 2 is flat.';
+  }else if(type==='insight'){
+    title='Insight Density';
+    body=(typeof getStatInsight==='function'?getStatInsight('insight',parseFloat(value)||0):'')||'Insight density counts new insights per 100 words. Low means repetition without escalation.';
+  }else if(type==='promise'){
+    title='Promise Tracking';
+    body=(typeof getStatInsight==='function'?getStatInsight('promise',value||'none'):'')||'Promise tracking checks whether a commitment made in the opening is delivered later.';
+  }else if(type==='voice'){
+    title='Voice Ratio';
+    body=(typeof getStatInsight==='function'?getStatInsight('voice',parseFloat(value)||0):'')||'Voice ratio measures how often the script addresses the viewer directly.';
+  }else if(type==='sync'){
+    title='Live Sync';
+    body='Live Sync keeps your analysis up to date as you write. Every edit triggers a fresh analysis. Pro only.';
+  }
+  openModal('_raw','<div class="mhandle"></div><div class="modal-title" style="font-size:.9rem;">'+title+'</div><p style="font-size:.78rem;color:var(--muted);line-height:1.65;margin-bottom:16px;">'+body+'</p><button class="btn-g" onclick="closeMoForce()">Got it</button>');
 }
 
 // ── Onboarding ──
@@ -2152,11 +2129,17 @@ function openWriteReport(){
   // Render body
   renderWriteReportBody(intel,script);
 
-  // Open drawer
-  document.getElementById('wrDrawer').classList.remove('hide');
-  document.getElementById('wrDrawer').classList.add('open');
-  document.getElementById('wrDov').classList.remove('hide');
-  document.getElementById('wrDov').classList.add('open');
+  // Open drawer - requestAnimationFrame ensures transition fires after display:none removed
+  var wd=document.getElementById('wrDrawer');
+  var wov=document.getElementById('wrDov');
+  wd.classList.remove('hide');
+  wov.classList.remove('hide');
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      wd.classList.add('open');
+      wov.classList.add('open');
+    });
+  });
 }
 
 function goToFullReport(){closeWriteReport();goScreen('hub');setTimeout(function(){var pill=document.querySelector('.hub-pill[data-tab="analyse"]');if(pill)setHubTab(pill,'analyse');},120);}
@@ -2246,41 +2229,14 @@ function updateSyncToggleUI(){
 }
 
 function runLiveSync(){
-  // Called after every paragraph edit when syncEnabled is true
   var script=getActive();
   if(!script||!S.syncEnabled||!isPro())return;
   var intel=analyseScript(script.paragraphs);
   S._liveIntel=intel;
-  // Save as an analysis history entry for this script (upsert)
-  loadAnalyseHistory();
-  var existing=null;
-  for(var i=S.analyseHistory.length-1;i>=0;i--){
-    if(S.analyseHistory[i].scriptId===script.id&&S.analyseHistory[i]._liveSync){
-      existing=S.analyseHistory[i];break;
-    }
-  }
-  if(existing){
-    existing.score=intel.overall;
-    existing.sectionScores=intel.sectionScores;
-    existing.paragraphs=script.paragraphs;
-    existing.date=new Date().toISOString();
-  }else{
-    S.analyseHistory.push({
-      id:uid(),title:script.title,
-      date:new Date().toISOString(),
-      score:intel.overall,
-      sectionScores:intel.sectionScores,
-      paragraphs:script.paragraphs.map(function(p){return {id:p.id,tag:p.tag,text:p.text};}),
-      scriptId:script.id,
-      _liveSync:true
-    });
-    if(S.analyseHistory.length>20)S.analyseHistory=S.analyseHistory.slice(-20);
-  }
-  saveAnalyseHistory();
-  // Update score on script card
+  // Update script's last score silently
   script.lastScore=intel.overall;
   save();
-  // If drawer is open, refresh it
+  // If drawer is open, refresh the display
   if(!document.getElementById('wrDrawer').classList.contains('hide')){
     var overall=intel.overall;
     var level=scoreLevel(overall);
@@ -2425,7 +2381,8 @@ function openModal(type,data){
   _modalOpen=true;
   var mo=document.getElementById('mo');
   var modal=document.getElementById('modal');
-  var html='<div class="mhandle"></div>';
+  var xBtn='<button onclick="closeMoForce()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);padding:4px;cursor:pointer;display:flex;z-index:2;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>';
+  var html='<div class="mhandle"></div>'+xBtn;
 
   if(type==='_raw'){html=data||'';modal.innerHTML=html;mo.classList.add('open');return;}
 
@@ -2794,7 +2751,8 @@ if(window.visualViewport){
   window.visualViewport.addEventListener('resize',function(){
     var active=document.activeElement;
     if(active&&(active.tagName==='TEXTAREA'||active.tagName==='INPUT')){
-      setTimeout(function(){active.scrollIntoView({block:'nearest',behavior:'smooth'});},50);
+      // Use center to keep the element well above the keyboard
+      setTimeout(function(){active.scrollIntoView({block:'center',behavior:'smooth'});},80);
     }
   });
 }

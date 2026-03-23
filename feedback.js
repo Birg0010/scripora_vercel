@@ -936,3 +936,405 @@ function getComposedFeedback(tag, text, sc, signals) {
     return null;
   }
 }
+
+// ════════════════════════════════════════════════════════════════════
+// STAT INSIGHTS
+// Consequence text for each stat chip on the Overview tab
+// Called with: FB.stats.pace.high / mid / low
+// Each level has: summary (1 line for chip), detail (for tooltip/modal)
+// ════════════════════════════════════════════════════════════════════
+
+FB.stats = {
+
+  pace: {
+    high: {
+      summary: ['Rhythm is strong.', 'Sentence variety is working.', 'Good pacing throughout.', 'The rhythm holds attention.'],
+      detail: [
+        'High pace variance means your sentence lengths vary significantly throughout. Short punchy sentences alternate with longer explanatory ones, which creates natural rhythm. Viewers process varied sentences faster and retain them longer.',
+        'A high variance score indicates strong rhythm discipline. The script moves between quick punches and longer builds, which prevents the reading experience from going flat.',
+        'Your sentence variety is working. The rhythm creates contrast, and contrast keeps the brain engaged. This is one of the harder things to achieve in a first draft.'
+      ]
+    },
+    mid: {
+      summary: ['Pacing is adequate.', 'Rhythm could be sharper.', 'Some sentence variety.', 'Pacing is functional but flat in places.'],
+      detail: [
+        'Mid-range pace variance means the script has some rhythm but not enough. Some sections may have uniform sentence length which creates a plateau effect. Try introducing one very short sentence after every two or three long ones.',
+        'The pacing is not hurting the script but it is not helping it either. Rhythm variation is what separates scripts that feel energetic from ones that feel workmanlike.',
+        'There is sentence variety here but it is inconsistent. Some paragraphs flow well while others run at a uniform pace. Identify the flat sections and add a short emphatic sentence to each.'
+      ]
+    },
+    low: {
+      summary: ['Flat pacing detected.', 'Rhythm is uniform.', 'Sentence lengths are too similar.', 'Pacing needs variation.'],
+      detail: [
+        'Low pace variance means your sentences are all roughly the same length. This creates a monotonous reading experience. Viewers describe this as a video that felt long even when it was short.',
+        'Uniform sentence length is one of the most common reasons a technically accurate script fails to engage. The information is there but the rhythm is not. A single short sentence placed at the right moment can change the feel of an entire section.',
+        'Your sentences run at almost the same length throughout. This removes the natural emphasis that shorter sentences create. The fix is simple: after your next long explanatory sentence, add one short one. One idea. Maximum eight words.'
+      ]
+    }
+  },
+
+  insight: {
+    high: {
+      summary: ['High insight density.', 'Rewarding throughout.', 'Consistent new value.', 'Strong reward rate.'],
+      detail: [
+        'High insight density means the script delivers new information consistently without repeating itself. Viewers who keep getting rewarded keep watching. This score suggests the body section is doing its job.',
+        'Your script delivers new insights at a strong rate. Each section moves the viewer forward rather than restating what was already said. This is what makes viewers describe a video as dense with value.',
+        'Insight density measures how often the viewer receives something genuinely new. A high score here means you are not padding and not repeating. Both are harder to achieve than they look.'
+      ]
+    },
+    mid: {
+      summary: ['Some repetition detected.', 'Insight rate is moderate.', 'A few sections plateau.', 'Value density is functional.'],
+      detail: [
+        'Mid-range insight density suggests some sections advance the idea while others restate it. The script is delivering value but not consistently. Review any section where two consecutive sentences make the same point in different words.',
+        'The insight rate is acceptable but not remarkable. Viewers will find value here but may feel the video ran slightly longer than it needed to. Identify the section with the most repetition and cut or replace one sentence.',
+        'Some of the script is advancing the viewer and some is circling back. The ratio is acceptable but there is room to increase the reward rate. Each sentence should either introduce a new idea or illustrate an existing one. If it does neither, cut it.'
+      ]
+    },
+    low: {
+      summary: ['Low insight density.', 'Script may be padding.', 'Repetition detected.', 'Value rate is low.'],
+      detail: [
+        'Low insight density means the script is repeating ideas more than it is advancing them. Viewers will notice this as a sense that the video is saying the same thing multiple ways. The fix is to cut the restatements and replace them with examples or new points.',
+        'A low density score suggests the script is filling time rather than delivering value. Each section should introduce something the viewer did not have before. If a sentence just repeats what the previous one said, it is costing you retention.',
+        'The script has more restatement than progression. This is the single most common reason viewers leave a video before the end. They feel they are no longer learning. Cut every sentence that says what a previous sentence already said.'
+      ]
+    }
+  },
+
+  promise: {
+    delivered: {
+      summary: ['Promise delivered.', 'Commitment fulfilled.', 'The viewer got what was offered.', 'Hook promise resolved.'],
+      detail: [
+        'A promise was detected in the opening and a delivery point was found later in the script. This is structurally sound. The viewer who stayed for the payoff received it, which builds the kind of trust that brings them back.',
+        'The script makes a commitment in the opening and follows through. This loop — promise to delivery — is the backbone of viewer trust. Audiences who feel the creator kept their word are significantly more likely to subscribe.',
+        'Promise detected and delivered. This is what separates a well-structured script from a collection of ideas. The viewer had something to wait for and received it.'
+      ]
+    },
+    notDelivered: {
+      summary: ['Promise not delivered.', 'Hook commitment unresolved.', 'The opening ask was not answered.', 'Viewer expectation unmet.'],
+      detail: [
+        'A promise was detected in the opening of the script but no clear delivery point was found. The viewer who stayed for the payoff will arrive at the end still waiting for it. This is one of the most damaging structural failures in a YouTube script.',
+        'The hook or context section created an expectation that was not explicitly fulfilled. Viewers who notice this feel misled even when the rest of the content was strong. Add a delivery sentence that references the original promise directly.',
+        'The script made a commitment and did not keep it. This may be unintentional — the delivery may exist but is not phrased clearly enough for the engine to find. Check the body and outro for the moment you intended to fulfil the opening promise and make it explicit.'
+      ]
+    },
+    none: {
+      summary: ['No promise detected.', 'No forward commitment.', 'Missing a viewer hook.', 'No stated outcome.'],
+      detail: [
+        'No explicit promise was detected in the opening sections. A promise is not just a hook — it is a commitment to the viewer about what they will have by the end. Without one, the viewer enters the body with no specific reason to reach the end.',
+        'The script does not appear to make a forward commitment to the viewer. Promises drive motivated watching. When the viewer knows what they are waiting for, they are more tolerant of setup and more attentive to delivery.',
+        'No promise was found in the hook or context. This is not always a problem — some video formats do not require one. But for educational and informational content, a viewer who knows what they are working toward watches with more intention.'
+      ]
+    }
+  },
+
+  voice: {
+    viewerHeavy: {
+      summary: ['Viewer-focused language.', 'Strong viewer address.', 'You-first framing.', 'Speaking to the viewer directly.'],
+      detail: [
+        'A high viewer address ratio means the script speaks to the viewer directly and consistently. This creates the sense that the video was made specifically for them, which increases both retention and trust.',
+        'The script prioritises the viewer over the creator in its language. This is one of the most reliable indicators of a video that will retain attention. When viewers feel addressed, they feel responsible for paying attention.',
+        'High viewer address means most sentences frame ideas around what the viewer experiences, needs, or gains. This is harder to sustain than it looks and you are doing it consistently.'
+      ]
+    },
+    balanced: {
+      summary: ['Balanced voice.', 'Mix of viewer and creator.', 'Reasonable viewer address.', 'Language is mostly viewer-focused.'],
+      detail: [
+        'The script balances creator-focused and viewer-focused language. This is acceptable but there is room to shift more sentences toward the viewer. Each creator-focused sentence is a moment the viewer is listening to your story rather than thinking about their own.',
+        'A balanced voice ratio means roughly equal creator and viewer focus. The goal is not to eliminate the creator voice entirely but to make sure it earns its place. Every "I" should be in service of a "you".',
+        'The mix of creator and viewer language is functional. To improve, review every sentence that starts with "I" and ask whether it could be reframed to start with "you" or to name the viewer benefit directly.'
+      ]
+    },
+    creatorHeavy: {
+      summary: ['Creator-heavy language.', 'Too much I/my framing.', 'Script is creator-focused.', 'Needs more viewer address.'],
+      detail: [
+        'A low viewer address ratio means the script speaks about the creator more than it speaks to the viewer. This is one of the most common reasons otherwise strong content fails to retain. The viewer came for themselves, not for you.',
+        'The script is predominantly creator-focused in its language. Viewers process creator-focused sentences as background information rather than relevant guidance. Shift the language toward the viewer by replacing "I" sentences with "you" sentences wherever possible.',
+        'Creator-heavy language creates distance. The viewer is watching you describe your experience rather than feeling that the experience is relevant to them. Every sentence that starts with "I" is an opportunity to reframe around the viewer.'
+      ]
+    }
+  },
+
+  balance: {
+    hookLight: {
+      summary: ['Hook is very short.', 'Opening may be too brief.', 'Hook needs more weight.', 'The opening is underbuilt.'],
+      detail: [
+        'The hook section is unusually short relative to the rest of the script. A hook can be brief and powerful, but if it is too short it may not create enough tension before the context section begins.',
+        'The hook appears to be one sentence or fewer. While brevity in a hook is generally good, the section needs to create genuine tension. Check whether the opening does enough before moving to context.',
+        'The proportional weight of the hook is very low. This may be intentional, but it is worth reviewing whether the opening earns the viewer\'s attention before the context section begins to build credentials.'
+      ]
+    },
+    ctaLight: {
+      summary: ['CTA is too brief.', 'The ask needs more space.', 'CTA section is underweight.', 'The close needs more room.'],
+      detail: [
+        'The CTA section is very short relative to the body. A brief CTA can work but it needs to contain a specific action and a reason. If either is missing, brevity becomes a problem.',
+        'The call to action has very few words. This limits how much it can do. A CTA needs room for the ask, the reason, and sometimes a forward direction. Very short CTAs tend to lack at least one of these.',
+        'The CTA\'s proportional weight is low. Check that it contains both a named action and a reason. Without a reason, brevity makes the ask feel transactional.'
+      ]
+    },
+    bodyHeavy: {
+      summary: ['Body dominates the script.', 'Opening and close may be thin.', 'Most weight is in the body.', 'Balance is body-heavy.'],
+      detail: [
+        'The main body takes up the majority of the script, which is normal, but check that the hook and context are not being squeezed. A body that is disproportionately long can dilute attention before the CTA.',
+        'The body section is significantly longer than the other sections combined. This is often fine but watch for two risks: an underdeveloped hook that has not earned the viewer\'s patience for a long body, and a compressed CTA at the end.',
+        'Most of the script weight is in the body. Make sure the hook earns the right to take the viewer into a long body section, and that the CTA has enough room to close effectively.'
+      ]
+    },
+    wellBalanced: {
+      summary: ['Sections are well balanced.', 'Good structural proportion.', 'Weight is well distributed.', 'Clean structural balance.'],
+      detail: [
+        'The section lengths are proportionally balanced. The hook, context, body, CTA and outro each occupy a sensible share of the script. This is a structural signal that the script has been planned rather than improvised.',
+        'Good section balance means the script does not over-invest in any one area at the expense of another. The viewer receives a hook, a setup, a payoff, a direction, and a close — each with appropriate room to do its job.',
+        'The proportions are clean. A structurally balanced script is easier to film, easier to edit, and easier for viewers to follow. This foundation gives each section the space it needs to work.'
+      ]
+    }
+  }
+};
+
+// ════════════════════════════════════════════════════════════════════
+// FAILURE PATTERN LIBRARY
+// Full descriptions + what good looks like for each pattern
+// Used in the Deep tab
+// ════════════════════════════════════════════════════════════════════
+
+FB.patterns = {
+
+  early_payoff: {
+    name: 'Early Payoff Trap',
+    descriptions: [
+      'The hook creates curiosity and then resolves it before the viewer has committed to watching.',
+      'Tension is introduced and collapsed within the first few sentences, removing the psychological pull that should carry the viewer into the context section.',
+      'The hook answers its own question, which eliminates the reason to continue watching.'
+    ],
+    consequence: [
+      'Once the curiosity is resolved, the viewer has no unfinished business with the video. They can leave having received the point.',
+      'The most powerful moment of viewer commitment — the open loop — is closed before the viewer has invested any attention.',
+      'A hook that resolves itself converts a potential viewer into someone who got what they came for in ten seconds and left.'
+    ],
+    example: [
+      'Instead of answering the question in the hook, hold it open. End the hook with something unresolved: "And the reason most creators never figure this out is exactly what I want to show you." The answer lives in the body, not the hook.',
+      'Split the hook: pose the question in the first sentence, then raise the stakes of not knowing the answer in the second. Never give the answer until the body section.',
+      'A strong hook creates a gap between what the viewer knows and what the script is about to reveal. The gap should stay open through the entire context section. Close it in the body.'
+    ]
+  },
+
+  creator_diary: {
+    name: 'Creator Diary Opening',
+    descriptions: [
+      'The script opens with the creator\'s experience, story, or background before establishing why the viewer should care.',
+      'The first sentences position the creator at the centre of the opening rather than the viewer\'s problem.',
+      'The hook leads with personal narrative before earning the viewer\'s investment.'
+    ],
+    consequence: [
+      'Viewers who do not already know and trust the creator have no reason to be interested in the creator\'s story before they have a reason to care about the topic.',
+      'Opening with the creator\'s experience asks the viewer to trust you before you have given them a reason to. Most viewers will not extend that trust for free.',
+      'A creator diary opening delays the moment the viewer sees themselves in the content. The longer it takes for the viewer to feel that this video is about them, the higher the drop-off risk.'
+    ],
+    example: [
+      'Move the personal story to the context section where it functions as a credential. Open instead with a question or claim about the viewer\'s situation. "Do you know that most creators make this mistake in their first sentence?"',
+      'Start with the viewer\'s problem, not your experience with it. The creator diary is a strong context tool when placed after the hook — it becomes authority rather than autobiography.',
+      'Rewrite the opening so the first word is not "I". Replace it with "You", with a question, or with a bold factual claim. Save the personal story for after the viewer has committed to staying.'
+    ]
+  },
+
+  endless_setup: {
+    name: 'Endless Setup',
+    descriptions: [
+      'The hook and context sections are weak or underdeveloped while the main body contains the real value.',
+      'The script takes a long time to earn the viewer\'s patience for the content.',
+      'Strong content is buried under a weak entry that has not given the viewer a reason to reach it.'
+    ],
+    consequence: [
+      'Viewers who are not given a compelling reason to stay in the first twenty seconds will not reach the strong body content.',
+      'The best parts of the script are inaccessible to viewers who needed a better opening to stay for them.',
+      'A weak entry to strong content is one of the most painful structural failures because the value is there — it is just never reached.'
+    ],
+    example: [
+      'Take the strongest idea from the body section and move a version of it into the hook. The hook should be the most provocative sentence in the script, not an introduction.',
+      'The context section earns the viewer\'s patience for the body. Shorten the setup and sharpen the promise. One credential, one promise, then get to the value.',
+      'Reverse-engineer the hook from the body: what is the single most surprising thing the body reveals? That is your hook.'
+    ]
+  },
+
+  broken_promise: {
+    name: 'Promise Not Delivered',
+    descriptions: [
+      'A specific commitment made in the opening of the script is not explicitly fulfilled in the body or outro.',
+      'The script sets a viewer expectation that it does not resolve.',
+      'The hook or context makes a promise that the rest of the script does not keep.'
+    ],
+    consequence: [
+      'Viewers who stayed specifically for the promised payoff will feel the creator did not keep their word. This erodes trust and reduces the chance of returning.',
+      'An undelivered promise is one of the most memorable failures of a video. Viewers do not forget what they were promised.',
+      'The trust built across the video collapses at the point where the viewer realises the promise was not kept. Everything that came before is retroactively questioned.'
+    ],
+    example: [
+      'Find the promise in your hook or context and write a delivery sentence that explicitly names it. "So that\'s the reason I mentioned at the start — the pattern that almost every script follows without the creator realising."',
+      'The delivery does not need to be elaborate. One sentence that connects back to the opening promise is enough to close the loop. "That is the answer to the question I opened with."',
+      'If you cannot find where the promise is delivered, it is not there. Add it. The exact location does not matter — the end of the body, the start of the outro — as long as it is explicit.'
+    ]
+  },
+
+  flatline: {
+    name: 'Flatline Pacing',
+    descriptions: [
+      'Sentence length is uniform throughout the script with very little variation.',
+      'The rhythm does not change across sections — every sentence runs at approximately the same length.',
+      'No pacing contrast exists to create emphasis or signal important ideas.'
+    ],
+    consequence: [
+      'Uniform pacing is the audio equivalent of a monotone delivery. The brain stops registering variation and attention drifts.',
+      'Without rhythm contrast, the viewer cannot tell which sentences are the important ones. Everything sounds equally weighted, which means nothing feels significant.',
+      'Flatline pacing makes technically accurate content harder to absorb and harder to remember. The information is there but it does not land with force.'
+    ],
+    example: [
+      'After every two or three long sentences, write one short one. Maximum eight words. That sentence should carry the key idea of the paragraph. The contrast will make it hit harder than any long sentence can.',
+      'Read the script aloud. Every place you naturally want to pause and let something land — that is where a short sentence belongs. Do not run the next thought immediately after an important one.',
+      '"Most creators make the same mistake in their hook. Every single one." That second sentence is four words. It does more work than the ten that preceded it.'
+    ]
+  },
+
+  authority_dump: {
+    name: 'Authority Without Evidence',
+    descriptions: [
+      'The context section asserts experience or expertise without providing specific, verifiable evidence.',
+      'Credentials are claimed but not demonstrated. The viewer is asked to trust a title, not a result.',
+      'The section establishes authority through assertion rather than through proof.'
+    ],
+    consequence: [
+      'Viewers are increasingly resistant to claimed authority. An assertion without evidence sounds like every other creator making the same claim.',
+      'Vague authority lands as background information. Specific evidence lands as credibility.',
+      'The difference between "I have years of experience" and "I have reviewed 400 scripts from creators with under 5000 subscribers" is the difference between a claim and a credential.'
+    ],
+    example: [
+      'Replace any general authority claim with a specific number, result, or named outcome. Not "I have helped many creators" but "I have helped 37 creators go from under 1000 to over 10,000 subscribers in under six months."',
+      'If you have no impressive numbers, use specificity instead. The specificity itself signals credibility. "I spent three months watching the first thirty seconds of 200 YouTube videos and tracking exactly when the drop-off happened."',
+      'Show rather than tell. Instead of claiming expertise, demonstrate it in the first sentence of the body. Let the quality of your content establish the credential.'
+    ]
+  },
+
+  weak_cta: {
+    name: 'Vague Call to Action',
+    descriptions: [
+      'The CTA section does not name a specific action or give the viewer a reason to take it.',
+      'The call to action is present but lacks direction — it tells the viewer to do something without telling them what or why.',
+      'The closing section makes a general request without the specificity needed to convert it into action.'
+    ],
+    consequence: [
+      'All the trust built across the video dissolves at the final moment when the ask is too vague to act on.',
+      'A CTA without a specific action requires the viewer to decide what to do, which is more friction than most viewers will accept.',
+      'Vague CTAs are processed as social noise rather than genuine requests. The viewer hears them the same way they hear a generic "drive safe" at the end of a phone call.'
+    ],
+    example: [
+      '"Subscribe because I post every Tuesday and next week I am covering the exact hook formula that retained 80 percent of viewers past 30 seconds." Action named. Reason given. Future promise made. This is what a CTA needs.',
+      'The formula: [specific action] + [specific reason] + [optional: what is coming next]. Every element increases the conversion rate. Removing any one of them reduces it.',
+      'If you can not give a specific reason to subscribe, give a specific next video. "Watch the video on context sections next — it covers the one sentence that doubles how long viewers stay."'
+    ]
+  },
+
+  abrupt_end: {
+    name: 'Abrupt Ending',
+    descriptions: [
+      'The script ends without closing the loop opened in the hook or providing forward direction for the viewer.',
+      'The outro stops the video rather than completing it.',
+      'The ending does not signal that the script has reached its intended destination.'
+    ],
+    consequence: [
+      'A video that stops rather than ends leaves the viewer with a mild sense of incompleteness that colours their memory of the whole thing.',
+      'The last thing the viewer experiences is the most memorable. An abrupt ending overwrites a strong middle.',
+      'Viewers who feel a video ended well are significantly more likely to watch another. The ending is not decoration — it is the final conversion opportunity.'
+    ],
+    example: [
+      'Close the loop: name the question or problem from the hook and give it one sentence of resolution. Then send the viewer forward. "So that is the answer to why most scripts fail before a single word is written. If you want to go deeper on hook structure, the next video covers the three opening lines that retain 80 percent of viewers." Two sentences. The video is complete.',
+      'The outro has two jobs: resolution and direction. Resolution closes the loop. Direction sends the viewer somewhere specific. Both can be done in two sentences.',
+      'Think of the outro as punctuation. It should feel definitive. "That is the framework. Now go and apply it to your next script." Short, complete, sends the viewer forward.'
+    ]
+  }
+};
+
+// ════════════════════════════════════════════════════════════════════
+// STAT INSIGHT FUNCTIONS
+// Called from openAnalyseResult to get contextual text for each stat
+// ════════════════════════════════════════════════════════════════════
+
+function getStatInsight(statType, value, context) {
+  var seed = Math.round(value * 10);
+  function pick(arr) {
+    if (!arr || !arr.length) return '';
+    return arr[Math.abs(seed) % arr.length];
+  }
+
+  if (statType === 'pace') {
+    var level = value >= 4 ? 'high' : value >= 2.5 ? 'mid' : 'low';
+    var entry = FB.stats.pace[level];
+    return entry ? pick(entry.detail) : '';
+  }
+
+  if (statType === 'insight') {
+    var level = value >= 2.5 ? 'high' : value >= 1.2 ? 'mid' : 'low';
+    var entry = FB.stats.insight[level];
+    return entry ? pick(entry.detail) : '';
+  }
+
+  if (statType === 'promise') {
+    var key = value === 'delivered' ? 'delivered' : value === 'none' ? 'none' : 'notDelivered';
+    var entry = FB.stats.promise[key];
+    return entry ? pick(entry.detail) : '';
+  }
+
+  if (statType === 'voice') {
+    var level = value >= 45 ? 'viewerHeavy' : value >= 25 ? 'balanced' : 'creatorHeavy';
+    var entry = FB.stats.voice[level];
+    return entry ? pick(entry.detail) : '';
+  }
+
+  if (statType === 'balance') {
+    var entry = FB.stats.balance[value] || FB.stats.balance.wellBalanced;
+    return entry ? pick(entry.detail) : '';
+  }
+
+  return '';
+}
+
+function getStatSummary(statType, value) {
+  var seed = Math.round(value * 10);
+  function pick(arr) {
+    if (!arr || !arr.length) return '';
+    return arr[Math.abs(seed) % arr.length];
+  }
+
+  if (statType === 'pace') {
+    var level = value >= 4 ? 'high' : value >= 2.5 ? 'mid' : 'low';
+    var entry = FB.stats.pace[level];
+    return entry ? pick(entry.summary) : '';
+  }
+
+  if (statType === 'insight') {
+    var level = value >= 2.5 ? 'high' : value >= 1.2 ? 'mid' : 'low';
+    var entry = FB.stats.insight[level];
+    return entry ? pick(entry.summary) : '';
+  }
+
+  return '';
+}
+
+function getPatternEntry(patternId) {
+  return FB.patterns[patternId] || null;
+}
+
+function getPatternExample(patternId, seed) {
+  var entry = FB.patterns[patternId];
+  if (!entry || !entry.example) return '';
+  return entry.example[Math.abs(seed) % entry.example.length];
+}
+
+function getPatternConsequence(patternId, seed) {
+  var entry = FB.patterns[patternId];
+  if (!entry || !entry.consequence) return '';
+  return entry.consequence[Math.abs(seed) % entry.consequence.length];
+}
+
+function getPatternDescription(patternId, seed) {
+  var entry = FB.patterns[patternId];
+  if (!entry || !entry.descriptions) return '';
+  return entry.descriptions[Math.abs(seed) % entry.descriptions.length];
+}
