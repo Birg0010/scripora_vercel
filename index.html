@@ -291,6 +291,7 @@
     <button class="res-tab" id="rtab-sections" onclick="switchResTab('sections',this)">Sections</button>
     <button class="res-tab" id="rtab-deep" onclick="switchResTab('deep',this)">Deep</button>
   </div>
+  <div id="resHero" style="flex-shrink:0;"></div>
   <div style="flex:1;overflow-y:auto;" id="resBody"></div>
 </div>
 
@@ -307,7 +308,7 @@
 
 <!-- WRITE REPORT DRAWER -->
 <div class="dov hide" id="wrDov" onclick="closeWriteReport()"></div>
-<div class="drawer hide" id="wrDrawer">
+<div class="drawer-bottom hide" id="wrDrawer">
   <div class="drawer-hd">
     <div style="flex:1;">
       <span class="drawer-title">Script Report</span>
@@ -374,6 +375,7 @@
 
 
 
+<script src="feedback.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

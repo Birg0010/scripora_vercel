@@ -553,8 +553,13 @@ function hasTransition(text){
   var last=text.replace(/([.!?])\s+/g,'$1\x01').split('\x01').pop()||'';
   return !!(last.toLowerCase().match(/\b(let me|let.?s|so today|in this video|here is what|that is exactly|what i found|i.?ll show|i will show|and that means|which brings|so here)\b/));
 }
-function getParagraphFeedback(tag,text,sc){
+function getParagraphFeedback(tag,text,sc,signals){
   if(!text||text.trim().length<5)return 'No content written for this section yet.';
+  // Try the new modular feedback composer first
+  if(typeof getComposedFeedback==='function'){
+    var composed=getComposedFeedback(tag,text,sc,signals||{});
+    if(composed)return composed;
+  }
   var l=text.toLowerCase();
   var op=openingWord(text);
   var first=getFirstSentence(text);
@@ -1491,14 +1496,14 @@ function runAnalyseFromPaste(){
       if(btn){btn.innerHTML='Analyse';btn.disabled=false;}
       S._pasteTitle='';
     },remaining);
-  });
+  },S._pasteTitle);
 }
 
-function aiTagAndAnalyse(text,onDone){
-  // AI call removed   rule engine now reads actual text and generates specific feedback
+function aiTagAndAnalyse(text,onDone,title){
+  // AI call removed - rule engine handles analysis
   // AI-powered analysis will be introduced as a Pro feature with proper API proxy
   if(onDone)onDone();
-  runAnalyse(text,'Pasted Script');
+  runAnalyse(text,title||'Pasted Script');
 }
 function runAnalyseForScript(id){
   var s=S.scripts.find(function(x){return x.id===id;});
@@ -1651,7 +1656,7 @@ function openAnalyseResult(id){
   hero+='</div></div>';
 
   // ── OVERVIEW PANEL ──
-  var ov=hero;
+  var ov='';
 
   // Top issue
   if(intel.issues&&intel.issues.length){
@@ -1809,7 +1814,11 @@ function openAnalyseResult(id){
   deep+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Download Report</button>';
   deep+='<div style="text-align:center;font-size:.58rem;color:var(--faint);padding-top:8px;">Scripora v3.9 &middot; by Selerii</div></div>';
 
-  // Store panels and render Overview by default
+  // Render hero into fixed div above panels
+  var heroEl=document.getElementById('resHero');
+  if(heroEl)heroEl.innerHTML=hero;
+
+  // Store panels (without hero) and render Overview by default
   S._resPanels={overview:ov,sections:sec,deep:deep};
   switchResTab('overview', document.getElementById('rtab-overview'));
 }
@@ -2062,36 +2071,6 @@ function getHelpSections(tab){
 }
 
 // ── Report Drawer ──
-function changeResultTag(resultId,paraIdx,currentTag){
-  var tagNames={hook:'Hook',ctx:'Context',body:'Main Body',cta:'CTA',out:'Outro'};
-  var opts=Object.keys(tagNames).map(function(k){
-    return '<button class="tag-opt '+k+(k===currentTag?' on':'')+'" onclick="applyResultTagChange(\''+resultId+'\','+paraIdx+',\''+k+'\');closeMoForce();">'+tagNames[k]+'</button>';
-  }).join('');
-  openModal('_raw','<div class="mhandle"></div><div class="modal-title">Change Section</div>'+
-    '<div class="modal-sub">Choose the correct section type for this paragraph.</div>'+
-    '<div class="tag-sel">'+opts+'</div>');
-}
-function applyResultTagChange(resultId,paraIdx,newTag){
-  loadAnalyseHistory();
-  var result=S.analyseHistory.find(function(h){return h.id===resultId;});
-  if(!result||!result.paragraphs||!result.paragraphs[paraIdx])return;
-  result.paragraphs[paraIdx].tag=newTag;
-  // Recalculate score for changed paragraph
-  result.paragraphs[paraIdx].score=scoreText(newTag,result.paragraphs[paraIdx].text);
-  // Recalculate section scores
-  var tagOrder=['hook','ctx','body','cta','out'];
-  tagOrder.forEach(function(tag){
-    var paras=result.paragraphs.filter(function(p){return p.tag===tag;});
-    result.sectionScores[tag]=paras.length?paras.reduce(function(a,p){return a+p.score;},0)/paras.length:undefined;
-  });
-  result.score=Math.round(Object.keys(result.sectionScores).reduce(function(ts,tag){
-    var w={hook:30,ctx:20,body:25,cta:15,out:10}[tag]||10;
-    return ts+(result.sectionScores[tag]||0)*w;
-  },0)/100);
-  saveAnalyseHistory();
-  setTimeout(function(){openAnalyseResult(resultId);},0);
-  showToast('Section updated','success');
-}
 function toggleAnnoBlock(el){el.classList.toggle('open');}
 function showStatHelp(type){
   var helps={
@@ -2175,13 +2154,19 @@ function openWriteReport(){
 
   // Open drawer
   document.getElementById('wrDrawer').classList.remove('hide');
+  document.getElementById('wrDrawer').classList.add('open');
   document.getElementById('wrDov').classList.remove('hide');
+  document.getElementById('wrDov').classList.add('open');
 }
 
 function goToFullReport(){closeWriteReport();goScreen('hub');setTimeout(function(){var pill=document.querySelector('.hub-pill[data-tab="analyse"]');if(pill)setHubTab(pill,'analyse');},120);}
 function closeWriteReport(){
-  document.getElementById('wrDrawer').classList.add('hide');
-  document.getElementById('wrDov').classList.add('hide');
+  document.getElementById('wrDrawer').classList.remove('open');
+  document.getElementById('wrDov').classList.remove('open');
+  setTimeout(function(){
+    document.getElementById('wrDrawer').classList.add('hide');
+    document.getElementById('wrDov').classList.add('hide');
+  },250);
 }
 
 function renderWriteReportBody(intel,script){
@@ -2369,10 +2354,10 @@ function renderProfile(){
   // App
   html+='<div class="prof-sec">App</div>';
   if(!window.matchMedia('(display-mode: standalone)').matches){
-    html+='<div class="prof-row" onclick="installPWA()">'+
+    html+='<div class="prof-row" onclick="openInstallGuide()">'+
       '<div class="prof-row-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></div>'+
-      '<div class="prof-row-info"><div class="prof-row-lbl">Add to Home Screen</div><div class="prof-row-sub">'+(pwaInstallPrompt?'Tap to install Scripora':'Open in Chrome to install')+'</div></div>'+
-      '<div class="prof-row-right"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div>';
+      '<div class="prof-row-info"><div class="prof-row-lbl">Get the App</div><div class="prof-row-sub">Install Scripora on your device</div></div>'+
+      '<div class="prof-row-right"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div>'
   }
   html+='<div class="prof-row" onclick="openModal(\'themes\')">'+
     '<div class="prof-row-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg></div>'+
@@ -2384,6 +2369,10 @@ function renderProfile(){
   html+='<div class="prof-row" onclick="openHelp()">'+
     '<div class="prof-row-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.12 2.6-2.842 3.183C12.405 13.546 12 14.02 12 14.5V15m0 3.5v.5"/><circle cx="12" cy="12" r="10"/></svg></div>'+
     '<div class="prof-row-info"><div class="prof-row-lbl">Help &amp; Guide</div><div class="prof-row-sub">How Scripora works, features and tips</div></div>'+
+    '<div class="prof-row-right"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div>';
+  html+='<div class="prof-row" onclick="openModal(\'contact\')">'+
+    '<div class="prof-row-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>'+
+    '<div class="prof-row-info"><div class="prof-row-lbl">Contact Developer</div><div class="prof-row-sub">Feedback, bugs and feature requests</div></div>'+
     '<div class="prof-row-right"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div>';
   // Sign out / delete
   html+='<div style="height:16px;"></div>';
@@ -2705,19 +2694,28 @@ function saveProfile(){
 }
 
 function sendContact(){
-  var type=document.getElementById('contactType')?document.getElementById('contactType').value:'feedback';
-  var msg=document.getElementById('contactMsg')?document.getElementById('contactMsg').value.trim():'';
+  var typeEl=document.getElementById('contactType');
+  var msgEl=document.getElementById('contactMsg');
+  var type=typeEl?typeEl.value:'feedback';
+  var msg=msgEl?msgEl.value.trim():'';
   if(!msg){showToast('Write a message first','error');return;}
-  if(typeof emailjs==='undefined'){showToast('Email service unavailable','error');return;}
-  if(typeof emailjs==='undefined'){showToast('Email service not loaded','error');return;}
+  if(typeof emailjs==='undefined'){showToast('Email service not loaded. Try support@scripora.app','error');return;}
+  var btn=document.querySelector('.btn-p');
+  if(btn){btn.textContent='Sending...';btn.disabled=true;}
   emailjs.init({publicKey:EMAILJS_KEY});
   var user=S.currentUser;
   emailjs.send(EMAILJS_SVC,EMAILJS_TPL,{
-    from_name:user?user.displayName:'Scripora User',
+    from_name:user?user.displayName:'Guest User',
     from_email:user?user.email:'guest@scripora.app',
-    message:'['+type+'] '+msg,
+    message:'['+type.toUpperCase()+'] '+msg,
     reply_to:user?user.email:'no-reply@scripora.app'
-  }).then(function(){closeMo();showToast('Message sent   thank you!','success');}).catch(function(){showToast('Send failed. Try support@scripora.app','error');});
+  }).then(function(){
+    closeMoForce();
+    showToast('Message sent. Thank you!','success');
+  }).catch(function(err){
+    if(btn){btn.textContent='Send';btn.disabled=false;}
+    showToast('Could not send. Email support@scripora.app directly','error');
+  });
 }
 
 function deleteAccount(){
@@ -2816,6 +2814,40 @@ window.addEventListener('appinstalled',function(){
   showToast('Scripora installed','success');
   safeGtag('event','pwa_installed');
 });
+function openInstallGuide(){
+  var isAndroid=/android/i.test(navigator.userAgent);
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  var html='<div class="mhandle"></div>';
+  html+='<div class="modal-title">Get Scripora</div>';
+  html+='<div class="modal-sub">Three ways to install Scripora on your device.</div>';
+
+  // Option 1: Chrome install prompt
+  html+='<div class="inst-opt" onclick="closeMoForce();installPWA();">';
+  html+='<div class="inst-opt-ico" style="background:var(--accent-soft);border-color:var(--accent-border);">';
+  html+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:20px;height:20px;stroke:var(--accent);"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></div>';
+  html+='<div class="inst-opt-info"><div class="inst-opt-title">Install from Chrome</div>';
+  html+='<div class="inst-opt-sub">'+(pwaInstallPrompt?'Tap to install now':'Open in Chrome and use the three-dot menu')+'</div></div>';
+  html+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:16px;height:16px;color:var(--faint);flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div>';
+
+  // Option 2: APKPure listing
+  html+='<div class="inst-opt" onclick="window.open(\'https://apkpure.com/scripora\',\'_blank\');closeMoForce();">';
+  html+='<div class="inst-opt-ico" style="background:rgba(90,126,201,.12);border-color:rgba(90,126,201,.3);">';
+  html+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:20px;height:20px;stroke:var(--body-c);"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>';
+  html+='<div class="inst-opt-info"><div class="inst-opt-title">APKPure</div>';
+  html+='<div class="inst-opt-sub">Download the Android app from APKPure</div></div>';
+  html+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:16px;height:16px;color:var(--faint);flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div>';
+
+  // Option 3: Direct APK download
+  html+='<div class="inst-opt" onclick="window.open(\'https://scripora.vercel.app/scripora.apk\',\'_blank\');closeMoForce();">';
+  html+='<div class="inst-opt-ico" style="background:rgba(106,175,130,.12);border-color:rgba(106,175,130,.3);">';
+  html+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:20px;height:20px;stroke:var(--s-high);"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>';
+  html+='<div class="inst-opt-info"><div class="inst-opt-title">Direct APK Download</div>';
+  html+='<div class="inst-opt-sub">Download and install the APK file directly</div></div>';
+  html+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:16px;height:16px;color:var(--faint);flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div>';
+
+  html+='<button class="btn-g" onclick="closeMoForce()" style="width:100%;margin-top:10px;">Close</button>';
+  openModal('_raw',html);
+}
 function installPWA(){
   if(pwaInstallPrompt){
     pwaInstallPrompt.prompt();
