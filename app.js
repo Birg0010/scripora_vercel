@@ -2045,14 +2045,14 @@ function openProSheet(){
       (f.tag?'<div class="pro-feat-tag">'+f.tag+'</div>':'')+
       '</div>';
   }).join('');
-  sheet.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div class="mhandle" style="margin:0;"></div><button onclick="closeProSheet(null)" style="background:none;border:none;padding:4px;color:var(--muted);display:flex;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>'+
+  sheet.innerHTML='<div class="pro-sheet-hdr"><div class="mhandle" style="margin:0;"></div><button onclick="closeProSheet(null)" style="background:none;border:none;padding:4px;color:var(--muted);display:flex;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div><div class="pro-sheet-body">'+
     '<div style="font-family:\'Playfair Display\',serif;font-size:1.1rem;color:var(--text);margin-bottom:4px;">Scripora Pro</div>'+
     '<div style="font-size:.74rem;color:var(--muted);margin-bottom:16px;">Everything you need to write with intention.</div>'+
     '<div class="pro-features">'+featHTML+'</div>'+
     '<div class="pro-price-box"><div><div class="pro-price-num">$9.99</div><div class="pro-price-sub">Lifetime access &nbsp;&middot;&nbsp; One-time payment</div></div><div class="pro-price-badge">Founder\'s Price</div></div>'+
     '<button class="pro-cta-btn" onclick="openGumroad()">Get Pro</button>'+
     '<div class="coupon-row" style="margin-top:6px;"><input class="coupon-inp" id="couponInpSheet" placeholder="Have a promo code?"/><button class="coupon-apply" onclick="checkProCode(document.getElementById(\'couponInpSheet\').value)">Apply</button></div>'+
-    '<div style="font-size:.62rem;color:var(--faint);text-align:center;margin-top:10px;">Secure payment via Gumroad. No subscription.</div>';
+    '<div style="font-size:.62rem;color:var(--faint);text-align:center;margin-top:10px;">Secure payment via Gumroad. No subscription.</div></div>';
   ov.classList.add('open');
 }
 function closeProSheet(evt){if(evt!==null&&evt&&evt.target!==document.getElementById('proSheetOv'))return;document.getElementById('proSheetOv').classList.remove('open');}
@@ -2084,33 +2084,7 @@ if(auth){
 // ── PWA Install   silent capture, profile button only ──
 var pwaInstallPrompt=null;
 // ── Keyboard handling ──
-if(window.visualViewport){
-  window.visualViewport.addEventListener('resize',function(){
-    var active=document.activeElement;
-    if(!active||(active.tagName!=='TEXTAREA'&&active.tagName!=='INPUT'))return;
-    // Give layout time to settle then scroll active element into view above keyboard
-    setTimeout(function(){
-      var rect=active.getBoundingClientRect();
-      var vvh=window.visualViewport.height;
-      // Only scroll if element is hidden below keyboard
-      if(rect.bottom>vvh-20){
-        active.scrollIntoView({block:'center',behavior:'smooth'});
-      }
-    },100);
-  });
-  // Also handle scroll events on viewport (covers the forward-typing case)
-  window.visualViewport.addEventListener('scroll',function(){
-    var active=document.activeElement;
-    if(!active||(active.tagName!=='TEXTAREA'&&active.tagName!=='INPUT'))return;
-    setTimeout(function(){
-      var rect=active.getBoundingClientRect();
-      var vvh=window.visualViewport.height;
-      if(rect.bottom>vvh-20){
-        active.scrollIntoView({block:'center',behavior:'smooth'});
-      }
-    },50);
-  });
-}
+
 window.addEventListener('online',function(){
   var d=document.getElementById('syncDot');
   if(d)d.style.background='var(--s-high)';
