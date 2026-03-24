@@ -1,5 +1,6 @@
-var CACHE = 'scripora-v4';
-var ASSETS = ['/', '/index.html', '/styles.css', '/app.js', '/feedback.js', '/manifest.json',
+var CACHE = 'scripora-v5';
+var ASSETS = ['/', '/index.html', '/styles.css', '/feedback.js',
+  '/engine.js', '/sync.js', '/app.js', '/manifest.json',
   '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
 self.addEventListener('install', function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(ASSETS);}));

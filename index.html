@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -286,12 +286,12 @@
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
     </button>
   </div>
+  <div id="resHero" style="flex-shrink:0;min-height:0;"></div>
   <div id="resTabs" style="display:flex;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
     <button class="res-tab on" id="rtab-overview" onclick="switchResTab('overview',this)">Overview</button>
     <button class="res-tab" id="rtab-sections" onclick="switchResTab('sections',this)">Sections</button>
     <button class="res-tab" id="rtab-deep" onclick="switchResTab('deep',this)">Deep</button>
   </div>
-  <div id="resHero" style="flex-shrink:0;min-height:0;"></div>
   <div style="flex:1;overflow-y:auto;" id="resBody"></div>
 </div>
 
@@ -376,6 +376,8 @@
 
 
 <script src="feedback.js"></script>
+<script src="engine.js"></script>
+<script src="sync.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
