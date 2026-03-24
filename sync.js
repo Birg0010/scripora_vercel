@@ -18,11 +18,7 @@ function loadFromCloud(){
       if(cloud.length>S.scripts.length){S.scripts=cloud;save();setTimeout(renderScripts,0);}
       if(doc.data().pro){
         localStorage.setItem(PRO_KEY,'true');
-        // Re-render UI to reflect pro status
-        setTimeout(function(){
-          if(typeof renderProfile==='function')renderProfile();
-          if(typeof renderHub==='function')renderHub();
-        },0);
+        if(typeof refreshProState==='function')refreshProState();
       }
     }
   }).catch(function(){});
@@ -34,10 +30,7 @@ function checkProCode(code){
   if(c==='DEVMODE'||c==='SELERII'){
     localStorage.setItem(PRO_KEY,'true');
     showToast('Pro unlocked','success');
-    setTimeout(function(){
-      if(typeof renderProfile==='function')renderProfile();
-      if(typeof renderHub==='function')renderHub();
-    },0);
+    if(typeof refreshProState==='function')refreshProState();
     return;
   }
   if(!db){showToast('Sign in to use promo codes','error');return;}
@@ -47,10 +40,7 @@ function checkProCode(code){
       localStorage.setItem(PRO_KEY,'true');
       if(S.currentUser){db.collection('users').doc(S.currentUser.uid).set({pro:true,pro_code:c,pro_unlocked_at:new Date().toISOString()},{merge:true});}
       showToast('Pro unlocked! Welcome.','success');
-      setTimeout(function(){
-        if(typeof renderProfile==='function')renderProfile();
-        if(typeof renderHub==='function')renderHub();
-      },0);
+      if(typeof refreshProState==='function')refreshProState();
       safeGtag('event','pro_unlock',{method:'coupon'});
     });
   }).catch(function(){showToast('Could not verify code','error');});

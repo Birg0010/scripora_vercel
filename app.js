@@ -47,6 +47,24 @@ try{
 
 // ── Helpers ──
 function isPro(){return localStorage.getItem(PRO_KEY)==='true';}
+function refreshProState(){
+  // Called after any pro unlock - refreshes all gated UI
+  setTimeout(function(){
+    if(typeof renderProfile==='function')renderProfile();
+    if(typeof renderHub==='function')renderHub();
+    if(typeof renderWrite==='function')renderWrite();
+    if(typeof updateSyncToggleUI==='function')updateSyncToggleUI();
+    // Re-render write report drawer if open
+    var wd=document.getElementById('wrDrawer');
+    if(wd&&!wd.classList.contains('hide')){
+      var script=getActive();
+      if(script&&typeof renderWriteReportBody==='function'){
+        var intel=analyseScript(script.paragraphs);
+        renderWriteReportBody(intel,script);
+      }
+    }
+  },50);
+}
 function safeGtag(){try{if(typeof gtag!=='undefined')gtag.apply(null,arguments);}catch(e){}}
 function uid(){return 'id_'+Date.now()+'_'+Math.random().toString(36).substr(2,6);}
 function escHtml(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -873,7 +891,13 @@ function openAnalyseResult(id){
 
   // Run full intelligence
   var paras=result.paragraphs||[];
+  // Use stored scores if available to avoid mismatch with history card
   var intel=analyseScript(paras);
+  // If result has stored scores, use them for hero display for consistency
+  if(result.sectionScores&&Object.keys(result.sectionScores).length){
+    intel.sectionScores=result.sectionScores;
+    intel.overall=result.score||intel.overall;
+  }
   var scores=intel.sectionScores;
   var overall=intel.overall||result.score||0;
   var level=scoreLevel(overall);
@@ -1458,7 +1482,48 @@ function openWriteReport(){
   });
 }
 
-function goToFullReport(){closeWriteReport();goScreen('hub');setTimeout(function(){var pill=document.querySelector('.hub-pill[data-tab="analyse"]');if(pill)setHubTab(pill,'analyse');},120);}
+function goToFullReport(){
+  closeWriteReport();
+  // Run fresh analysis on current script and save to history
+  var script=getActive();
+  if(script&&script.paragraphs&&script.paragraphs.length){
+    // Save a fresh analysis entry so we have something to open
+    var intel=analyseScript(script.paragraphs);
+    loadAnalyseHistory();
+    // Check if we already have a recent entry for this script
+    var existing=null;
+    for(var i=0;i<S.analyseHistory.length;i++){
+      if(S.analyseHistory[i].scriptId===script.id){existing=S.analyseHistory[i];break;}
+    }
+    if(existing){
+      // Open existing result directly
+      goScreen('hub');
+      setTimeout(function(){openAnalyseResult(existing.id);},120);
+    } else {
+      // Run analysis and save, then open
+      var entry={
+        id:uid(),
+        title:script.title||'Untitled',
+        date:new Date().toISOString(),
+        scriptId:script.id,
+        paragraphs:script.paragraphs.slice(),
+        overall:intel.overall,
+        scores:intel.sectionScores
+      };
+      S.analyseHistory.unshift(entry);
+      if(S.analyseHistory.length>50)S.analyseHistory=S.analyseHistory.slice(0,50);
+      saveAnalyseHistory();
+      goScreen('hub');
+      setTimeout(function(){openAnalyseResult(entry.id);},120);
+    }
+  } else {
+    goScreen('hub');
+    setTimeout(function(){
+      var pill=document.querySelector('.hub-pill[data-tab="analyse"]');
+      if(pill)setHubTab(pill,'analyse');
+    },120);
+  }
+}
 function closeWriteReport(){
   document.getElementById('wrDrawer').classList.remove('open');
   document.getElementById('wrDov').classList.remove('open');
