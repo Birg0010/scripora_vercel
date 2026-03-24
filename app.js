@@ -367,6 +367,16 @@ var _liveSyncTimer=null;
 function liveScore(pid,tag,text){
   var wcel=document.getElementById('wc_'+pid);
   if(wcel)wcel.textContent=wordCount(text)+' words';
+  // Save text immediately so sync reads current content
+  var script=getActive();
+  if(script){
+    script.paragraphs.forEach(function(p){
+      if(p.id===pid){p.text=text;p.score=scoreText(p.tag,text);}
+    });
+    script.updatedAt=new Date().toISOString();
+    script.lastScore=overallScore(script.paragraphs);
+    save();
+  }
   // Debounced live sync - only if Pro and enabled
   if(S.syncEnabled&&isPro()){
     if(_liveSyncTimer)clearTimeout(_liveSyncTimer);
@@ -1047,8 +1057,10 @@ function openAnalyseResult(id){
 
   // ── DEEP PANEL ──
   var deep='';
+    if(!isPro()){
   deep+='<div style="margin:12px 14px 0;padding:11px 13px;background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:10px;font-size:.72rem;color:var(--muted);line-height:1.6;">';
   deep+='<strong style="color:var(--accent);">Hook and Context</strong> show full per-sentence feedback. Upgrade to <strong style="color:var(--accent);">Pro</strong> to unlock Body, CTA and Outro at the same depth.</div>';
+  }
 
   // Per-sentence for hook and ctx
   var freeTags=['hook','ctx'];
@@ -2287,4 +2299,16 @@ function dismissPWA(){}
       }
     }
   },3000);
+
+  // ── Keyboard: scroll active textarea into view on focus ──
+  // Fires immediately when user taps a paragraph box
+  // Fixes the "last two boxes hidden under keyboard" issue
+  document.addEventListener('focusin',function(e){
+    if(e.target&&e.target.classList&&e.target.classList.contains('pb-ta')){
+      setTimeout(function(){
+        e.target.scrollIntoView({block:'center',behavior:'smooth'});
+      },300);
+    }
+  });
+
 })();
