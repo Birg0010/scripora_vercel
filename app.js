@@ -1072,14 +1072,36 @@ function openAnalyseResult(id){
     });
   });
 
-  // Pro gate
+  // Pro gate for body/cta/out sentences
   var hasProContent=proTags.some(function(tag){return paras.some(function(p){return p.tag===tag&&p.text&&p.text.trim();});});
   if(hasProContent){
-    deep+='<div style="margin:10px 14px 0;border:1px solid var(--accent-border);border-radius:12px;background:var(--accent-soft);padding:14px;">';
-    deep+='<div style="font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:5px;">Pro feature</div>';
-    deep+='<div style="font-size:.84rem;font-weight:700;color:var(--text);margin-bottom:4px;">Per-sentence feedback for Body, CTA and Outro</div>';
-    deep+='<div style="font-size:.7rem;color:var(--muted);line-height:1.6;margin-bottom:12px;">See exactly which sentences are costing you retention and what to replace them with.</div>';
-    deep+='<button onclick="openProSheet()" style="padding:8px 18px;border-radius:8px;background:var(--accent);color:#0A0D14;border:none;font-size:.76rem;font-weight:700;cursor:pointer;">See Pro Features</button></div>';
+    if(isPro()){
+      proTags.forEach(function(tag){
+        var tagParas=paras.filter(function(p){return p.tag===tag;});
+        tagParas.forEach(function(p){
+          if(!p.text||!p.text.trim())return;
+          var sents=p.text.replace(/([.!?])\s+/g,'$1\x01').split('\x01').filter(function(s){return s.trim().length>3;});
+          sents.forEach(function(s,si){
+            var sc=scoreText(tag,s);
+            var lv=scoreLevel(sc);
+            var fb=getParagraphFeedback(tag,s,sc);
+            var fbCls=sc>=70?'pos':sc<45?'neg':'';
+            deep+='<div class="res-anno-block tag-'+tag+'" style="margin:'+(si===0?'10px':'4px')+' 14px 0;">';
+            deep+='<div class="res-anno-hd"><span class="res-anno-tag">'+tagNames[tag]+(sents.length>1?' &middot; '+(si+1):'')+'</span>';
+            deep+='<span class="score-pill '+lv+'"><span class="score-pill-dot"></span>'+sc+'</span></div>';
+            deep+='<div class="res-anno-text">'+escHtml(s)+'</div>';
+            deep+='<div class="res-anno-fb '+fbCls+'">'+fb+'</div></div>';
+          });
+        });
+      });
+    } else {
+      deep+='<div style="margin:10px 14px 0;border:1px solid var(--accent-border);border-radius:12px;background:var(--accent-soft);padding:14px;">';
+      deep+='<div style="font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Pro Feature</div>';
+      deep+='<div style="font-size:.84rem;font-weight:700;color:var(--text);margin-bottom:4px;">Per-sentence feedback</div>';
+      deep+='<div style="font-size:.7rem;color:var(--muted);line-height:1.6;margin-bottom:12px;">See exactly which sentences in your Body, CTA and Outro are losing viewer attention. <button onclick="showStatHelp(\"sync\")" style="background:none;border:none;color:var(--faint);font-size:.7rem;cursor:pointer;">[?]</button></div>';
+      deep+='<button onclick="openProSheet()" style="padding:8px 18px;border-radius:8px;background:var(--accent);color:#000;font-size:.78rem;font-weight:700;border:none;cursor:pointer;">Unlock Pro</button>';
+      deep+='</div>';
+    }
   }
 
   // Failure patterns  -  all shown, detail is the value
@@ -1507,8 +1529,8 @@ function goToFullReport(){
         date:new Date().toISOString(),
         scriptId:script.id,
         paragraphs:script.paragraphs.slice(),
-        overall:intel.overall,
-        scores:intel.sectionScores
+        score:intel.overall,
+        sectionScores:intel.sectionScores
       };
       S.analyseHistory.unshift(entry);
       if(S.analyseHistory.length>50)S.analyseHistory=S.analyseHistory.slice(0,50);
@@ -1614,11 +1636,36 @@ function runLiveSync(){
   if(!script||!S.syncEnabled||!isPro())return;
   var intel=analyseScript(script.paragraphs);
   S._liveIntel=intel;
-  // Update script's last score silently
   script.lastScore=intel.overall;
   save();
-  // If drawer is open, refresh the display
-  if(!document.getElementById('wrDrawer').classList.contains('hide')){
+
+  // Upsert history entry so full report reflects latest content
+  loadAnalyseHistory();
+  var existingIdx=-1;
+  for(var i=0;i<S.analyseHistory.length;i++){
+    if(S.analyseHistory[i].scriptId===script.id){existingIdx=i;break;}
+  }
+  var entry={
+    id:existingIdx>=0?S.analyseHistory[existingIdx].id:uid(),
+    title:script.title||'Untitled',
+    date:new Date().toISOString(),
+    scriptId:script.id,
+    paragraphs:script.paragraphs.slice(),
+    score:intel.overall,
+    sectionScores:intel.sectionScores
+  };
+  if(existingIdx>=0){
+    S.analyseHistory[existingIdx]=entry;
+  } else {
+    S.analyseHistory.unshift(entry);
+    if(S.analyseHistory.length>50)S.analyseHistory=S.analyseHistory.slice(0,50);
+  }
+  saveAnalyseHistory();
+  S._currentResultId=entry.id;
+
+  // Update drawer if open
+  var wd=document.getElementById('wrDrawer');
+  if(wd&&!wd.classList.contains('hide')){
     var overall=intel.overall;
     var level=scoreLevel(overall);
     var colMap={high:'var(--s-high)',mid:'var(--s-mid)',low:'var(--s-low)'};
