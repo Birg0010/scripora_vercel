@@ -764,7 +764,7 @@ function renderAnalyse(){
   }else{
     var q=(S._aSearch||'').toLowerCase().trim();
     var filtered=q?hist.filter(function(h){return (h.title||'').toLowerCase().indexOf(q)>=0;}):hist;
-    var recent=filtered.slice(-3).reverse();
+    var recent=filtered.slice(0,3);
     el.innerHTML='<div class="analyse-compact-card">'+
       '<div class="analyse-compact-title" style="display:flex;align-items:center;gap:6px;">Analyse a script<button onclick="openModal(\'analyseHelp\')" style="background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:15px;height:15px;color:var(--muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.12 2.6-2.842 3.183C12.405 13.546 12 14.02 12 14.5V15m0 3.5v.5"/><circle cx="12" cy="12" r="10"/></svg></button></div>'+
       '<input id="pasteTitle" placeholder="Script title (optional)" value="'+(S._pasteTitle||'')+'" oninput="S._pasteTitle=this.value" style="display:block;width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:.78rem;color:var(--text);margin-bottom:7px;outline:none;"/>'+
@@ -930,95 +930,45 @@ function openAnalyseResult(id){
   var col=colMap[level];
 
   // ── HERO (shared across all tabs) ──
-  var hero='<div class="res-hero">';
-  hero+='<div class="res-hero-top">';
-  hero+='<div class="res-score-ring"><svg viewBox="0 0 58 58"><circle class="res-ring-track" cx="29" cy="29" r="22"/>';
-  hero+='<circle class="res-ring-fill '+level+'" cx="29" cy="29" r="22" stroke-dasharray="'+circ+'" stroke-dashoffset="'+fill+'"/></svg>';
-  hero+='<div class="res-score-num"><span class="res-score-val '+level+'">'+overall+'</span><span class="res-score-lbl">score</span></div></div>';
-  hero+='<div class="res-hero-info"><div class="res-verdict">'+getScriptVerdict(scores,overall)+'</div>';
-  hero+='<div class="res-summary">'+getScriptVerdictSub(scores,overall,Object.keys(scores))+'</div></div></div>';
-  hero+='<div class="res-section-bars">';
-  tagOrder.forEach(function(tag){
-    var sc=scores[tag];
+  var tagColors={hook:'var(--hook)',ctx:'var(--ctx)',body:'var(--body-c)',cta:'var(--cta)',out:'var(--out)'};
+  var tagOrder2=['hook','ctx','body','cta','out'];
+
+  // ── HERO: Option A (score box + horizontal bars) ──
+  var hero='<div class="res-hero-a">';
+  hero+='<div class="hero-a-score">';
+  hero+='<div class="hero-a-num '+level+'" style="color:var(--s-'+level+');">'+overall+'</div>';
+  hero+='<div class="hero-a-lbl">Score</div>';
+  hero+='</div>';
+  hero+='<div class="hero-a-right">';
+  hero+='<div class="hero-a-verdict">'+getScriptVerdict(sectionScores,overall)+'</div>';
+  hero+='<div class="hero-a-bars">';
+  tagOrder2.forEach(function(tag){
+    var sc=sectionScores[tag];
     if(!sc&&sc!==0)return;
     if(!paras.find(function(p){return p.tag===tag;}))return;
     var lv=scoreLevel(sc);
-    hero+='<div class="res-sbar"><span class="res-sbar-name">'+tagNames[tag]+'</span>';
-    hero+='<div class="res-sbar-track"><div class="res-sbar-fill '+lv+'" style="width:'+sc+'%"></div></div>';
-    hero+='<span class="res-sbar-val '+lv+'">'+sc+'</span></div>';
+    hero+='<div class="hbar">';
+    hero+='<span class="hbar-name" style="color:'+tagColors[tag]+'">'+tagNames[tag].split(' ')[0]+'</span>';
+    hero+='<div class="hbar-track"><div class="hbar-fill" style="width:'+sc+'%;background:'+tagColors[tag]+'"></div></div>';
+    hero+='<span class="hbar-val">'+sc+'</span>';
+    hero+='</div>';
   });
-  hero+='</div></div>';
+  hero+='</div></div></div>';
 
-  // ── OVERVIEW PANEL ──
-  var ov='';
-
-  // Top issue
-  if(intel.issues&&intel.issues.length){
-    intel.issues.forEach(function(issue,ii){
-      var lbl=ii===0?'Top Issue':'Issue '+(ii+1);
-      ov+='<div class="top-issue-card"'+(ii>0?' style="margin-top:10px;"':'')+' >';
-      ov+='<div class="top-issue-hd"><span class="tih-label">'+lbl+'</span><span class="tih-section">'+issue.section+'</span>';
-      ov+='<span class="tih-impact '+issue.impact+'">'+issue.impact+' impact</span></div>';
-      ov+='<div class="tih-body">';
-      ov+='<div class="tih-row"><div class="tih-dot obs"></div><div class="tih-text obs">'+issue.observation+'</div></div>';
-      ov+='<div class="tih-row"><div class="tih-dot cons"></div><div class="tih-text">'+issue.consequence+'</div></div>';
-      ov+='<div class="tih-row"><div class="tih-dot fix"></div><div class="tih-text fix">'+issue.fix+'</div></div>';
-      ov+='</div></div>';
-    });
-  }
-
-  // Attention curve
-  ov+='<div class="res-curve-card"><div class="res-card-title" style="display:flex;align-items:center;gap:5px;">Attention Curve';
-  ov+='<button onclick="showStatHelp(\'curve\')" style="background:none;border:none;color:var(--faint);font-size:.6rem;cursor:pointer;">[?]</button></div>';
-  ov+='<div class="res-curve">';
-  var curve=intel.curve||[];
-  var maxAbs=Math.max(0.1,Math.max.apply(null,curve.map(function(v){return Math.abs(v);})));
-  curve.forEach(function(v){
-    var pct=Math.round(((v+maxAbs)/(maxAbs*2))*100);
-    var h=Math.max(8,Math.round((pct/100)*48));
-    var cls=v>0.3?'pos':v<-0.3?'neg':'neu';
-    ov+='<div class="res-curve-bar '+cls+'" style="height:'+h+'px"></div>';
-  });
-  ov+='</div><div class="res-curve-labels"><span class="res-curve-lbl">0%</span><span class="res-curve-lbl">50%</span><span class="res-curve-lbl">100%</span></div></div>';
-
-  // Stats row
-  ov+='<div class="res-stats-row">';
-  ov+='<div class="res-stat-chip"><div class="res-stat-num">'+intel.totalWords+'</div><div class="res-stat-lbl">Words</div></div>';
-  ov+='<div class="res-stat-chip"><div class="res-stat-num">'+intel.totalSentences+'</div><div class="res-stat-lbl">Sentences</div></div>';
-  ov+='<div class="res-stat-chip" onclick="showStatHelp(\'pace\','+intel.sentenceLenVariance+')" style="cursor:pointer;"><div class="res-stat-num">'+intel.sentenceLenVariance+'</div><div class="res-stat-lbl">Pace Var ?</div></div>';
-  ov+='<div class="res-stat-chip" onclick="showStatHelp(\'insight\','+intel.rewardDensity+')" style="cursor:pointer;"><div class="res-stat-num">'+intel.rewardDensity+'</div><div class="res-stat-lbl">Insight ?</div></div>';
-  ov+='</div>';
-
-  // Promise + Voice tracking
-  var promiseStatus=intel.promises&&intel.promises.length?(intel.promiseDelivered?'Delivered':'Not delivered'):'None made';
-  var promiseCol=intel.promises&&intel.promises.length?(intel.promiseDelivered?'var(--s-high)':'var(--s-low)'):'var(--muted)';
-  var totalSents=intel.sentenceData?intel.sentenceData.length:1;
-  var youCount=intel.sentenceData?intel.sentenceData.filter(function(s){return s.viewerBenefit>0||(/you/i.test(s.sentence));}).length:0;
-  var voiceRatio=totalSents>0?Math.round((youCount/totalSents)*100):0;
-  var voiceCol=voiceRatio>=40?'var(--s-high)':voiceRatio>=25?'var(--s-mid)':'var(--s-low)';
-  ov+='<div style="display:flex;gap:6px;padding:10px 14px 0;">';
-  ov+='<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;">';
-  ov+='<div style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:5px;">Promise <button onclick="showStatHelp(\'promise\')" style="background:none;border:none;color:var(--faint);font-size:.55rem;cursor:pointer;">[?]</button></div>';
-  ov+='<div style="font-size:.8rem;font-weight:600;color:'+promiseCol+';">'+promiseStatus+'</div></div>';
-  ov+='<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;">';
-  ov+='<div style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:5px;">Voice <button onclick="showStatHelp(\'voice\')" style="background:none;border:none;color:var(--faint);font-size:.55rem;cursor:pointer;">[?]</button></div>';
-  ov+='<div style="font-size:.8rem;font-weight:600;color:'+voiceCol+';">Viewer '+voiceRatio+'%</div></div></div>';
-
-  // Section balance
-  ov+='<div style="margin:10px 14px 0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">';
-  ov+='<div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Section Balance</div>';
-  ov+='<div style="display:flex;gap:3px;height:28px;border-radius:6px;overflow:hidden;margin-bottom:6px;">';
-  var tagColors={hook:'var(--hook)',ctx:'var(--ctx)',body:'var(--body-c)',cta:'var(--cta)',out:'var(--out)'};
-  var tagBgs={hook:'var(--hook-bg)',ctx:'var(--ctx-bg)',body:'var(--body-bg)',cta:'var(--cta-bg)',out:'var(--out-bg)'};
+  // Section Balance
   var totalWds=Math.max(1,paras.reduce(function(a,p){return a+wc(p.text||'');},0));
-  tagOrder.forEach(function(tag){
-    var tagParas=paras.filter(function(p){return p.tag===tag;});
-    if(!tagParas.length)return;
-    var tagWds=tagParas.reduce(function(a,p){return a+wc(p.text||'');},0);
-    var pct=Math.max(5,Math.round((tagWds/totalWds)*100));
-    ov+='<div style="flex:'+pct+';background:'+tagBgs[tag]+';border:1px solid '+tagColors[tag]+';opacity:.8;display:flex;align-items:center;justify-content:center;font-size:.48rem;font-weight:700;color:'+tagColors[tag]+';">'+tagNames[tag].split(' ')[0]+'</div>';
+  ov+='<div class="stat-card" style="margin-bottom:10px;">';
+  ov+='<div class="stat-card-lbl">Section Balance</div>';
+  ov+='<div style="display:flex;gap:3px;height:24px;border-radius:6px;overflow:hidden;margin-bottom:4px;">';
+  var tagBgs2={hook:'var(--hook)',ctx:'var(--ctx)',body:'var(--body-c)',cta:'var(--cta)',out:'var(--out)'};
+  tagOrder2.forEach(function(tag){
+    var tagWds=paras.filter(function(p){return p.tag===tag;}).reduce(function(a,p){return a+wc(p.text||'');},0);
+    if(!tagWds)return;
+    var pct=Math.max(4,Math.round(tagWds/totalWds*100));
+    ov+='<div style="width:'+pct+'%;background:'+tagBgs2[tag]+';opacity:.7;"></div>';
   });
-  // Balance insight from library
+  ov+='</div>';
+  // Balance insight
   var balanceKey='wellBalanced';
   var ctaWds2=paras.filter(function(p){return p.tag==='cta';}).reduce(function(a,p){return a+wc(p.text||'');},0);
   var hookWds2=paras.filter(function(p){return p.tag==='hook';}).reduce(function(a,p){return a+wc(p.text||'');},0);
@@ -1028,9 +978,9 @@ function openAnalyseResult(id){
   else if(totalWds>0&&bodyWds2/totalWds>0.72)balanceKey='bodyHeavy';
   if(typeof getStatInsight==='function'){
     var balTxt=getStatInsight('balance',balanceKey);
-    if(balTxt)ov+='<div style="font-size:.68rem;color:var(--muted);line-height:1.55;margin-top:6px;">'+balTxt+'</div>';
+    if(balTxt)ov+='<div style="font-size:.68rem;color:var(--muted);line-height:1.55;">'+balTxt+'</div>';
   }
-  ov+='</div></div>';
+  ov+='</div>';
 
   // In short
   ov+='<div class="res-inshort"><div class="res-inshort-tag">In short</div>';
@@ -1244,6 +1194,11 @@ function deleteAnalyseSession(id){
   saveAnalyseHistory();
   setTimeout(renderAnalyse,0);
   showToast('Removed','default');
+  // If full history modal is open, re-render it immediately
+  var modal=document.getElementById('modal');
+  if(modal&&modal.getAttribute('data-modal-type')==='allHistory'){
+    openModal('allHistory',null);
+  }
 }
 function openAsNewScript(resultId){
   loadAnalyseHistory();
@@ -1906,7 +1861,7 @@ function openModal(type,data){
       '</div>'+
       (histList||'<p style="font-size:.8rem;color:var(--muted);">No history yet.</p>')+
       '<button class="btn-g" style="width:100%;margin-top:10px;" onclick="closeMo()">Close</button>';
-    modal.innerHTML=html;mo.classList.add('open');return;
+    modal.innerHTML=html;modal.setAttribute('data-modal-type','allHistory');mo.classList.add('open');return;
   }
 
   if(type==='themes'){
