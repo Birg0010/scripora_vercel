@@ -410,6 +410,10 @@ function deleteParagraph(pid){
   script.updatedAt=new Date().toISOString();
   script.lastScore=overallScore(script.paragraphs);
   save();setTimeout(renderWrite,0);
+  if(S.syncEnabled&&isPro()){
+    if(_liveSyncTimer)clearTimeout(_liveSyncTimer);
+    _liveSyncTimer=setTimeout(runLiveSync,800);
+  }
 }
 
 function changeParagraphTag(pid){
@@ -424,6 +428,11 @@ function applyTagChange(pid,tag){
   var script=getActive();if(!script)return;
   script.paragraphs.forEach(function(p){if(p.id===pid){p.tag=tag;p.score=scoreText(tag,p.text);}});
   script.updatedAt=new Date().toISOString();save();setTimeout(renderWrite,0);
+  // Trigger sync on tag change
+  if(S.syncEnabled&&isPro()){
+    if(_liveSyncTimer)clearTimeout(_liveSyncTimer);
+    _liveSyncTimer=setTimeout(runLiveSync,800);
+  }
 }
 
 // ── Drawer ──
@@ -915,7 +924,7 @@ function openAnalyseResult(id){
   var tagOrder=['hook','ctx','body','cta','out'];
 
   // Build all three panels
-  var circ=Math.PI*2*28;
+  var circ=Math.PI*2*22;
   var fill=Math.round(circ*(1-overall/100)*10)/10;
   var colMap={high:'var(--s-high)',mid:'var(--s-mid)',low:'var(--s-low)'};
   var col=colMap[level];
@@ -923,8 +932,8 @@ function openAnalyseResult(id){
   // ── HERO (shared across all tabs) ──
   var hero='<div class="res-hero">';
   hero+='<div class="res-hero-top">';
-  hero+='<div class="res-score-ring"><svg viewBox="0 0 72 72"><circle class="res-ring-track" cx="36" cy="36" r="28"/>';
-  hero+='<circle class="res-ring-fill '+level+'" cx="36" cy="36" r="28" stroke-dasharray="'+circ+'" stroke-dashoffset="'+fill+'"/></svg>';
+  hero+='<div class="res-score-ring"><svg viewBox="0 0 58 58"><circle class="res-ring-track" cx="29" cy="29" r="22"/>';
+  hero+='<circle class="res-ring-fill '+level+'" cx="29" cy="29" r="22" stroke-dasharray="'+circ+'" stroke-dashoffset="'+fill+'"/></svg>';
   hero+='<div class="res-score-num"><span class="res-score-val '+level+'">'+overall+'</span><span class="res-score-lbl">score</span></div></div>';
   hero+='<div class="res-hero-info"><div class="res-verdict">'+getScriptVerdict(scores,overall)+'</div>';
   hero+='<div class="res-summary">'+getScriptVerdictSub(scores,overall,Object.keys(scores))+'</div></div></div>';
@@ -945,15 +954,17 @@ function openAnalyseResult(id){
 
   // Top issue
   if(intel.issues&&intel.issues.length){
-    var issue=intel.issues[0];
-    ov+='<div class="top-issue-card">';
-    ov+='<div class="top-issue-hd"><span class="tih-label">Top Issue</span><span class="tih-section">'+issue.section+'</span>';
-    ov+='<span class="tih-impact '+issue.impact+'">'+issue.impact+' impact</span></div>';
-    ov+='<div class="tih-body">';
-    ov+='<div class="tih-row"><div class="tih-dot obs"></div><div class="tih-text obs">'+issue.observation+'</div></div>';
-    ov+='<div class="tih-row"><div class="tih-dot cons"></div><div class="tih-text">'+issue.consequence+'</div></div>';
-    ov+='<div class="tih-row"><div class="tih-dot fix"></div><div class="tih-text fix">'+issue.fix+'</div></div>';
-    ov+='</div></div>';
+    intel.issues.forEach(function(issue,ii){
+      var lbl=ii===0?'Top Issue':'Issue '+(ii+1);
+      ov+='<div class="top-issue-card"'+(ii>0?' style="margin-top:10px;"':'')+' >';
+      ov+='<div class="top-issue-hd"><span class="tih-label">'+lbl+'</span><span class="tih-section">'+issue.section+'</span>';
+      ov+='<span class="tih-impact '+issue.impact+'">'+issue.impact+' impact</span></div>';
+      ov+='<div class="tih-body">';
+      ov+='<div class="tih-row"><div class="tih-dot obs"></div><div class="tih-text obs">'+issue.observation+'</div></div>';
+      ov+='<div class="tih-row"><div class="tih-dot cons"></div><div class="tih-text">'+issue.consequence+'</div></div>';
+      ov+='<div class="tih-row"><div class="tih-dot fix"></div><div class="tih-text fix">'+issue.fix+'</div></div>';
+      ov+='</div></div>';
+    });
   }
 
   // Attention curve
@@ -1667,11 +1678,11 @@ function runLiveSync(){
     sectionScores:intel.sectionScores
   };
   if(existingIdx>=0){
-    S.analyseHistory[existingIdx]=entry;
-  } else {
-    S.analyseHistory.unshift(entry);
-    if(S.analyseHistory.length>50)S.analyseHistory=S.analyseHistory.slice(0,50);
+    // Remove from current position and move to top
+    S.analyseHistory.splice(existingIdx,1);
   }
+  S.analyseHistory.unshift(entry);
+  if(S.analyseHistory.length>50)S.analyseHistory=S.analyseHistory.slice(0,50);
   saveAnalyseHistory();
   S._currentResultId=entry.id;
 
@@ -2088,11 +2099,11 @@ function editLink(i){
   var link=script.notes.links[i];if(!link)return;
   var html='<div class="mhandle"></div>';
   html+='<div class="modal-title">Edit Link</div>';
-  html+='<label class="modal-label">Label</label>';
-  html+='<input id="editLinkLabel" class="modal-input" value="'+escHtml(link.label||'')+'" placeholder="Link label"/>';
-  html+='<label class="modal-label">URL</label>';
-  html+='<input id="editLinkUrl" class="modal-input" value="'+escHtml(link.url||'')+'" placeholder="https://..." style="margin-bottom:14px;"/>';
-  html+='<button class="btn-p" onclick="saveEditLink('+i+')">Save</button>';
+  html+='<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;">Label</div>';
+  html+='<input id="editLinkLabel" class="modal-inp" value="'+escHtml(link.label||'')+'" placeholder="Link label"/>';
+  html+='<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;">URL</div>';
+  html+='<input id="editLinkUrl" class="modal-inp" value="'+escHtml(link.url||'')+'" placeholder="https://..." style="margin-bottom:14px;"/>';
+  html+='<div class="modal-acts"><button class="btn-g" onclick="closeMoForce()">Cancel</button><button class="btn-p" onclick="saveEditLink('+i+')">Save</button></div>';
   openModal('_raw',html);
 }
 function saveEditLink(i){
