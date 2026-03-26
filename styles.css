@@ -1612,3 +1612,5 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
 
 .pro-sheet-hdr{position:sticky;top:0;background:var(--surface);padding:16px 20px 10px;display:flex;align-items:center;justify-content:space-between;z-index:2;border-radius:20px 20px 0 0;}
 .pro-sheet-body{padding:0 20px;}
+
+#resHero{flex-shrink:0;overflow:visible;}

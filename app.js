@@ -839,8 +839,8 @@ function runAnalyse(text,title,scriptId,paragraphs){
     score:overall,sectionScores:sectionScores,paragraphs:paras,scriptId:scriptId||null
   };
   loadAnalyseHistory();
-  S.analyseHistory.push(result);
-  if(S.analyseHistory.length>20)S.analyseHistory=S.analyseHistory.slice(-20);
+  S.analyseHistory.unshift(result);
+  if(S.analyseHistory.length>50)S.analyseHistory=S.analyseHistory.slice(0,50);
   saveAnalyseHistory();
   safeGtag('event','script_analysed',{score:overall});
   // Small delay so the analysing state is visible before results appear
@@ -1167,10 +1167,6 @@ var ov='';
   var heroEl=document.getElementById('resHero');
   if(heroEl){
     heroEl.innerHTML=hero;
-    // Force repaint on Android Chrome
-    heroEl.style.display='none';
-    heroEl.offsetHeight; // trigger reflow
-    heroEl.style.display='';
   }
 
   // Store panels (without hero) and render Overview by default
