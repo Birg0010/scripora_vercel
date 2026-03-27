@@ -955,7 +955,9 @@ function openAnalyseResult(id){
   });
   hero+='</div></div></div>';
 
-var ov='';
+var tagOrder=tagOrder2||['hook','ctx','body','cta','out'];
+  var id=result.id;
+  var ov='';
 
   // Top issue
   if(intel.issues&&intel.issues.length){
