@@ -918,6 +918,7 @@ function openAnalyseResult(id){
     intel.overall=result.score||intel.overall;
   }
   var scores=intel.sectionScores;
+  var sectionScores=intel.sectionScores;
   var overall=intel.overall||result.score||0;
   var level=scoreLevel(overall);
   var tagNames={hook:'Hook',ctx:'Context',body:'Main Body',cta:'CTA',out:'Outro'};
