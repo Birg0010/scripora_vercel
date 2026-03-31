@@ -1797,7 +1797,7 @@ function renderProfile(){
   var cur=currentThemeId();
   var dotHtml='';
   for(var ti=0;ti<themeIds.length;ti++){
-    dotHtml+='<div onclick="applyTheme(\''+themeIds[ti]+'\');setTimeout(renderProfile,0);" style="width:14px;height:14px;border-radius:50%;background:'+themeBgs[ti]+';border:2px solid '+(cur===themeIds[ti]?'var(--text)':'transparent')+';cursor:pointer;"></div>';
+    dotHtml+='<div onclick="applyTheme(\''+themeIds[ti]+'\');setTimeout(renderProfile,0);" style="width:16px;height:16px;border-radius:50%;background:'+themeBgs[ti]+';border:2px solid '+(cur===themeIds[ti]?'var(--accent)':'rgba(255,255,255,.2)')+';box-shadow:0 0 0 1px rgba(0,0,0,.4);cursor:pointer;"></div>';
   }
   var appearHTML=
     lbl('Appearance')+
@@ -1805,7 +1805,7 @@ function renderProfile(){
   var supportHTML=
     lbl('Support')+
     group([
-      row(rowIcon('copper','M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z','var(--accent)'),'Help &amp; Guide','','goScreen(\'help\')',chev),
+      row(rowIcon('copper','M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z','var(--accent)'),'Help &amp; Guide','','openHelp()',chev),
       row(rowIcon('purple','M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z','var(--cta)'),'Contact Developer','','openModal(\'contact\')',chev)
     ]);
   var legalHTML=
@@ -1824,7 +1824,7 @@ function renderProfile(){
         '</div>'+
         '<div style="font-size:1.1rem;color:var(--text);text-align:center;font-weight:600;">You\'re writing as a guest</div>'+
         '<div style="font-size:.75rem;color:var(--muted);text-align:center;line-height:1.6;max-width:260px;">Sign in to back up your scripts, sync across devices, and access your work anywhere.</div>'+
-        '<button onclick="signIn()" style="width:100%;background:var(--text);color:#12161F;border:none;border-radius:14px;padding:14px;font-size:.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:4px;">'+
+        '<button onclick="signInGoogle()" style="width:100%;background:var(--text);color:#12161F;border:none;border-radius:14px;padding:14px;font-size:.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:4px;">'+
           '<div style="width:18px;height:18px;border-radius:50%;background:conic-gradient(#4285F4 0deg 90deg,#EA4335 90deg 180deg,#FBBC05 180deg 270deg,#34A853 270deg);flex-shrink:0;"></div>'+
           'Continue with Google'+
         '</button>'+
