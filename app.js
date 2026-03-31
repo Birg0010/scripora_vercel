@@ -185,7 +185,7 @@ function renderScripts(){
   });
   if(list.length===0){
     if(S.scripts.length===0){
-      el.innerHTML='<div class="empty-state"><div class="eico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></div><h3>Your first script is waiting</h3><p>Structure your Hook, build your Context, nail your CTA. Every great video starts here.</p><button class="add-btn" id="emptyCreateBtn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>Write your first script</button><div class="empty-hint">Scripts save automatically as you write.<br/>Sign in anytime to back them up.</div></div>';
+      el.innerHTML='<div class="empty-state"><div class="eico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></div><h3>Your first script is waiting</h3><p>Structure your Hook, build your Context, nail your CTA. Every great video starts here.</p><button class="add-btn" id="emptyCreateBtn" onclick="openModal(\'newScript\')"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>Write your first script</button><div class="empty-hint">Scripts save automatically as you write.<br/>Sign in anytime to back them up.</div></div>';
     }else{
       el.innerHTML='<div class="empty-state"><div class="eico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div><h3>No matches</h3><p>Try a different search or filter.</p></div>';
     }
@@ -262,6 +262,11 @@ function confirmBulkDelete(){
 }
 function openScript(id){
   if(S.bulkMode){toggleBulkSelect(id);return;}
+  if(S.activeId!==id){
+    S.syncEnabled=false;
+    S._liveIntel=null;
+    if(_liveSyncTimer){clearTimeout(_liveSyncTimer);_liveSyncTimer=null;}
+  }
   S.activeId=id;goScreen('write');
 }
 
@@ -1459,9 +1464,11 @@ function showStatHelp(type,value){
 // ── Onboarding ──
 var _obSlide=0;
 var _obData=[
-  {icon:'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z',title:'Write with structure',body:'Every great YouTube video starts with a script. Scripora gives you five building blocks: Hook, Context, Main Body, CTA and Outro. Each one has a job. Together they hold the viewer from open to close.'},
-  {icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',title:'Understand what your script does',body:'The Analyse tab reads your script sentence by sentence and maps it as a viewer attention timeline. You see where attention spikes, where it drops, and exactly what to fix before you film.'},
-  {icon:'M13 10V3L4 14h7v7l9-11h-7z',title:'Write with intention',body:'Scripora does not check grammar or count keywords. It simulates what a viewer experiences, second by second, and tells you what happens if you do not change it.'}
+  {icon:'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z',title:'Write with structure',body:'Scripora gives you five building blocks: Hook, Context, Body, CTA and Outro. Each paragraph gets a colour-coded tag. Tap the tag to change it. The app is intuitive. Explore every button and see what it does.'},
+  {icon:'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',title:'Start on the Scripts tab',body:'The Scripts tab is your home. Create a script, open one to write, and see your scores at a glance. Tap any card to open it in the Write tab.'},
+  {icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',title:'Analyse is inside the Hub tab',body:'Tap Hub in the bottom nav, then tap the Analyse pill. Paste your script or load one from your list. Tap Analyse and your full report opens as an overlay on the Hub page.'},
+  {icon:'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',title:'Score, verdict, and top issues',body:'The analysis result shows your overall score, a section breakdown, and up to 3 issues. Each one has an observation, a consequence, and a fix. Three tabs: Overview, Sections, Deep. Past results live in Hub > Analyse > View All.'},
+  {icon:'M13 10V3L4 14h7v7l9-11h-7z',title:'Write with intention',body:'Scripora simulates what a viewer experiences second by second. It does not check grammar. It tells you what happens to attention if you do not change something. Pro unlocks Live Sync and full per-sentence Deep tab feedback.'}
 ];
 function initOnboarding(){
   var seen=localStorage.getItem('sp_ob');
@@ -1476,7 +1483,7 @@ function showOnboardSlide(n){
     '<div class="ob-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="'+d.icon+'"/></svg></div>'+
     '<div class="ob-title">'+d.title+'</div>'+
     '<div class="ob-body">'+d.body+'</div>';
-  [0,1,2].forEach(function(i){var dot=document.getElementById('od'+i);if(dot)dot.classList.toggle('on',i===n);});
+  [0,1,2,3,4].forEach(function(i){var dot=document.getElementById('od'+i);if(dot)dot.classList.toggle('on',i===n);});
   var back=document.getElementById('obBack');
   var next=document.getElementById('obNext');
   if(back)back.style.display=n>0?'':'none';
@@ -1504,9 +1511,15 @@ function openWriteReport(){
   }
   if(!script.paragraphs||!script.paragraphs.length){showToast('Add some content to analyse','default');return;}
 
-  // Run analysis on current paragraphs
-  var intel=analyseScript(script.paragraphs);
-  S._liveIntel=intel;
+  // Run fresh analysis only when sync is ON; otherwise use last saved intel
+  var intel;
+  if(S.syncEnabled&&isPro()){
+    intel=analyseScript(script.paragraphs);
+    S._liveIntel=intel;
+  } else {
+    intel=S._liveIntel||analyseScript(script.paragraphs);
+    if(!S._liveIntel)S._liveIntel=intel;
+  }
 
   // Populate header
   var overall=intel.overall||0;
@@ -1537,6 +1550,7 @@ function openWriteReport(){
 }
 
 function goToFullReport(){
+  S._resultOrigin='write';
   closeWriteReport();
   // Run fresh analysis on current script and save to history
   var script=getActive();
@@ -1744,98 +1758,161 @@ function runLiveSync(){
 
 function closeAnalyseResults(){
   document.getElementById('analyseResultsScreen').classList.add('hide');
-  // Re-render analyse tab so history shows new session without refresh
-  if(S.activeHubTab==='analyse'){
-    setTimeout(renderAnalyse,0);
+  if(S._resultOrigin==='write'){
+    goScreen('write');
+  } else {
+    if(S.activeHubTab==='analyse')setTimeout(renderAnalyse,0);
   }
+  S._resultOrigin=null;
 }
 
 // ── Profile ──
 function renderProfile(){
   var el=document.getElementById('profileContent');
-  if(!S.currentUser||S.isGuest){
-    el.innerHTML='<div class="prof-guest">'+
-      '<div class="prof-guest-logo"><em>S</em></div>'+
-      '<h2>Your writing, protected</h2>'+
-      '<p class="prof-guest-sub">Sign in to back up your scripts, sync across devices and unlock Hub.</p>'+
-      '<div class="benefits">'+
-      '<div class="benefit"><div class="benefit-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg></div><div class="benefit-txt"><strong>Cloud backup</strong>Your scripts are safe even if you lose your phone.</div></div>'+
-      '<div class="benefit"><div class="benefit-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582 4 8 4s8 1.79 8 4"/></svg></div><div class="benefit-txt"><strong>Multi-device sync</strong>Start on mobile, finish on any device.</div></div>'+
-      '<div class="benefit"><div class="benefit-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div><div class="benefit-txt"><strong>Full Hub access</strong>Track your stats, writing streaks and analyse your scripts.</div></div>'+
+  var pro=isPro();
+  var u=S.currentUser;
+  var isGuest=!u||S.isGuest;
+
+  function rowIcon(col,path,stroke){
+    var bgs={blue:'rgba(90,126,201,.12)',green:'rgba(106,175,130,.12)',purple:'rgba(196,122,175,.12)',copper:'rgba(184,115,51,.12)',gray:'rgba(122,128,153,.08)',red:'rgba(192,90,90,.12)'};
+    return '<div style="width:32px;height:32px;border-radius:9px;background:'+bgs[col]+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+
+      '<svg fill="none" stroke="'+stroke+'" viewBox="0 0 24 24" stroke-width="2" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="'+path+'"/></svg>'+
+    '</div>';
+  }
+  function row(icon,title,sub,action,right){
+    return '<div class="prof-row"'+(action?' onclick="'+action+'"':'')+'>'+icon+
+      '<div style="flex:1;"><div class="prof-row-title">'+title+'</div>'+(sub?'<div class="prof-row-sub">'+sub+'</div>':'')+
+      '</div>'+(right||'')+'</div>';
+  }
+  function group(rows){
+    return '<div style="margin:0 14px;background:var(--surface);border-radius:16px;border:1px solid var(--border);overflow:hidden;">'+rows.join('')+'</div>';
+  }
+  function lbl(text){
+    return '<div style="font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:18px 20px 8px;font-weight:600;">'+text+'</div>';
+  }
+  var chev='<div style="color:var(--faint);font-size:.9rem;">&#8250;</div>';
+
+  var themeIds=['midnight','obsidian','slate','rouge','forest'];
+  var themeBgs=['#12161F','#1A1A1A','#1C2030','#1F1218','#121A14'];
+  var cur=currentThemeId();
+  var dotHtml='';
+  for(var ti=0;ti<themeIds.length;ti++){
+    dotHtml+='<div onclick="applyTheme(\''+themeIds[ti]+'\');setTimeout(renderProfile,0);" style="width:14px;height:14px;border-radius:50%;background:'+themeBgs[ti]+';border:2px solid '+(cur===themeIds[ti]?'var(--text)':'transparent')+';cursor:pointer;"></div>';
+  }
+  var appearHTML=
+    lbl('Appearance')+
+    group([row(rowIcon('copper','M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M12 7a5 5 0 100 10 5 5 0 000-10z','var(--accent)'),'Theme','',null,'<div style="display:flex;gap:5px;">'+dotHtml+'</div>')]);
+  var supportHTML=
+    lbl('Support')+
+    group([
+      row(rowIcon('copper','M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z','var(--accent)'),'Help &amp; Guide','','goScreen(\'help\')',chev),
+      row(rowIcon('purple','M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z','var(--cta)'),'Contact Developer','','openModal(\'contact\')',chev)
+    ]);
+  var legalHTML=
+    lbl('Legal')+
+    group([
+      row(rowIcon('gray','M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z','var(--muted)'),'Privacy Policy','','openModal(\'privacy\')',chev),
+      row(rowIcon('gray','M9 12h6m-6 4h6M5 8h14M5 4h14','var(--muted)'),'Terms of Use','','openModal(\'terms\')',chev)
+    ]);
+  var ver='<div style="text-align:center;font-size:.62rem;color:var(--faint);padding:20px;letter-spacing:.04em;">Scripora v5.9c &middot; by Selerii</div>';
+
+  if(isGuest){
+    el.innerHTML=
+      '<div style="padding:36px 20px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;border-bottom:1px solid var(--border);background:linear-gradient(170deg,rgba(184,115,51,.06) 0%,transparent 80%);">'+
+        '<div style="width:68px;height:68px;border-radius:50%;background:var(--s2);border:1.5px dashed var(--faint);display:flex;align-items:center;justify-content:center;">'+
+          '<svg fill="none" stroke="var(--faint)" viewBox="0 0 24 24" stroke-width="1.5" style="width:28px;height:28px;"><path stroke-linecap="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>'+
+        '</div>'+
+        '<div style="font-size:1.1rem;color:var(--text);text-align:center;font-weight:600;">You\'re writing as a guest</div>'+
+        '<div style="font-size:.75rem;color:var(--muted);text-align:center;line-height:1.6;max-width:260px;">Sign in to back up your scripts, sync across devices, and access your work anywhere.</div>'+
+        '<button onclick="signIn()" style="width:100%;background:var(--text);color:#12161F;border:none;border-radius:14px;padding:14px;font-size:.88rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:4px;">'+
+          '<div style="width:18px;height:18px;border-radius:50%;background:conic-gradient(#4285F4 0deg 90deg,#EA4335 90deg 180deg,#FBBC05 180deg 270deg,#34A853 270deg);flex-shrink:0;"></div>'+
+          'Continue with Google'+
+        '</button>'+
+        '<div style="display:flex;flex-direction:column;gap:6px;width:100%;margin-top:2px;">'+
+          '<div style="display:flex;align-items:center;gap:10px;background:var(--s2);border-radius:10px;padding:10px 14px;font-size:.72rem;color:var(--muted);">&#9729; Scripts backed up automatically</div>'+
+          '<div style="display:flex;align-items:center;gap:10px;background:var(--s2);border-radius:10px;padding:10px 14px;font-size:.72rem;color:var(--muted);">&#9889; Live Sync available with Pro</div>'+
+          '<div style="display:flex;align-items:center;gap:10px;background:var(--s2);border-radius:10px;padding:10px 14px;font-size:.72rem;color:var(--muted);">&#128241; Access from any device</div>'+
+        '</div>'+
       '</div>'+
-      '<button class="ls-google" onclick="signInGoogle()" style="margin-bottom:12px;">'+
-      '<svg viewBox="0 0 24 24" fill="none" style="width:18px;height:18px;"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>'+
-      'Sign in with Google</button>'+
-      '<div class="prof-legal"><span onclick="openModal(\'privacy\')">Privacy Policy</span><span style="color:rgba(255,255,255,.1)">·</span><span onclick="openModal(\'terms\')">Terms</span></div>'+
-      '</div>';
+      lbl('Upgrade')+
+      '<div style="margin:0 14px;background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;">'+
+        '<div style="font-size:1.2rem;">&#10038;</div>'+
+        '<div style="flex:1;"><div style="font-size:.84rem;font-weight:600;color:var(--accent);">Scripora Pro</div><div style="font-size:.65rem;color:var(--muted);margin-top:2px;line-height:1.5;">Unlimited scripts, Live Sync, full AI analysis. One payment, yours forever.</div></div>'+
+        '<button onclick="openProSheet()" style="background:var(--accent);color:#12161F;border:none;border-radius:10px;padding:8px 14px;font-size:.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">$9.99</button>'+
+      '</div>'+
+      appearHTML+supportHTML+legalHTML+ver;
     return;
   }
 
-  var u=S.currentUser;
-  var initials=(u.displayName||'U').split(' ').map(function(n){return n[0];}).join('').substring(0,2).toUpperCase();
-  var html='<div class="prof-hero">'+
-    '<div class="prof-av">'+(u.photoURL?'<img src="'+u.photoURL+'" alt="avatar"/>':initials)+'</div>'+
-    '<div class="prof-name">'+(u.displayName||'Creator')+'</div>'+
-    '<div class="prof-email">'+u.email+'</div>'+
-    '<div class="prof-sync"><span class="sync-dot"></span>Synced</div>'+
+  var initials=(u.displayName||'?').split(' ').map(function(w){return w.charAt(0);}).join('').slice(0,2).toUpperCase();
+  var avatarHTML=u.photoURL?
+    '<img src="'+u.photoURL+'" style="width:68px;height:68px;border-radius:50%;object-fit:cover;" onerror="this.style.display=\'none\'"/>':
+    '<div style="width:68px;height:68px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--accent);">'+initials+'</div>';
+  var badge=pro?
+    '<div style="background:var(--accent);color:#12161F;font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:3px 12px;border-radius:50px;text-transform:uppercase;">Pro</div>':
+    '<div style="background:var(--s2);border:1px solid var(--border);color:var(--muted);font-size:.6rem;font-weight:600;letter-spacing:.08em;padding:3px 12px;border-radius:50px;text-transform:uppercase;">Free</div>';
+  var html=
+    '<div style="padding:28px 20px 20px;background:linear-gradient(170deg,rgba(184,115,51,.08) 0%,transparent 70%);border-bottom:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:10px;">'+
+      '<div style="width:76px;height:76px;border-radius:50%;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;">'+avatarHTML+'</div>'+
+      '<div style="font-size:1.15rem;font-weight:700;color:var(--text);">'+escHtml(u.displayName||'Scripora User')+'</div>'+
+      (u.email?'<div style="font-size:.72rem;color:var(--muted);">'+escHtml(u.email)+'</div>':'')+
+      badge+
     '</div>';
 
-  // Account
-  html+='<div class="prof-sec">Account</div>';
-  html+='<div class="prof-row" onclick="openModal(\'editProfile\')">'+
-    '<div class="prof-row-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></div>'+
-    '<div class="prof-row-info"><div class="prof-row-lbl">Edit Profile</div></div>'+
-    '<div class="prof-row-right"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div>';
-
-  // Pro
-  html+='<div class="prof-sec">Pro</div>';
-  if(isPro()){
-    html+='<div class="pro-box"><span class="pro-badge"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:11px;height:11px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3l14 9-14 9V3z"/></svg>Pro Member</span><div style="font-size:.74rem;color:var(--muted);margin-top:6px;line-height:1.55;">You have access to all Pro features. Thank you for supporting Scripora.</div></div>';
-  }else{
-    html+='<div class="pro-box">'+
-      '<div style="font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:4px;">Unlock Pro</div>'+
-      '<div style="font-size:.72rem;color:var(--muted);margin-bottom:10px;">Portfolio export, advanced analytics and AI writing assistant coming soon.</div>'+
-      '<button style="width:100%;padding:10px;border-radius:8px;background:var(--accent);color:#0A0D14;border:none;font-size:.82rem;font-weight:700;cursor:pointer;" onclick="openProSheet()">Get Pro &middot; $9.99</button>'+
-      '<div class="coupon-row"><input class="coupon-inp" id="couponInpProfile" placeholder="Have a promo code?"/><button class="coupon-apply" onclick="checkProCode(document.getElementById(\'couponInpProfile\').value)">Apply</button></div>'+
+  if(pro){
+    html+=lbl('Membership')+
+      '<div style="margin:0 14px;background:linear-gradient(135deg,rgba(184,115,51,.1),rgba(184,115,51,.04));border:1px solid var(--accent-border);border-radius:16px;padding:16px;">'+
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'+
+          '<div style="background:var(--accent);color:#12161F;font-size:.58rem;font-weight:700;letter-spacing:.1em;padding:3px 10px;border-radius:50px;text-transform:uppercase;">Pro</div>'+
+          '<div style="font-size:.84rem;font-weight:600;color:var(--text);">Lifetime access &middot; active</div>'+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;gap:5px;">'+
+          '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);flex-shrink:0;"></div>Unlimited scripts</div>'+
+          '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);flex-shrink:0;"></div>Live Sync &mdash; write and analyse together</div>'+
+          '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);flex-shrink:0;"></div>Full per-sentence Deep tab</div>'+
+          '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--faint);flex-shrink:0;"></div>AI analysis &mdash; coming soon</div>'+
+        '</div>'+
+      '</div>';
+  } else {
+    html+=lbl('Upgrade')+
+      '<div class="pro-box">'+
+        '<div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;">Scripora Pro &mdash; $9.99 lifetime</div>'+
+        '<div style="font-size:.7rem;color:var(--muted);line-height:1.6;margin-bottom:10px;">Unlimited scripts, Live Sync, full Deep tab, AI analysis on the way.</div>'+
+        '<button onclick="openProSheet()" class="btn-p" style="width:100%;">Get Pro</button>'+
+        '<div style="margin-top:10px;">'+
+          '<input class="modal-inp" placeholder="Have a promo code?" id="profPromoInp" style="margin-bottom:6px;"/>'+
+          '<button class="btn-g" style="width:100%;" onclick="checkPromoFromProfile()">Apply</button>'+
+        '</div>'+
       '</div>';
   }
 
-  // App
-  html+='<div class="prof-sec">App</div>';
-  if(!window.matchMedia('(display-mode: standalone)').matches){
-    html+='<div class="prof-row" onclick="openInstallGuide()">'+
-      '<div class="prof-row-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></div>'+
-      '<div class="prof-row-info"><div class="prof-row-lbl">Get the App</div><div class="prof-row-sub">Install Scripora on your device</div></div>'+
-      '<div class="prof-row-right"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div>'
-  }
-  html+='<div class="prof-row" onclick="openModal(\'themes\')">'+
-    '<div class="prof-row-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg></div>'+
-    '<div class="prof-row-info"><div class="prof-row-lbl">Themes</div><div class="prof-row-sub">'+THEMES.find(function(t){return t.id===currentThemeId();}).name+'</div></div>'+
-    '<div class="prof-row-right"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div>';
-
-  // Up Next
-  html+='<div class="prof-sec">Up Next</div>';
-  html+='<div class="prof-row" onclick="openHelp()">'+
-    '<div class="prof-row-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.12 2.6-2.842 3.183C12.405 13.546 12 14.02 12 14.5V15m0 3.5v.5"/><circle cx="12" cy="12" r="10"/></svg></div>'+
-    '<div class="prof-row-info"><div class="prof-row-lbl">Help &amp; Guide</div><div class="prof-row-sub">How Scripora works, features and tips</div></div>'+
-    '<div class="prof-row-right"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div>';
-  html+='<div class="prof-row" onclick="openModal(\'contact\')">'+
-    '<div class="prof-row-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>'+
-    '<div class="prof-row-info"><div class="prof-row-lbl">Contact Developer</div><div class="prof-row-sub">Feedback, bugs and feature requests</div></div>'+
-    '<div class="prof-row-right"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div>';
-  // Sign out / delete
-  html+='<div style="height:16px;"></div>';
-  html+='<div class="signout-row" onclick="signOut()">'+
-    '<div class="signout-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg></div>'+
-    '<div class="signout-lbl red">Sign Out</div></div>';
-  html+='<div class="signout-row" onclick="openModal(\'deleteAccount\')">'+
-    '<div class="signout-ico" style="background:rgba(139,58,58,.08);"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></div>'+
-    '<div class="signout-lbl" style="color:var(--faint);font-size:.78rem;">Delete Account</div></div>';
-
-  html+='<div class="prof-btm"><span onclick="openModal(\'privacy\')">Privacy Policy</span><span class="prof-btm-dot">&middot;</span><span onclick="openModal(\'terms\')">Terms</span></div>';
-  html+='<div class="prof-version">Scripora v3.4 &nbsp;&middot;&nbsp; by Selerii</div>';
+  html+=appearHTML;
+  html+=lbl('Account')+
+    group([
+      row(rowIcon('blue','M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z','var(--body-c)'),'Edit Profile','','openModal(\'editProfile\')',chev),
+      row(rowIcon('green','M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z','var(--s-high)'),'Get the App','Install on your home screen','openGetApp()',chev)
+    ]);
+  html+=supportHTML+legalHTML;
+  html+=lbl('Account actions')+
+    group([
+      row(rowIcon('gray','M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1','var(--muted)'),'Sign Out','','signOut()',''),
+      '<div class="prof-row" onclick="openModal(\'deleteAccount\')">'+
+        '<div style="flex:1;"><div style="font-size:.84rem;color:var(--s-low);">Delete Account</div><div style="font-size:.65rem;color:var(--dim);margin-top:1px;">Permanently removes your data</div></div>'+
+      '</div>'
+    ]);
+  html+=ver;
   el.innerHTML=html;
+  setTimeout(function(){
+    var inp=document.getElementById('profPromoInp');
+    if(inp)inp.onkeydown=function(e){if(e.key==='Enter')checkPromoFromProfile();};
+  },0);
 }
+
+function checkPromoFromProfile(){
+  var inp=document.getElementById('profPromoInp');
+  if(inp&&inp.value)checkProCode(inp.value.trim());
+}
+
 
 // ── Sign in/out ──
 function signInGoogle(){
