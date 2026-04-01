@@ -65,6 +65,142 @@ function refreshProState(){
     }
   },50);
 }
+
+// ── Scripora AI ──
+var AI_FREE_LIMIT=5;
+var AI_ENDPOINT='/api/analyse';
+
+function getAiUsage(){
+  try{
+    var d=JSON.parse(localStorage.getItem('sp_ai_usage')||'{}');
+    var today=new Date().toLocaleDateString('en-CA');// YYYY-MM-DD
+    if(d.date!==today)return {date:today,count:0};
+    return d;
+  }catch(e){return {date:new Date().toLocaleDateString('en-CA'),count:0};}
+}
+
+function incrementAiUsage(){
+  var u=getAiUsage();
+  u.count=(u.count||0)+1;
+  localStorage.setItem('sp_ai_usage',JSON.stringify(u));
+}
+
+function canUseAi(){
+  if(isPro())return true;
+  return getAiUsage().count<AI_FREE_LIMIT;
+}
+
+function aiCallsRemaining(){
+  if(isPro())return 999;
+  return Math.max(0,AI_FREE_LIMIT-getAiUsage().count);
+}
+
+function runAiAnalysis(engineOutput,tier,resultId){
+  // Show loading state in the result panel
+  var body=document.getElementById('resBody');
+  if(body){
+    var cur=body.innerHTML;
+    body.innerHTML='<div class="ai-loading"><div class="ai-loading-dot"></div><div class="ai-loading-dot"></div><div class="ai-loading-dot"></div><div style="font-size:.72rem;color:var(--muted);margin-top:10px;">Scripora AI is reading your script...</div></div>'+cur;
+  }
+
+  var payload=JSON.stringify({
+    scriptType:engineOutput.scriptType||'general',
+    overall:engineOutput.overall||0,
+    sectionScores:engineOutput.sectionScores||{},
+    paragraphs:engineOutput.paragraphs||[],
+    failurePatterns:engineOutput.failurePatterns||[],
+    signals:{
+      promises:engineOutput.promises||[],
+      promiseDelivered:engineOutput.promiseDelivered||false,
+      sentenceLenVariance:engineOutput.sentenceLenVariance||0,
+      voiceRatio:engineOutput.voiceRatio||0,
+      totalSentences:engineOutput.totalSentences||0
+    },
+    tier:tier
+  });
+
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST',AI_ENDPOINT,true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.timeout=15000;
+  xhr.onload=function(){
+    // Remove loading state
+    if(body){
+      var ai_load=body.querySelector('.ai-loading');
+      if(ai_load)ai_load.parentNode.removeChild(ai_load);
+    }
+    if(xhr.status===200){
+      try{
+        var resp=JSON.parse(xhr.responseText);
+        if(resp.ok&&resp.result){
+          incrementAiUsage();
+          renderAiResult(resp.result,resultId);
+        } else {
+          renderAiFallback('AI feedback unavailable right now.');
+        }
+      }catch(e){renderAiFallback('AI feedback unavailable right now.');}
+    } else if(xhr.status===504){
+      renderAiFallback('AI took too long to respond. Structural analysis shown.');
+    } else {
+      renderAiFallback('AI feedback unavailable right now.');
+    }
+  };
+  xhr.ontimeout=function(){
+    if(body){var al=body.querySelector('.ai-loading');if(al)al.parentNode.removeChild(al);}
+    renderAiFallback('AI took too long to respond.');
+  };
+  xhr.onerror=function(){
+    if(body){var al=body.querySelector('.ai-loading');if(al)al.parentNode.removeChild(al);}
+    renderAiFallback('AI feedback unavailable right now.');
+  };
+  xhr.send(payload);
+}
+
+function renderAiResult(ai,resultId){
+  // Update the overview panel with AI content
+  // Verdict
+  var vEl=document.getElementById('res-ai-verdict');
+  if(vEl&&ai.verdict)vEl.textContent=ai.verdict;
+  var vsEl=document.getElementById('res-ai-verdictsub');
+  if(vsEl&&ai.verdictSub)vsEl.textContent=ai.verdictSub;
+  // Issues
+  var issEl=document.getElementById('res-ai-issues');
+  if(issEl&&ai.topIssues&&ai.topIssues.length){
+    var html='';
+    ai.topIssues.forEach(function(issue,ii){
+      var lbl=ii===0?'Top Issue':'Issue '+(ii+1);
+      var ic=issue.impact==='high'?'high':'medium';
+      html+='<div class="top-issue-card"'+(ii>0?' style="margin-top:10px;"':'')+' >';
+      html+='<div class="top-issue-hd"><span class="tih-label">'+lbl+'</span><span class="tih-section">'+escHtml(issue.section||'')+'</span>';
+      html+='<span class="tih-impact '+ic+'">'+escHtml(issue.impact||'')+' impact</span></div>';
+      html+='<div class="tih-body">';
+      html+='<div class="tih-row"><div class="tih-dot obs"></div><div class="tih-text obs">'+escHtml(issue.observation||'')+'</div></div>';
+      html+='<div class="tih-row"><div class="tih-dot cons"></div><div class="tih-text">'+escHtml(issue.consequence||'')+'</div></div>';
+      html+='<div class="tih-row"><div class="tih-dot fix"></div><div class="tih-text fix">'+escHtml(issue.fix||'')+'</div></div>';
+      html+='</div></div>';
+    });
+    issEl.innerHTML=html;
+  }
+  // inShort
+  var isEl=document.getElementById('res-ai-inshort');
+  if(isEl&&ai.inShort)isEl.textContent=ai.inShort;
+  // Store AI result in history entry
+  loadAnalyseHistory();
+  for(var i=0;i<S.analyseHistory.length;i++){
+    if(S.analyseHistory[i].id===resultId){
+      S.analyseHistory[i].aiResult=ai;
+      break;
+    }
+  }
+  saveAnalyseHistory();
+}
+
+function renderAiFallback(msg){
+  var fb=document.getElementById('res-ai-fallback');
+  if(fb){fb.textContent=msg;fb.style.display='block';}
+}
+
+
 function safeGtag(){try{if(typeof gtag!=='undefined')gtag.apply(null,arguments);}catch(e){}}
 function uid(){return 'id_'+Date.now()+'_'+Math.random().toString(36).substr(2,6);}
 function escHtml(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -113,7 +249,7 @@ function goScreen(name){
   updateHeader(name);
   if(name==='scripts'){if(S.bulkMode)exitBulkMode();else setTimeout(renderScripts,0);}
   if(name==='write')renderWrite();
-  if(name==='hub'){S.hubPillOpen=false;renderHub();}
+  if(name==='hub'){S.hubPillOpen=!localStorage.getItem('sp_hub_seen');renderHub();}
   if(name==='profile')renderProfile();
   recordSession();
 }
@@ -149,7 +285,7 @@ function buildHubPillHTML(){
 }
 function toggleHubPill(){S.hubPillOpen=!S.hubPillOpen;document.getElementById('headerRight').innerHTML=buildHubPillHTML();}
 function setHubTab(tab){
-  S.activeHubTab=tab;S.hubPillOpen=false;
+  S.activeHubTab=tab;S.hubPillOpen=false;localStorage.setItem('sp_hub_seen','1');
   document.getElementById('headerRight').innerHTML=buildHubPillHTML();
   ['stats','analyse','workspace'].forEach(function(t){
     var id='hub'+t.charAt(0).toUpperCase()+t.slice(1);
@@ -850,7 +986,24 @@ function runAnalyse(text,title,scriptId,paragraphs){
   safeGtag('event','script_analysed',{score:overall});
   // Small delay so the analysing state is visible before results appear
   var _resultId=result.id;
-  setTimeout(function(){openAnalyseResult(_resultId);},200);
+  setTimeout(function(){
+    openAnalyseResult(_resultId);
+    // Fire AI analysis after result opens
+    setTimeout(function(){
+      if(!canUseAi()){
+        // Show limit message in place of AI section
+        var fb=document.getElementById('res-ai-fallback');
+        var rem=aiCallsRemaining();
+        if(fb){
+          fb.innerHTML='You have used your '+AI_FREE_LIMIT+' free AI analyses today. Resets at midnight. <button onclick="openProSheet()" style="background:none;border:none;color:var(--accent);font-size:.72rem;cursor:pointer;text-decoration:underline;">Upgrade to Pro</button> for unlimited.';
+          fb.style.display='block';
+        }
+        return;
+      }
+      var tier=isPro()?'pro':'free';
+      runAiAnalysis(intel,tier,_resultId);
+    },300);
+  },200);
 }
 
 
@@ -966,6 +1119,7 @@ var tagOrder=tagOrder2||['hook','ctx','body','cta','out'];
   var ov='';
 
   // Top issue
+  ov+='<div id="res-ai-issues">';
   if(intel.issues&&intel.issues.length){
     intel.issues.forEach(function(issue,ii){
       var lbl=ii===0?'Top Issue':'Issue '+(ii+1);
@@ -979,6 +1133,7 @@ var tagOrder=tagOrder2||['hook','ctx','body','cta','out'];
       ov+='</div></div>';
     });
   }
+  ov+='</div>';
 
   // Attention curve
   ov+='<div class="res-curve-card"><div class="res-card-title" style="display:flex;align-items:center;gap:5px;">Attention Curve';
@@ -1047,8 +1202,8 @@ var tagOrder=tagOrder2||['hook','ctx','body','cta','out'];
 
   // In short
   ov+='<div class="res-inshort"><div class="res-inshort-tag">In short</div>';
-  ov+='<div class="res-inshort-verdict">'+getScriptVerdict(scores,overall)+'</div>';
-  ov+='<div class="res-inshort-body">'+getScriptVerdictSub(scores,overall,Object.keys(scores))+'</div></div>';
+  ov+='<div class="res-inshort-verdict" id="res-ai-verdict">'+getScriptVerdict(scores,overall)+'</div>';
+  ov+='<div class="res-inshort-body" id="res-ai-inshort">'+getScriptVerdictSub(scores,overall,Object.keys(scores))+'</div></div>';
 
   // Actions
   ov+='<div style="display:flex;flex-direction:column;gap:8px;padding:16px 14px 28px;">';
