@@ -1,658 +1,362 @@
-// ════════════════════════════════════════════════════════════════════
-// SCRIPORA — ENGINE.JS
-// Intelligence engine: sentence analysis, scoring, pattern detection
-// ════════════════════════════════════════════════════════════════════
+// Scripora Intelligence Engine v4 - Viewer State Simulation Model
 
 function splitSentences(text){
-  var raw=text.match(/[^.!?]+[.!?]+/g)||[text];
-  return raw.map(function(s){return s.trim();}).filter(function(s){return s.length>3;});
+  if(!text||!text.trim())return[];
+  return text.replace(/([.!?])\s+/g,'$1\x01').split('\x01').map(function(s){return s.trim();}).filter(function(s){return s.length>3;});
 }
-function getWords(text){return text.toLowerCase().split(/\s+/).filter(function(w){return w.length>0;});}
-function wc(text){return text?text.trim().split(/\s+/).filter(function(w){return w.length>0;}).length:0;}
-function countNumbers(text){return (text.match(/\b\d[\d,.]*/g)||[]).length;}
-function countSpecifics(text){
-  return countNumbers(text)+
-    (text.match(/[$£€%]/g)||[]).length+
-    (text.match(/\b(years?|months?|days?|hours?|minutes?|seconds?|weeks?)\b/gi)||[]).length;
+function getWords(text){
+  if(!text)return[];
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(function(w){return w.length>0;});
+}
+function wc(text){return getWords(text).length;}
+function clamp(v,mn,mx){return Math.min(mx,Math.max(mn,v));}
+function norm(v){return clamp(v,0,1);}
+
+// ── Feature Extraction ──
+function extractSpecificity(s){
+  if(!s)return 0;
+  var score=0;
+  var nums=s.match(/\d+(\.\d+)?(%|x|k|m|b)?\b/g)||[];
+  score+=Math.min(0.4,nums.length*0.15);
+  var pw=['exactly','specifically','precisely','every','always','never','first','second','third','within','after','before','since','until','including'];
+  var words=getWords(s);
+  var pc=0;pw.forEach(function(w){if(words.indexOf(w)>=0)pc++;});
+  score+=Math.min(0.3,pc*0.12);
+  var ne=s.match(/\b[A-Z][a-z]{2,}\b/g)||[];
+  score+=Math.min(0.3,ne.length*0.1);
+  return norm(score);
+}
+function extractNovelty(s,prev){
+  if(!s)return 0;
+  if(!prev)return 0.7;
+  var sw=['the','a','an','is','are','was','were','be','been','have','has','had','do','does','did','will','would','could','should','this','that','it','its','and','or','but','so','in','on','at','to','of','by','with','from','as','not','no'];
+  var cw=getWords(s).filter(function(w){return w.length>3&&sw.indexOf(w)<0;});
+  var pw=getWords(prev).filter(function(w){return w.length>3&&sw.indexOf(w)<0;});
+  if(cw.length===0)return 0.3;
+  var ov=0;cw.forEach(function(w){if(pw.indexOf(w)>=0)ov++;});
+  return norm(1-(ov/cw.length));
+}
+function extractClarity(s){
+  if(!s)return 0;
+  var wds=getWords(s);var wc2=wds.length;
+  var ls;
+  if(wc2<=8)ls=0.9;else if(wc2<=16)ls=1.0;else if(wc2<=25)ls=0.7;else if(wc2<=35)ls=0.4;else ls=0.1;
+  var pp=/\b(is|are|was|were|been|being)\s+(being\s+)?\w+ed\b/i.test(s)?0.2:0;
+  var lw=wds.filter(function(w){return w.length>10;}).length;
+  return norm(ls-pp-Math.min(0.3,lw*0.08));
+}
+function extractProgression(s,prev){
+  if(!s)return 0;
+  if(!prev)return 0.8;
+  var pm=['but','however','yet','now','next','then','so','therefore','because','since','which means','that means','here','first','second','third','finally','most importantly','what this means','the reason','the problem','the answer'];
+  var lower=s.toLowerCase();
+  var hm=pm.some(function(m){return lower.indexOf(m)===0||lower.indexOf('. '+m)>=0;});
+  var nov=extractNovelty(s,prev);
+  return norm((hm?0.7:0.4)+(nov*0.3));
+}
+function extractPayoff(s,prevSents){
+  if(!s)return 0;
+  var lower=s.toLowerCase();
+  var pw=["that's why","here's why","the answer","the reason","it turns out","what actually","the truth","this means","so here","which is why","the secret","the key","the result","the fix"];
+  var hp=pw.some(function(p){return lower.indexOf(p)>=0;});
+  var rc=(prevSents||[]).slice(-3).join(' ').toLowerCase();
+  var hs=/\?|why |how |what if |imagine |think about |you.ll |i.ll show/.test(rc);
+  if(hp&&hs)return 0.85;
+  if(hp)return 0.5;
+  if(hs&&/because|since|so|therefore|as a result/.test(lower))return 0.6;
+  return 0.1;
+}
+function extractCredibility(s){
+  if(!s)return 0;
+  var score=0;var lower=s.toLowerCase();
+  if(/\d+/.test(s))score+=0.25;
+  var dw=['i built','i created','i made','i tested','i tried','i spent','i ran','i worked','i studied','we built','we tested','we found','results showed','data shows','research shows','studies show','according to','based on'];
+  dw.forEach(function(d){if(lower.indexOf(d)>=0)score+=0.2;});
+  var ew=['proof','evidence','result','outcome','finding','experiment','test','data','study','report'];
+  ew.forEach(function(e){if(lower.indexOf(e)>=0)score+=0.1;});
+  return norm(score);
+}
+function extractDirectness(s){
+  if(!s)return 0;
+  var lower=s.toLowerCase();
+  var total=Math.max(1,getWords(s).length);
+  var dw=["you","your","you're","you've","you'll","yourself","we","our","let's","if you","when you","for you","imagine you","think about"];
+  var cnt=0;dw.forEach(function(d){if(lower.indexOf(d)>=0)cnt++;});
+  return norm(cnt/Math.max(1,total*0.3));
 }
 
-// ── Tension signals ──
-var CURIOSITY_OPENERS=['what if','imagine','most people','the reason','here is why','did you know','have you ever','you are about to','this is why','stop doing','never do','always do','the truth about','what nobody','i made a mistake','i failed','i lost','i gained','i discovered'];
-var TENSION_WORDS=['wrong','mistake','fail','secret','truth','nobody','everyone','surprising','shocking','actually','real reason','never told','hidden','exposed','myth','lied','misunderstood'];
-var RESOLUTION_WORDS=['because','so','which means','that is why','this is why','the answer is','the reason is','here is how','the solution'];
+// ── Viewer State ──
+function initialState(){return{curiosity:0.5,reward:0.3,tension:0.4,trust:0.4,clarity:0.6,fatigue:0.1};}
 
-function signalCuriosityOpened(sentence){
-  var l=sentence.toLowerCase();
-  if(l.match(/\?/))return true;
-  for(var i=0;i<CURIOSITY_OPENERS.length;i++){if(l.indexOf(CURIOSITY_OPENERS[i])>=0)return true;}
-  for(var i=0;i<TENSION_WORDS.length;i++){if(l.indexOf(TENSION_WORDS[i])>=0)return true;}
-  return false;
-}
-function signalCuriosityCollapsed(sentence){
-  var l=sentence.toLowerCase();
-  // Same sentence opens AND resolves tension
-  var opens=signalCuriosityOpened(sentence);
-  var resolves=false;
-  for(var i=0;i<RESOLUTION_WORDS.length;i++){if(l.indexOf(RESOLUTION_WORDS[i])>=0){resolves=true;break;}}
-  return opens&&resolves;
-}
-function signalTensionLanguage(sentence){
-  var l=sentence.toLowerCase();
-  for(var i=0;i<TENSION_WORDS.length;i++){if(l.indexOf(TENSION_WORDS[i])>=0)return true;}
-  return false;
+function updateState(state,f){
+  var d=0.15;
+  var curiosity=state.curiosity*(1-d)+f.novelty*0.35+f.payoff*(-0.20)+f.directness*0.10+f.progression*0.10;
+  var reward=state.reward*(1-d)+f.specificity*0.35+f.payoff*0.40+f.credibility*0.15+f.directness*0.10;
+  var tension=state.tension*(1-d)+f.novelty*0.25+f.progression*0.15+f.payoff*(-0.35)+f.credibility*(-0.05);
+  var trust=state.trust*(1-d)+f.credibility*0.45+f.specificity*0.25+f.clarity*0.10+f.payoff*0.10;
+  var clarityS=state.clarity*(1-d)+f.clarity*0.60+f.specificity*0.10+f.directness*0.10;
+  var stim=(f.novelty+f.progression)/2;
+  var fatigue=state.fatigue*(1-d)+(1-stim)*0.25+(stim>0.5?-0.15:0);
+  return{curiosity:norm(curiosity),reward:norm(reward),tension:norm(tension),trust:norm(trust),clarity:norm(clarityS),fatigue:norm(fatigue)};
 }
 
-// ── Credibility signals ──
-var CREDENTIAL_VERBS=['spent','built','made','tested','tried','studied','tracked','learned','discovered','worked','ran','grew','lost','gained','earned','created','launched','failed','succeeded','interviewed','analyzed','researched'];
-var VAGUE_AUTHORITY=['i know','i think','i believe','in my opinion','i feel like','as someone who','i have experience'];
-
-function signalAuthorityProven(sentence){
-  var l=sentence.toLowerCase();
-  for(var i=0;i<CREDENTIAL_VERBS.length;i++){
-    if(l.match(new RegExp('\\bi '+CREDENTIAL_VERBS[i]+'\\b')))return true;
-  }
-  return countSpecifics(sentence)>=2;
-}
-function signalAuthorityVague(sentence){
-  var l=sentence.toLowerCase();
-  for(var i=0;i<VAGUE_AUTHORITY.length;i++){if(l.indexOf(VAGUE_AUTHORITY[i])>=0)return true;}
-  return false;
-}
-function signalViewerBenefit(sentence){
-  var l=sentence.toLowerCase();
-  return !!(l.match(/\b(you will|you can|you.?ll|by the end|after this|you.?re going to|this will help|you.?ll learn|you.?ll know|you.?ll be able)\b/));
+function deriveAttention(state){
+  var raw=(state.curiosity*0.30)+(state.reward*0.25)+(state.tension*0.20)+(state.trust*0.10)+(state.clarity*0.05)-(state.fatigue*0.30);
+  return norm(raw);
 }
 
-// ── Pacing signals ──
-function signalShortSentence(sentence){return wc(sentence)<=8;}
-function signalLongSentence(sentence){return wc(sentence)>=30;}
-function signalPassiveVoice(sentence){
-  return !!(sentence.match(/\b(was|were|is|are|been|being)\s+\w+ed\b/i));
-}
-var FILLER=['basically','literally','you know','sort of','kind of','actually','i guess','as i mentioned','like i said','so yeah'];
-function signalFiller(sentence){
-  var l=sentence.toLowerCase();
-  for(var i=0;i<FILLER.length;i++){if(l.indexOf(FILLER[i])>=0)return true;}
-  return false;
-}
-function signalHighDensity(sentence){
-  // Many specifics relative to length
-  return countSpecifics(sentence)>=2&&wc(sentence)>=10;
-}
-
-// ── Direction signals ──
-var PROMISE_PHRASES=['in this video','today i will','i.?m going to show','you will learn','by the end','i.?ll teach','we.?re going to cover','this video will','let me show you'];
-var DELIVERY_PHRASES=['so that.?s','as you can see','as i showed','as we covered','which is why i said','going back to','remember when i said','that.?s exactly what','and that.?s how'];
-var DRIFT_PHRASES=['actually','by the way','speaking of','on a different note','this reminds me','unrelated but'];
-
-function signalPromiseIntroduced(sentence){
-  var l=sentence.toLowerCase();
-  for(var i=0;i<PROMISE_PHRASES.length;i++){if(l.match(new RegExp(PROMISE_PHRASES[i])))return true;}
-  return false;
-}
-function signalPromiseDelivered(sentence){
-  var l=sentence.toLowerCase();
-  for(var i=0;i<DELIVERY_PHRASES.length;i++){if(l.match(new RegExp(DELIVERY_PHRASES[i])))return true;}
-  return false;
-}
-function signalTopicDrift(sentence){
-  var l=sentence.toLowerCase();
-  for(var i=0;i<DRIFT_PHRASES.length;i++){if(l.indexOf(DRIFT_PHRASES[i])>=0)return true;}
-  return false;
-}
-
-// ── Reward signals ──
-var INSIGHT_PHRASES=['the reason is','what this means','the key insight','what most people miss','here.?s the thing','the difference is','what actually happens','the real issue','what this tells us','the pattern i noticed'];
-function signalNewInsight(sentence){
-  var l=sentence.toLowerCase();
-  for(var i=0;i<INSIGHT_PHRASES.length;i++){if(l.match(new RegExp(INSIGHT_PHRASES[i])))return true;}
-  return countSpecifics(sentence)>=2&&signalCuriosityOpened(sentence);
-}
-
-// ── Per-sentence signal analysis ──
-function analyseSentence(sentence,idx,total){
-  var signals={
-    curiosityOpened:signalCuriosityOpened(sentence),
-    curiosityCollapsed:signalCuriosityCollapsed(sentence),
-    tensionLanguage:signalTensionLanguage(sentence),
-    authorityProven:signalAuthorityProven(sentence),
-    authorityVague:signalAuthorityVague(sentence),
-    viewerBenefit:signalViewerBenefit(sentence),
-    short:signalShortSentence(sentence),
-    long:signalLongSentence(sentence),
-    passive:signalPassiveVoice(sentence),
-    filler:signalFiller(sentence),
-    highDensity:signalHighDensity(sentence),
-    promiseIntroduced:signalPromiseIntroduced(sentence),
-    promiseDelivered:signalPromiseDelivered(sentence),
-    topicDrift:signalTopicDrift(sentence),
-    newInsight:signalNewInsight(sentence),
-    position:idx/(Math.max(total-1,1)),
-    wordCount:wc(sentence)
-  };
-  // Attention state: 1=high, 0=neutral, -1=risk
-  var attention=0;
-  if(signals.curiosityOpened&&!signals.curiosityCollapsed)attention+=1;
-  if(signals.newInsight)attention+=1;
-  if(signals.viewerBenefit)attention+=0.5;
-  if(signals.authorityProven)attention+=0.5;
-  if(signals.curiosityCollapsed)attention-=1.5;
-  if(signals.filler)attention-=0.5;
-  if(signals.passive)attention-=0.3;
-  if(signals.topicDrift)attention-=0.8;
-  signals.attention=Math.max(-2,Math.min(2,attention));
-  return signals;
-}
-
-// ── Analyse full script ──
-function analyseScript(paragraphs){
-  var allSentences=[];
-  var paraMap=[];
-  paragraphs.forEach(function(p,pi){
-    var sents=splitSentences(p.text||'');
-    sents.forEach(function(s,si){
-      allSentences.push(s);
-      paraMap.push({paraIdx:pi,tag:p.tag});
-    });
+// ── Simulation Loop ──
+function simulateScript(paragraphs){
+  var all=[];
+  paragraphs.forEach(function(p){
+    if(!p.text||!p.text.trim())return;
+    splitSentences(p.text).forEach(function(s){all.push({text:s,tag:p.tag,paraId:p.id});});
   });
-  var n=allSentences.length;
-  var sentenceData=allSentences.map(function(s,i){
-    var sig=analyseSentence(s,i,n);
-    sig.sentence=s;
-    sig.tag=paraMap[i]?paraMap[i].tag:'body';
-    sig.paraIdx=paraMap[i]?paraMap[i].paraIdx:0;
-    return sig;
+  if(all.length===0)return{sentences:[],attentionCurve:[]};
+  var state=initialState();var results=[];var prevSents=[];
+  all.forEach(function(item,idx){
+    var prev=idx>0?all[idx-1].text:'';
+    var f={
+      specificity:extractSpecificity(item.text),
+      novelty:extractNovelty(item.text,prev),
+      clarity:extractClarity(item.text),
+      progression:extractProgression(item.text,prev),
+      payoff:extractPayoff(item.text,prevSents),
+      credibility:extractCredibility(item.text),
+      directness:extractDirectness(item.text)
+    };
+    state=updateState(state,f);
+    var att=deriveAttention(state);
+    results.push({text:item.text,tag:item.tag,paraId:item.paraId,idx:idx,features:f,state:{curiosity:state.curiosity,reward:state.reward,tension:state.tension,trust:state.trust,clarity:state.clarity,fatigue:state.fatigue},attention:Math.round(att*100)});
+    prevSents.push(item.text);if(prevSents.length>5)prevSents.shift();
   });
-
-  // Section scores using signals
-  var tagGroups={hook:[],ctx:[],body:[],cta:[],out:[]};
-  sentenceData.forEach(function(sd){if(tagGroups[sd.tag])tagGroups[sd.tag].push(sd);});
-
-  var sectionScores={};
-  Object.keys(tagGroups).forEach(function(tag){
-    sectionScores[tag]=calcSectionScore(tag,tagGroups[tag],paragraphs);
-  });
-
-  // Overall score weighted by section
-  var weights={hook:30,ctx:20,body:25,cta:15,out:10};
-  var tw=0,ts=0;
-  Object.keys(sectionScores).forEach(function(tag){
-    var w=weights[tag]||10;
-    tw+=w;ts+=sectionScores[tag]*w;
-  });
-  var overall=tw>0?Math.round(ts/tw):0;
-
-  // Attention curve (group into 10 buckets)
-  var curve=[];
-  for(var b=0;b<10;b++){
-    var start=Math.floor(b/10*n);
-    var end2=Math.floor((b+1)/10*n);
-    var bucket=sentenceData.slice(start,end2);
-    var avg=bucket.length?bucket.reduce(function(a,sd){return a+sd.attention;},0)/bucket.length:0;
-    curve.push(parseFloat(avg.toFixed(2)));
-  }
-
-  // Promise tracking
-  var promises=[];
-  var promiseDelivered=false;
-  sentenceData.forEach(function(sd){
-    if(sd.promiseIntroduced)promises.push(sd.sentence.substring(0,60));
-    if(sd.promiseDelivered)promiseDelivered=true;
-  });
-
-  // Pacing data
-  var sentLens=sentenceData.map(function(sd){return sd.wordCount;});
-  var avgLen=sentLens.length?sentLens.reduce(function(a,b){return a+b;},0)/sentLens.length:0;
-  var variance=sentLens.length?Math.sqrt(sentLens.reduce(function(a,b){return a+Math.pow(b-avgLen,2);},0)/sentLens.length):0;
-
-  // Reward density (new insights per 100 words)
-  var totalWc=paragraphs.reduce(function(a,p){return a+wc(p.text||'');},0);
-  var insightCount=sentenceData.filter(function(sd){return sd.newInsight;}).length;
-  var rewardDensity=totalWc>0?Math.round((insightCount/totalWc)*100*10)/10:0;
-
-  // Failure patterns
-  var failurePatterns=detectFailurePatterns(sentenceData,sectionScores,promises,promiseDelivered);
-
-  // Top issues
-  var issues=buildTopIssues(sectionScores,sentenceData,failurePatterns,promises,promiseDelivered,variance);
-
-  return {
-    overall:overall,
-    sectionScores:sectionScores,
-    curve:curve,
-    sentenceData:sentenceData,
-    promises:promises,
-    promiseDelivered:promiseDelivered,
-    avgSentenceLen:Math.round(avgLen),
-    sentenceLenVariance:Math.round(variance*10)/10,
-    rewardDensity:rewardDensity,
-    failurePatterns:failurePatterns,
-    issues:issues,
-    totalSentences:n,
-    totalWords:totalWc
-  };
+  return{sentences:results,attentionCurve:results.map(function(r){return r.attention;})};
 }
 
-function calcSectionScore(tag,sentences,paragraphs){
-  if(!sentences||!sentences.length)return 0;
-  var score=30;
-  var para=paragraphs.find(function(p){return p.tag===tag;});
-  var text=para?para.text:'';
-  var l=text.toLowerCase();
+// ── Section Scoring ──
+function scoreSectionFromSim(tag,sentences){
+  var t=sentences.filter(function(s){return s.tag===tag;});
+  if(t.length===0)return 0;
+  var score;
   if(tag==='hook'){
-    if(!l.match(/^i[\s,]/))score+=15;
-    var collapses=sentences.filter(function(s){return s.curiosityCollapsed;}).length;
-    var opens=sentences.filter(function(s){return s.curiosityOpened;}).length;
-    if(opens>0&&collapses===0)score+=25;
-    else if(collapses>0)score-=20;
-    if(countSpecifics(text)>=1)score+=15;
-    if(l.match(/\?/))score+=15;
+    var early=t.slice(0,3).reduce(function(a,s){return a+s.attention;},0)/Math.min(3,t.length);
+    var ac=t.reduce(function(a,s){return a+s.state.curiosity;},0)/t.length;
+    var at=t.reduce(function(a,s){return a+s.state.tension;},0)/t.length;
+    score=(early*0.5)+(ac*100*0.3)+(at*100*0.2);
   }else if(tag==='ctx'){
-    var proven=sentences.filter(function(s){return s.authorityProven;}).length;
-    var vague=sentences.filter(function(s){return s.authorityVague;}).length;
-    score+=proven*15-vague*8;
-    var benefits=sentences.filter(function(s){return s.viewerBenefit;}).length;
-    score+=benefits*12;
-    if(countSpecifics(text)>=2)score+=10;
+    var atr=t.reduce(function(a,s){return a+s.state.trust;},0)/t.length;
+    var acr=t.reduce(function(a,s){return a+s.features.credibility;},0)/t.length;
+    var acl=t.reduce(function(a,s){return a+s.state.clarity;},0)/t.length;
+    score=(atr*100*0.45)+(acr*100*0.35)+(acl*100*0.20);
   }else if(tag==='body'){
-    var insights=sentences.filter(function(s){return s.newInsight;}).length;
-    score+=Math.min(insights*10,25);
-    var passives=sentences.filter(function(s){return s.passive;}).length;
-    score-=passives*6;
-    var fillers=sentences.filter(function(s){return s.filler;}).length;
-    score-=fillers*8;
-    if(wc(text)>=50)score+=10;
-    var lens=sentences.map(function(s){return s.wordCount;});
-    var avg=lens.reduce(function(a,b){return a+b;},0)/(lens.length||1);
-    var vari=Math.sqrt(lens.reduce(function(a,b){return a+Math.pow(b-avg,2);},0)/(lens.length||1));
-    if(vari>=4)score+=10;
+    var aa=t.reduce(function(a,s){return a+s.attention;},0)/t.length;
+    var ar=t.reduce(function(a,s){return a+s.state.reward;},0)/t.length;
+    var ap=t.reduce(function(a,s){return a+s.features.progression;},0)/t.length;
+    var av=t.map(function(s){return s.attention;});
+    var am=aa;
+    var av2=av.reduce(function(a,v){return a+Math.pow(v-am,2);},0)/av.length;
+    score=(aa*0.40)+(ar*100*0.35)+(ap*100*0.15)+(av2<200?10:-5)+10;
   }else if(tag==='cta'){
-    var ctaText=l;
-    var hasVerb=!!ctaText.match(/\b(subscribe|follow|comment|like|share|click|watch|join|download|check out|hit the|tap)\b/);
-    var hasReason=!!ctaText.match(/\b(because|so that|if you|to get|for more|every week|new video|coming)\b/);
-    if(hasVerb)score+=25;
-    if(hasReason)score+=25;
-    if(hasVerb&&hasReason)score+=10;
+    var at2=t.reduce(function(a,s){return a+s.state.trust;},0)/t.length;
+    var ad=t.reduce(function(a,s){return a+s.features.directness;},0)/t.length;
+    var ac2=t.reduce(function(a,s){return a+s.state.clarity;},0)/t.length;
+    score=(at2*100*0.40)+(ad*100*0.40)+(ac2*100*0.20);
   }else if(tag==='out'){
-    var hasRes=!!l.match(/\b(so there|that.?s it|to wrap|in summary|now you know|hope this|until next|see you)\b/);
-    var hasFwd=!!l.match(/\b(next video|next one|watch next|see you|coming up|linked)\b/);
-    var hasCB=!!l.match(/\b(remember|back to|started with|from the beginning|full circle)\b/);
-    if(hasRes)score+=20;
-    if(hasFwd)score+=20;
-    if(hasCB)score+=15;
+    var ft=t[t.length-1].state.tension;
+    var apy=t.reduce(function(a,s){return a+s.features.payoff;},0)/t.length;
+    var atr2=t.reduce(function(a,s){return a+s.state.trust;},0)/t.length;
+    score=((1-ft)*100*0.40)+(apy*100*0.35)+(atr2*100*0.25);
+  }else{
+    score=t.reduce(function(a,s){return a+s.attention;},0)/t.length;
   }
-  return Math.min(Math.max(score,0),100);
+  return Math.round(clamp(score,0,100));
 }
 
-function detectFailurePatterns(sentenceData,scores,promises,promiseDelivered){
+// ── Pattern Detection ──
+function detectPatterns(sentences,sectionScores){
   var patterns=[];
-  var hookScore=scores.hook||0,bodyScore=scores.body||0;
-  var ctaScore=scores.cta||0,ctxScore=scores.ctx||0,outScore=scores.out||0;
-
-  // Early Payoff Trap
-  var firstFive=sentenceData.slice(0,Math.min(5,sentenceData.length));
-  if(firstFive.filter(function(s){return s.curiosityCollapsed;}).length>=1){
-    patterns.push({id:'early_payoff',name:'Early Payoff Trap',
-      desc:'The hook resolves its own tension before the viewer has a reason to stay. Curiosity collapses in the opening sentences.'});
-  }
-
-  // Creator Diary
-  var hookSents=sentenceData.filter(function(s){return s.tag==='hook';});
-  if(hookSents.length>0&&hookSents[0].sentence.trim().toLowerCase().match(/^(i |my |i've |i'm |i was |i have )/)){
-    patterns.push({id:'creator_diary',name:'Creator Diary Opening',
-      desc:'The script opens with the creator before the viewer has a reason to care. Lead with the viewer problem first.'});
-  }
-
-  // Endless Setup
-  if(hookScore<45&&ctxScore<45&&bodyScore>=60){
-    patterns.push({id:'endless_setup',name:'Endless Setup',
-      desc:'Strong content is buried under a weak opening. Viewers may not reach the value because the hook and context do not earn their patience.'});
-  }
-
-  // Broken Promise
-  if(promises.length>0&&!promiseDelivered){
-    patterns.push({id:'broken_promise',name:'Promise Not Delivered',
-      desc:'A promise made early in the script has no clear delivery point. Viewers who stayed for the payoff will feel let down.'});
-  }
-
-  // Flatline Pacing
-  var lens=sentenceData.map(function(s){return s.wordCount;});
-  var avg=lens.reduce(function(a,b){return a+b;},0)/(lens.length||1);
-  var vari=Math.sqrt(lens.reduce(function(a,b){return a+Math.pow(b-avg,2);},0)/(lens.length||1));
-  if(vari<3&&sentenceData.length>=6){
-    patterns.push({id:'flatline',name:'Flatline Pacing',
-      desc:'Sentence length is uniform throughout. Mix short punchy sentences with longer explanatory ones to create rhythm.'});
-  }
-
-  // Authority Without Evidence
-  var ctxSents=sentenceData.filter(function(s){return s.tag==='ctx';});
-  if(ctxSents.length>=2){
-    var vague=ctxSents.filter(function(s){return s.authorityVague;}).length;
-    var proven=ctxSents.filter(function(s){return s.authorityProven;}).length;
-    if(vague>proven){
-      patterns.push({id:'authority_dump',name:'Authority Without Evidence',
-        desc:'The context claims experience without specific proof. Add a number, a result, or a named example to make it credible.'});
-    }
-  }
-
-  // Weak CTA
-  if(ctaScore<35&&sentenceData.some(function(s){return s.tag==='cta';})){
-    patterns.push({id:'weak_cta',name:'Vague Call to Action',
-      desc:'The CTA does not name a specific action or give a reason to take it. All the trust built in the video dissolves here.'});
-  }
-
-  // Abrupt Ending
-  if(sentenceData.some(function(s){return s.tag==='out';})&&outScore<35){
-    patterns.push({id:'abrupt_end',name:'Abrupt Ending',
-      desc:'The video stops rather than ends. No resolution, no forward direction. Add one sentence to close the loop and send the viewer somewhere.'});
-  }
-
+  if(!sentences||sentences.length===0)return patterns;
+  var av=sentences.map(function(s){return s.attention;});
+  var avg=av.reduce(function(a,v){return a+v;},0)/av.length;
+  var fh=av.slice(0,Math.floor(av.length/2));
+  var sh=av.slice(Math.floor(av.length/2));
+  var fa=fh.reduce(function(a,v){return a+v;},0)/Math.max(1,fh.length);
+  var sa=sh.reduce(function(a,v){return a+v;},0)/Math.max(1,sh.length);
+  if(fa-sa>18)patterns.push({id:'attention_dropoff',name:'Attention Drop-off',severity:'high',desc:'Viewer engagement consistently declines through the second half.'});
+  var hs=sentences.filter(function(s){return s.tag==='hook';});
+  var hc=hs.length>0?hs.reduce(function(a,s){return a+s.state.curiosity;},0)/hs.length:0;
+  var ar=sentences.reduce(function(a,s){return a+s.state.reward;},0)/sentences.length;
+  if(hc>0.65&&ar<0.35)patterns.push({id:'clickbait',name:'Promise Not Delivered',severity:'high',desc:'The hook creates high curiosity but the script does not deliver enough value.'});
+  var ac=sentences.reduce(function(a,s){return a+s.state.curiosity;},0)/sentences.length;
+  if(ar>0.6&&ac<0.35)patterns.push({id:'info_dump',name:'Information Overload',severity:'medium',desc:'High value content but curiosity stays low. Feels like a lecture.'});
+  var cs=sentences.filter(function(s){return s.tag==='ctx';});
+  var acr=cs.length>0?cs.reduce(function(a,s){return a+s.features.credibility;},0)/cs.length:0;
+  var at=sentences.reduce(function(a,s){return a+s.state.trust;},0)/sentences.length;
+  if(at<0.35&&acr<0.25)patterns.push({id:'trust_gap',name:'Authority Gap',severity:'high',desc:'Claims are made without evidence. Trust stays low throughout.'});
+  var variance=av.reduce(function(a,v){return a+Math.pow(v-avg,2);},0)/av.length;
+  if(variance<80&&sentences.length>6)patterns.push({id:'flatline',name:'Flat Engagement',severity:'medium',desc:'No attention peaks or drops. The script lacks tension and payoff cycles.'});
+  var os=sentences.slice(0,Math.min(3,sentences.length));
+  var oa=os.reduce(function(a,s){return a+s.attention;},0)/Math.max(1,os.length);
+  if(oa<40)patterns.push({id:'weak_opening',name:'Weak Opening',severity:'high',desc:'First three sentences score low. Most viewers decide in the first 30 seconds.'});
+  var ls=sentences.slice(-3);
+  var lt=ls.reduce(function(a,s){return a+s.state.tension;},0)/Math.max(1,ls.length);
+  if(lt>0.55)patterns.push({id:'unresolved_tension',name:'Unresolved Loop',severity:'medium',desc:'Script ends with high tension. A hook question or promise was not closed.'});
+  var hd=hs.length>0?hs.reduce(function(a,s){return a+s.features.directness;},0)/hs.length:0;
+  var hsp=hs.length>0?hs.reduce(function(a,s){return a+s.features.specificity;},0)/hs.length:0;
+  if(hd<0.2&&hsp<0.25&&hs.length>0)patterns.push({id:'creator_diary',name:'Creator-First Opening',severity:'medium',desc:'Hook focuses on the creator rather than establishing a viewer benefit.'});
   return patterns;
 }
 
-function buildTopIssues(scores,sentenceData,patterns,promises,promiseDelivered,variance){
-  var issues=[];
-  var hookSc=scores.hook||0,ctaSc=scores.cta||0,bodySc=scores.body||0;
-  var ctxSc=scores.ctx||0,outSc=scores.out||0;
-
-  function pv(arr,s){if(!arr||!arr.length)return '';return arr[Math.abs(s)%arr.length];}
-  function sd(tag){var h=0;for(var i=0;i<tag.length;i++){h=((h<<5)-h)+tag.charCodeAt(i);h=h&h;}return Math.abs(h);}
-
-  if(typeof FB==='undefined')return [];
-
-  if(hookSc<55&&hookSc>0){
-    var s=sd('hook'+hookSc);
-    var e=hookSc<40?FB.hook.noTension:FB.hook.creatorFirst;
-    if(e)issues.push({section:'Hook',impact:hookSc<40?'high':'medium',observation:pv(e.observation,s),consequence:pv(e.consequence,s+1),fix:pv(e.direction,s+2)});
-  }
-  if(ctaSc<55&&ctaSc>0){
-    var s=sd('cta'+ctaSc);
-    var e=ctaSc<40?FB.cta.noAction:FB.cta.actionNoReason;
-    if(e)issues.push({section:'CTA',impact:ctaSc<40?'high':'medium',observation:pv(e.observation,s),consequence:pv(e.consequence,s+1),fix:pv(e.direction,s+2)});
-  }
-  if(ctxSc<55&&ctxSc>0){
-    var s=sd('ctx'+ctxSc);
-    var e=ctxSc<40?FB.ctx.noCredential:FB.ctx.credentialNoPayoff;
-    if(e)issues.push({section:'Context',impact:ctxSc<40?'high':'medium',observation:pv(e.observation,s),consequence:pv(e.consequence,s+1),fix:pv(e.direction,s+2)});
-  }
-  if(outSc<50&&outSc>0){
-    var s=sd('out'+outSc);
-    var e=FB.out.abrupt;
-    if(e)issues.push({section:'Outro',impact:outSc<35?'high':'medium',observation:pv(e.observation,s),consequence:pv(e.consequence,s+1),fix:pv(e.direction,s+2)});
-  }
-  if(bodySc<50&&bodySc>0){
-    var s=sd('body'+bodySc);
-    var e=bodySc<40?FB.body.noMomentum:FB.body.noExamples;
-    if(e)issues.push({section:'Main Body',impact:bodySc<40?'high':'medium',observation:pv(e.observation,s),consequence:pv(e.consequence,s+1),fix:pv(e.direction,s+2)});
-  }
-  if(promises&&promises.length&&!promiseDelivered){
-    var s=sd('promise');
-    var obs=['A promise made in the opening has no clear delivery point.','The script commits to something early that is never explicitly fulfilled.','An expectation set for the viewer is not resolved in the body or outro.'];
-    var cons=['Viewers who stayed for that payoff will feel let down. This erodes trust beyond this video.','The unresolved promise is the last thing the viewer carries away from an otherwise strong script.','When a promise is not delivered, the viewer questions whether the rest of the content can be trusted.'];
-    var fix=['Add one delivery sentence in the body that directly references the original promise.','Name the promise again in the body and show how the content fulfils it.','End the main body with a sentence that explicitly answers the hook commitment.'];
-    issues.push({section:'Structure',impact:'high',observation:pv(obs,s),consequence:pv(cons,s+1),fix:pv(fix,s+2)});
-  }
-  if(variance<3&&sentenceData&&sentenceData.length>=8){
-    var s=sd('pace'+Math.round(variance*10));
-    var e=FB.body.flatPacing;
-    if(e)issues.push({section:'Pacing',impact:'medium',observation:pv(e.observation,s),consequence:pv(e.consequence,s+1),fix:pv(e.direction,s+2)});
-  }
-  issues.sort(function(a,b){var w={high:0,medium:1,low:2};return (w[a.impact]||1)-(w[b.impact]||1);});
-  return issues.slice(0,3);
+function getPatternConsequence(id){
+  var m={attention_dropoff:'Viewers who make it past the hook are still leaving before the end.',clickbait:'The viewer feels cheated. High expectations are not met.',info_dump:'Without curiosity cycles, the script feels like a lecture and viewers drop off.',trust_gap:'Without evidence, viewers mentally discount every claim.',flatline:'No emotional peaks or valleys. The content becomes forgettable.',weak_opening:'Most viewers leave before the content even starts.',unresolved_tension:'The viewer finishes with an open loop, which feels unsatisfying.',creator_diary:'Viewers come for their own benefit. An opening that does not establish that loses them immediately.'};
+  return m[id]||'This pattern reduces overall viewer engagement.';
 }
 
-// ── Keep original scoring functions for Write tab pills ──
+function getPatternFix(id){
+  var m={attention_dropoff:'Add a re-hook or new information where attention starts declining.',clickbait:'Ensure the body delivers on the specific promise made in the hook.',info_dump:'Introduce questions before answers. Every insight needs a reason to want it.',trust_gap:'Add one specific, verifiable result or piece of evidence in the context section.',flatline:'Vary sentence length. Short after long creates rhythm. Add a contrast mid-body.',weak_opening:'Rewrite the first sentence to create an unresolved question or viewer benefit.',unresolved_tension:'Return to the hook question in the outro and close it in one sentence.',creator_diary:'Reframe the opening to establish the viewer problem before the creator angle.'};
+  return m[id]||'Address this in the relevant section.';
+}
+
+// ── Script Type Detection ──
+function detectScriptType(paragraphs){
+  var allText=paragraphs.map(function(p){return p.text||'';}).join(' ').toLowerCase();
+  var types={
+    tutorial:['step','how to','you need','you should','make sure','tip','trick','method','guide','learn','tutorial','first','second','third'],
+    story:['i was','i had','i remember','i felt','one day','back then','at the time','i decided','i realized','years ago','when i was'],
+    opinion:['i think','i believe','in my opinion','the truth is','the problem is','actually','in fact','unpopular opinion','change my mind','most people'],
+    listicle:['number one','#1','top ','list','ways to','reasons why','things that','mistakes','tips','secrets','facts','signs'],
+    review:['review','worth it','pros','cons','tested','after using','verdict','recommend','compared to','is it good'],
+    sport:['match','game','season','player','team','goal','score','win','loss','coach','league','club','champion','tournament','football','basketball','cricket'],
+    documentary:['discovered','investigation','revealed','the story of','what really happened','history of','the truth about','nobody knew','mystery','case','evidence']
+  };
+  var scores={};var best='general';var bestScore=0;
+  Object.keys(types).forEach(function(type){
+    var hits=types[type].filter(function(w){return allText.indexOf(w)>=0;}).length;
+    scores[type]=hits/types[type].length;
+    if(scores[type]>bestScore){bestScore=scores[type];best=type;}
+  });
+  return{type:best,confidence:Math.min(100,Math.round(bestScore*300))};
+}
+
+// ── Build Attention Curve (10 buckets) ──
+function buildCurve(sentences){
+  if(sentences.length===0)return[];
+  var bsz=Math.ceil(sentences.length/10);var curve=[];
+  for(var b=0;b<10;b++){
+    var start=b*bsz;var end=Math.min(start+bsz,sentences.length);
+    var bucket=sentences.slice(start,end);
+    if(bucket.length===0){curve.push(50);continue;}
+    curve.push(Math.round(bucket.reduce(function(a,s){return a+s.attention;},0)/bucket.length));
+  }
+  return curve;
+}
+
+// ── Build Top Issues ──
+function buildTopIssues(patterns,sectionScores,sentences){
+  var issues=[];
+  var tagNames={hook:'Hook',ctx:'Context',body:'Body',cta:'CTA',out:'Outro'};
+  patterns.forEach(function(p){
+    if(issues.length>=5)return;
+    var secMap={attention_dropoff:'Body',clickbait:'Context',trust_gap:'Context',info_dump:'Body',flatline:'Body',weak_opening:'Hook',unresolved_tension:'Outro',creator_diary:'Hook'};
+    issues.push({section:secMap[p.id]||'General',impact:p.severity,observation:p.desc,consequence:getPatternConsequence(p.id),fix:getPatternFix(p.id)});
+  });
+  if(issues.length<3){
+    var sorted=Object.keys(sectionScores).sort(function(a,b){return sectionScores[a]-sectionScores[b];});
+    sorted.forEach(function(tag){
+      if(issues.length>=3)return;
+      if((sectionScores[tag]||0)<50){
+        issues.push({section:tagNames[tag]||tag,impact:(sectionScores[tag]||0)<30?'high':'medium',observation:'The '+(tagNames[tag]||tag)+' section scores below average.',consequence:'Viewer states are not being adequately engaged at this point in the script.',fix:'Review the '+(tagNames[tag]||tag)+' section in the Deep tab for sentence-level guidance.'});
+      }
+    });
+  }
+  return issues.slice(0,5);
+}
+
+// ── Main Entry Point ──
+function analyseScript(paragraphs){
+  if(!paragraphs||paragraphs.length===0){
+    return{overall:0,sectionScores:{},curve:[],sentenceData:[],promises:[],promiseDelivered:false,avgSentenceLen:0,sentenceLenVariance:0,rewardDensity:0,failurePatterns:[],issues:[],totalSentences:0,totalWords:0,attentionCurve:[],viewerStateTrajectory:[],openingStrength:0,closingStrength:0,tensionScore:0,voiceRatio:0,paceVariance:0,insightDensity:0,scriptType:'general',scriptTypeConfidence:0,weakestPoints:[],paragraphs:[]};
+  }
+  var sim=simulateScript(paragraphs);
+  var sentences=sim.sentences;
+  var tags=['hook','ctx','body','cta','out'];
+  var sectionScores={};
+  tags.forEach(function(tag){sectionScores[tag]=scoreSectionFromSim(tag,sentences);});
+  var weights={hook:0.30,ctx:0.20,body:0.25,cta:0.15,out:0.10};
+  var tw=0;var ts=0;
+  tags.forEach(function(tag){
+    if(paragraphs.some(function(p){return p.tag===tag;})){
+      ts+=(sectionScores[tag]||0)*weights[tag];tw+=weights[tag];
+    }
+  });
+  var overall=tw>0?Math.round(ts/tw):0;
+  var patterns=detectPatterns(sentences,sectionScores);
+  var typeResult=detectScriptType(paragraphs);
+  var curve=buildCurve(sentences);
+  var issues=buildTopIssues(patterns,sectionScores,sentences);
+  var os=sentences.slice(0,Math.min(3,sentences.length));
+  var openingStrength=os.length>0?Math.round(os.reduce(function(a,s){return a+s.attention;},0)/os.length):0;
+  var cls=sentences.slice(-3);
+  var closingStrength=cls.length>0?Math.round(cls.reduce(function(a,s){return a+s.attention;},0)/cls.length):0;
+  var tensionScore=sentences.length>0?Math.round(sentences.reduce(function(a,s){return a+s.state.tension;},0)/sentences.length*100):0;
+  var voiceRatio=sentences.length>0?Math.round(sentences.reduce(function(a,s){return a+s.features.directness;},0)/sentences.length*100):0;
+  var lengths=sentences.map(function(s){return wc(s.text);});
+  var lmean=lengths.length>0?lengths.reduce(function(a,v){return a+v;},0)/lengths.length:0;
+  var paceVariance=lengths.length>1?Math.round(Math.sqrt(lengths.reduce(function(a,v){return a+Math.pow(v-lmean,2);},0)/lengths.length)*10)/10:0;
+  var insights=sentences.filter(function(s){return s.features.novelty>0.6&&s.state.reward>0.5;}).length;
+  var insightDensity=sentences.length>0?Math.round((insights/sentences.length)*1000)/10:0;
+  var hookSents=sentences.filter(function(s){return s.tag==='hook';});
+  var hadPromise=hookSents.some(function(s){return/\?|will show|going to|you.ll|today i.ll|by the end/.test(s.text.toLowerCase());});
+  var hadDelivery=sentences.filter(function(s){return s.tag!=='hook';}).some(function(s){return s.features.payoff>0.5;});
+  var weakest=sentences.slice().sort(function(a,b){return a.attention-b.attention;}).slice(0,3).map(function(s){return{text:s.text,tag:s.tag,attention:s.attention,idx:s.idx};});
+  var totalWords=paragraphs.reduce(function(a,p){return a+wc(p.text||'');},0);
+  var totalSentences=sentences.length;
+  var avgSentenceLen=totalSentences>0?Math.round(totalWords/totalSentences):0;
+  return{
+    overall:overall,sectionScores:sectionScores,curve:curve,
+    sentenceData:sentences.map(function(s){return{text:s.text,tag:s.tag,attention:s.attention,features:s.features,state:s.state};}),
+    promises:hadPromise?['promise detected']:[],promiseDelivered:hadDelivery,
+    avgSentenceLen:avgSentenceLen,sentenceLenVariance:paceVariance,rewardDensity:insightDensity,
+    failurePatterns:patterns,issues:issues,totalSentences:totalSentences,totalWords:totalWords,
+    attentionCurve:sim.attentionCurve,viewerStateTrajectory:sentences.map(function(s){return s.state;}),
+    openingStrength:openingStrength,closingStrength:closingStrength,
+    tensionScore:tensionScore,voiceRatio:voiceRatio,paceVariance:paceVariance,insightDensity:insightDensity,
+    scriptType:typeResult.type,scriptTypeConfidence:typeResult.confidence,
+    weakestPoints:weakest,paragraphs:paragraphs
+  };
+}
+
+// ── Compatibility layer (app.js still calls these) ──
 function scoreText(tag,text){
-  if(!text||text.trim().length<5)return 0;
-  var sents=splitSentences(text);
-  var n=sents.length;
-  var sentData=sents.map(function(s,i){return analyseSentence(s,i,n);});
-  var p={tag:tag,text:text};
-  return calcSectionScore(tag,sentData,[p]);
+  if(!text||!text.trim())return 0;
+  var result=analyseScript([{id:'tmp',tag:tag,text:text}]);
+  return result.sectionScores[tag]||0;
 }
 function scoreLevel(n){return n>=70?'high':n>=45?'mid':'low';}
 function scoreVerdict(n){return n>=70?'Strong':n>=45?'Needs Work':'Weak';}
 function scorePillHTML(n){var l=scoreLevel(n);return '<span class="score-pill '+l+'"><span class="score-pill-dot"></span>'+n+' &middot; '+scoreVerdict(n)+'</span>';}
-function overallScore(paras){
-  if(!paras||!paras.length)return 0;
-  var weights={hook:30,ctx:20,body:25,cta:15,out:10},tw=0,ts=0;
-  paras.forEach(function(p,pi){var w=weights[p.tag]||10,sc=scoreText(p.tag,p.text);tw+=w;ts+=sc*w;});
-  return tw>0?Math.round(ts/tw):0;
-}
-
-// ── Feedback   reads the actual text ──
-
-// ── Text helpers used by getParagraphFeedback ──
-function openingWord(text){var m=text.trim().match(/^([A-Za-z']+)/);return m?m[1].toLowerCase():'';}
-function hasQuestion(text){return text.indexOf('?')>=0;}
-function getFirstSentence(text){var m=text.match(/^[^.!?]+[.!?]/);return m?m[0].trim():text.substring(0,Math.min(text.length,120));}
-function getLastSentence(text){var s=text.replace(/([.!?])\s+/g,'$1\x01').split('\x01').map(function(x){return x.trim();}).filter(function(x){return x.length>4;});return s.length?s[s.length-1]:'';}
-function hasCredential(text){return !!(text.toLowerCase().match(/\bi (spent|built|made|tested|tried|studied|tracked|learned|discovered|worked|ran|grew|lost|gained|earned|created|launched|failed|succeeded)\b/));}
-function hasViewerAddress(text){return (text.match(/\byou\b/gi)||[]).length;}
-function hasCTAVerb(text){var l=text.toLowerCase();var verbs=['subscribe','follow','comment','like','share','click','watch','join','download','check out','hit the','tap the','turn on'];for(var i=0;i<verbs.length;i++){if(l.indexOf(verbs[i])>=0)return verbs[i];}return null;}
-function hasCTAReason(text){return !!(text.toLowerCase().match(/\b(because|so that|if you want|to get|for more|every week|every (mon|tue|wed|thu|fri)|new video|coming out|dropping)\b/));}
-function hasResolution(text){return !!(text.toLowerCase().match(/\b(so there you have it|that.?s it|that.?s all|to wrap|in summary|to sum up|bottom line|the takeaway|now you know|hope that helps|hope this helped|as always|until next time|see you|next video|full circle)\b/));}
-function hasCallbackToHook(text){return !!(text.toLowerCase().match(/\b(remember (when|what|how|that)|back to|started with|began with|opened with|at the start|from the beginning|full circle|comes back)\b/));}
-function hasForwardMomentum(text){return !!(text.toLowerCase().match(/\b(next video|next one|next week|see you|until next|linked|check out|coming up|dropping|watch this|watch next|up next|related)\b/));}
-function structureSignals(text){var l=text.toLowerCase();var s=0;if(l.match(/\b(first|firstly|number one|step one)\b/))s++;if(l.match(/\b(second|secondly|number two|step two)\b/))s++;if(l.match(/\b(third|finally|lastly)\b/))s++;if(l.match(/\b(next|then|after that|moving on)\b/))s++;return s;}
-function fillerWords(text){var l=text.toLowerCase();var found=[];var fillers=['basically','literally','you know','sort of','kind of','actually','i guess','as i mentioned','like i said','so yeah','to be honest','at the end of the day'];fillers.forEach(function(f){if(l.indexOf(f)>=0)found.push(f);});return found;}
-function sentenceLengthVariance(text){var ss=text.replace(/([.!?])\s+/g,'$1\x01').split('\x01').map(function(s){return s.trim();}).filter(function(s){return s.length>4;});if(ss.length<2)return 0;var lens=ss.map(function(s){return s.split(/\s+/).length;});var avg=lens.reduce(function(a,b){return a+b;},0)/lens.length;var v=lens.reduce(function(a,b){return a+Math.pow(b-avg,2);},0)/lens.length;return Math.sqrt(v);}
-function longestSentence(text){var ss=text.replace(/([.!?])\s+/g,'$1\x01').split('\x01').map(function(s){return s.trim();}).filter(function(s){return s.length>4;});if(!ss.length)return {text:'',words:0};var sorted=ss.slice().sort(function(a,b){return b.split(/\s+/).length-a.split(/\s+/).length;});return {text:sorted[0],words:sorted[0].split(/\s+/).length};}
-function countPassive(text){return (text.match(/\b(was|were|is|are|been|being)\s+\w+ed\b/gi)||[]).length;}
-
-function selfResolves(text){
-  var first=text.trim().match(/^[^.!?]+[.!?]/);
-  if(!first)return false;
-  var f=first[0].toLowerCase();
-  var hasHook=!!(f.match(/\b(why|how|what|secret|truth|mistake|wrong|never|always|if you)\b/));
-  var hasAnswer=!!(f.match(/\b(because|so|which means|that is why|this is why|the reason|here is)\b/));
-  return hasHook&&hasAnswer;
-}
-function hasTransition(text){
-  var last=text.replace(/([.!?])\s+/g,'$1\x01').split('\x01').pop()||'';
-  return !!(last.toLowerCase().match(/\b(let me|let.?s|so today|in this video|here is what|that is exactly|what i found|i.?ll show|i will show|and that means|which brings|so here)\b/));
-}
-function getParagraphFeedback(tag,text,sc,signals){
-  if(!text||text.trim().length<5)return 'No content written for this section yet.';
-  // Try the new modular feedback composer first
-  if(typeof getComposedFeedback==='function'){
-    var composed=getComposedFeedback(tag,text,sc,signals||{});
-    if(composed)return composed;
-  }
-  var l=text.toLowerCase();
-  var op=openingWord(text);
-  var first=getFirstSentence(text);
-  var last=getLastSentence(text);
-  var wc=wordCount(text);
-  var specs=countSpecifics(text);
-  var fillers=fillerWords(text);
-  var passive=countPassive(text);
-  var ctaVerb=hasCTAVerb(text);
-
-  if(tag==='hook'){
-    // Priority order name the most damaging thing first
-    if(op==='i'){
-      return 'Opening with "I" puts you at the centre before the viewer has a reason to care. The first word should be about them, a problem, or a claim not you.';
-    }
-    if(selfResolves(text)){
-      var hw=first.match(/\b(why|how|what|secret|truth|mistake|wrong)\b/i);
-      var hw2=hw?'"'+hw[0]+'"':'the tension';
-      return 'The hook raises '+hw2+' and answers it in the same sentence. The viewer has nothing to stay for the loop closed before it opened.';
-    }
-    if(!hasQuestion(text)&&!text.match(/\b(wrong|mistake|fail|stop|never|always|secret|truth|nobody|everyone|surprising)\b/i)){
-      return 'This makes a statement but does not create urgency. A question or a bold claim something the viewer needs to verify gives them a reason to keep watching.';
-    }
-    if(specs===0&&wc>10){
-      return 'The hook is directional but vague. One specific detail a number, a named scenario, a concrete outcome would make staying feel necessary rather than optional.';
-    }
-    if(!hasTransition(text)&&sc>=70){
-      return 'Strong open. The tension is clear and it earns the next section. Make sure the context section references what was just promised.';
-    }
-    if(sc>=70)return 'This hook creates an open loop and holds it. The viewer has a reason to stay.';
-    if(wc<8)return 'This is too brief to create any pull. A hook needs enough words to raise something even one sentence of genuine tension is more than this.';
-    return 'The opening makes no specific promise and creates no tension. The viewer has no reason to stay past the first sentence. Start with a problem the viewer is already feeling, or a claim they cannot ignore.';
-  }
-
-  if(tag==='ctx'){
-    if(!hasCredential(text)&&specs<2){
-      return 'This section has not established why your voice on this topic matters. One specific credential time spent, result achieved, thing built earns the viewer\'s attention for the rest of the video.';
-    }
-    if(hasCredential(text)&&specs===0){
-      var credMatch=text.match(/\bi (spent|built|made|tested|tried|studied|tracked|learned|discovered|worked|ran|grew|lost|gained|earned|created|launched)\b/i);
-      var credWord=credMatch?credMatch[1]:'did this';
-      return 'You mention you '+credWord+' something but leave it vague. Add the specific number, result or timeframe "I '+credWord+' [X amount/time]" lands far harder than the same sentence without it.';
-    }
-    if(!hasViewerAddress(text)){
-      return 'This section is about you, not the viewer. Translate your credential into their outcome not just what you did, but what that means they can skip, learn faster, or avoid.';
-    }
-    if(fillers.length>0){
-      return 'The word "'+fillers[0]+'" is doing nothing here except softening the sentence. Cut it the credential underneath is stronger without the padding.';
-    }
-    if(sc>=70)return 'Credibility established quickly with specifics, and the viewer\'s payoff is clear. This section does its job.';
-    return 'The context is present but not landing with weight. Specificity is what converts a credential into trust.';
-  }
-
-  if(tag==='body'){
-    var longest=longestSentence(text);
-    if(passive>1){
-      var passiveMatch=text.match(/\b(was|were|is|are|been|being)\s+\w+ed\b/i);
-      var passiveEx=passiveMatch?'"'+passiveMatch[0]+'"':'a passive construction';
-      return 'Passive voice appears '+passive+' times including '+passiveEx+'. Rewrite in active voice and the section immediately sounds more authoritative.';
-    }
-    if(fillers.length>1){
-      return 'The words "'+fillers.slice(0,2).join('" and "')+'" appear here. Each one signals uncertainty and drains authority from the sentences around them.';
-    }
-    if(longest.words>40){
-      var preview=longest.text.substring(0,40)+'...';
-      return 'One sentence runs to '+longest.words+' words "'+preview+'" by the time a viewer finishes it the point has dissolved. Break it into two.';
-    }
-    if(specs<2&&wc>60){
-      return 'The section has length but lacks specificity. Viewers remember specific things a number, a named tool, a concrete example. Without them this section will not stick.';
-    }
-    if(structureSignals(text)===0&&wc>100){
-      return 'This section is dense without visible structure. Adding one signal "first", "the key thing", "here is the difference" gives viewers a handhold and makes the section feel easier to follow.';
-    }
-    var variance=sentenceLengthVariance(text);
-    if(variance<3&&wc>50){
-      return 'Every sentence here is roughly the same length. That creates a flat rhythm that works against engagement. Mix short punchy sentences with longer explanatory ones.';
-    }
-    if(sc>=70)return 'Specific, structured and addresses the viewer directly. This section delivers on the promise of the hook.';
-    return 'The substance is there but it needs more specificity or clearer structure to land with full weight.';
-  }
-
-  if(tag==='cta'){
-    if(!ctaVerb){
-      return 'The video ends with no ask. The viewer has nowhere to go and the momentum built across the whole script evaporates here. Name one specific action, subscribe, comment, or watch next, and give one reason to take it.';
-    }
-    if(ctaVerb&&!hasCTAReason(text)){
-      return '"'+ctaVerb.charAt(0).toUpperCase()+ctaVerb.slice(1)+'" is named but there is no reason to do it. "Subscribe because we post every Tuesday" converts better than "subscribe" alone give them the why.';
-    }
-    if(wc>60){
-      return 'The CTA is too long. By the time the viewer reaches the ask it has lost its directness. Say the action, say the reason, stop.';
-    }
-    if(!hasViewerAddress(text)){
-      return 'The CTA talks about the action rather than directing the viewer to take it. Address them directly "if you want X, do Y" not "it would be great if people subscribed."';
-    }
-    if(sc>=70)return 'The ask is specific, reasoned and directed at the viewer. This CTA earns its follow-through.';
-    return 'The CTA is present but not compelling enough to act on. Specific ask plus a real reason is the formula.';
-  }
-
-  if(tag==='out'){
-    if(!hasResolution(text)&&!hasCallbackToHook(text)){
-      return 'The video stops rather than ends. There is no resolution and no forward direction. Acknowledge what was just covered, close the loop from the hook, and point the viewer to what comes next.';
-    }
-    if(!hasForwardMomentum(text)){
-      return 'The outro resolves the video but does not send the viewer anywhere. Without forward momentum a next video, a linked resource, a reason to stay in your world this is where the session ends.';
-    }
-    if(hasCallbackToHook(text)&&hasForwardMomentum(text)&&sc>=70){
-      return 'The outro closes the loop opened in the hook and moves the viewer forward. This is exactly how an outro should work.';
-    }
-    if(wc<10){
-      return 'The outro is too abrupt. Even one sentence of resolution acknowledging what was covered and where to go next is enough to make the ending feel complete.';
-    }
-    if(sc>=70)return 'Clean resolution. The video feels complete and the viewer has somewhere to go next.';
-    return 'The outro needs either a callback to the opening or a clear direction forward ideally both.';
-  }
-  return '';
-}
-
-// ── Smart paragraph splitting ──
-function splitBySentenceSignals(text){
-  // Split a single block into sections by recognising sentence-level boundaries
-  var sentences=text.match(/[^.!?]+[.!?]+/g)||[text];
-  if(sentences.length<=2)return [text];
-  var sections=[],current='';
-  var CTX_SIGNALS=/\b(let me|today i|in this video|what i found|i('ve| have) (spent|built|tested|studied)|i('m going| will) show)/i;
-  var CTA_SIGNALS=/\b(subscribe|follow|comment|hit the|tap the|if you (want|enjoyed)|smash that)/i;
-  var OUTRO_SIGNALS=/\b(so there you have it|that('s| is) it|to wrap|in summary|until next|see you|hope (this|that) helped)/i;
-  sentences.forEach(function(s,i){
-    current+=s;
-    var atEnd=i===sentences.length-1;
-    // Break before context signals (when we already have content)
-    if(!atEnd&&current.trim().length>30){
-      var next=sentences[i+1]||'';
-      if(CTX_SIGNALS.test(next)||CTA_SIGNALS.test(next)||OUTRO_SIGNALS.test(next)){
-        sections.push(current.trim());
-        current='';
-      }
-    }
-  });
-  if(current.trim())sections.push(current.trim());
-  return sections.length>1?sections:[text];
+function overallScore(paras){if(!paras||!paras.length)return 0;return analyseScript(paras).overall;}
+function getParagraphFeedback(tag,text,sc){
+  if(!text||!text.trim())return'';
+  var l=scoreLevel(sc||0);
+  if(l==='high')return'This sentence is working well.';
+  if(l==='mid')return'This sentence has room to improve.';
+  return'This sentence needs attention -- consider the structure or specificity.';
 }
 function guessParagraphs(text){
-  // Split on blank lines first   respects natural writing structure
-  var blocks=text.split(/\n\s*\n/).map(function(b){return b.trim();}).filter(function(b){return b.length>0;});
-  // Fall back to single newlines
-  if(blocks.length===1){
-    var single=text.split(/\n/).map(function(b){return b.trim();}).filter(function(b){return b.length>0;});
-    if(single.length>1)blocks=single;
-  }
-  // If still one block, try to split by sentence-level section signals
-  if(blocks.length===1&&wordCount(blocks[0])>60){
-    blocks=splitBySentenceSignals(blocks[0]);
-  }
-  if(!blocks.length)blocks=[text.trim()];
-  var n=blocks.length;
-
-  return blocks.map(function(b,i){
-    var tag=assignTag(b,i,n,blocks);
-    return {id:uid(),tag:tag,text:b,score:scoreText(tag,b)};
+  if(!text||!text.trim())return[];
+  var tags=['hook','ctx','body','cta','out'];
+  var blocks=text.split(/\n\n+/).filter(function(b){return b.trim().length>10;});
+  return blocks.map(function(block,i){
+    var tag=tags[Math.min(i,tags.length-1)];
+    if(blocks.length>=4&&i>1&&i<blocks.length-2)tag='body';
+    if(blocks.length>=4&&i===blocks.length-2)tag='cta';
+    if(blocks.length>=3&&i===blocks.length-1)tag='out';
+    return{id:'g'+i,tag:tag,text:block.trim(),score:0};
   });
 }
-
-function assignTag(block,idx,total,allBlocks){
-  var l=block.toLowerCase();
-  var wc=wordCount(block);
-
-  // Outro signals are reliable regardless of position
-  if(hasResolution(block)){return 'out';}
-  if(hasForwardMomentum(block)&&idx===total-1){return 'out';}
-
-  // Hook: first block, under 80 words, no credential
-  if(idx===0&&wc<80&&!hasCredential(block)){return 'hook';}
-
-  // Context: credential verb with specificity, in first third of script
-  if(hasCredential(block)&&countSpecifics(block)>=1&&idx<=Math.ceil(total/3)){return 'ctx';}
-
-  // CTA: requires strong evidence to avoid false positives
-  // Must have action verb AND a reason AND appear in the second half AND be short
-  var ctaVerb=hasCTAVerb(block);
-  if(ctaVerb&&hasCTAReason(block)&&idx>=Math.floor(total*0.5)&&wc<80){return 'cta';}
-  // Very obvious CTA: short, late, viewer-addressed, has action verb
-  if(ctaVerb&&wc<40&&idx>=Math.floor(total*0.7)&&hasViewerAddress(block)){return 'cta';}
-
-  // Position fallback
-  if(total===1)return 'body';
-  if(total===2)return idx===0?'hook':'out';
-  if(total===3){var map=['hook','body','out'];return map[idx]||'body';}
-  if(total===4){var map4=['hook','ctx','body','out'];return map4[idx]||'body';}
-  if(idx===0)return 'hook';
-  if(idx===1)return 'ctx';
-  if(idx===total-1)return 'out';
-  if(idx===total-2)return 'cta';
-  return 'body';
+function assignTag(text,index,total){
+  if(total<=1)return'body';
+  var r=index/(total-1);
+  if(r<0.15)return'hook';if(r<0.30)return'ctx';if(r<0.75)return'body';if(r<0.90)return'cta';return'out';
 }
-
-
-

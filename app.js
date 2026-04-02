@@ -105,6 +105,7 @@ function runAiAnalysis(engineOutput,tier,resultId){
 
   var payload=JSON.stringify({
     scriptType:engineOutput.scriptType||'general',
+    scriptTypeConfidence:engineOutput.scriptTypeConfidence||0,
     overall:engineOutput.overall||0,
     sectionScores:engineOutput.sectionScores||{},
     paragraphs:engineOutput.paragraphs||[],
@@ -112,9 +113,14 @@ function runAiAnalysis(engineOutput,tier,resultId){
     signals:{
       promises:engineOutput.promises||[],
       promiseDelivered:engineOutput.promiseDelivered||false,
-      sentenceLenVariance:engineOutput.sentenceLenVariance||0,
+      sentenceLenVariance:engineOutput.paceVariance||0,
       voiceRatio:engineOutput.voiceRatio||0,
-      totalSentences:engineOutput.totalSentences||0
+      totalSentences:engineOutput.totalSentences||0,
+      openingStrength:engineOutput.openingStrength||0,
+      closingStrength:engineOutput.closingStrength||0,
+      tensionScore:engineOutput.tensionScore||0,
+      insightDensity:engineOutput.insightDensity||0,
+      weakestPoints:engineOutput.weakestPoints||[]
     },
     tier:tier
   });
