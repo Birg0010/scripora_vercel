@@ -29,12 +29,27 @@ function extractSpecificity(s){
 function extractNovelty(s,prev){
   if(!s)return 0;
   if(!prev)return 0.7;
-  var sw=['the','a','an','is','are','was','were','be','been','have','has','had','do','does','did','will','would','could','should','this','that','it','its','and','or','but','so','in','on','at','to','of','by','with','from','as','not','no'];
-  var cw=getWords(s).filter(function(w){return w.length>3&&sw.indexOf(w)<0;});
+  var sw=['the','a','an','is','are','was','were','be','been','have','has','had','do','does','did','will','would','could','should','this','that','it','its','and','or','but','so','in','on','at','to','of','by','with','from','as','not','no','i','my','we','our','you','your'];
+  var allWords=getWords(s);
+  var cw=allWords.filter(function(w){return w.length>3&&sw.indexOf(w)<0;});
   var pw=getWords(prev).filter(function(w){return w.length>3&&sw.indexOf(w)<0;});
-  if(cw.length===0)return 0.3;
+  // Short sentences with few content words cannot claim high novelty
+  // A sentence like "I worked hard" has 0 content words after filtering
+  // It should score LOW novelty not HIGH
+  if(cw.length===0){
+    // No content words = repetitive/vague = low novelty
+    return 0.15;
+  }
+  if(cw.length<2){
+    // Very few content words = limited novelty
+    return 0.25;
+  }
   var ov=0;cw.forEach(function(w){if(pw.indexOf(w)>=0)ov++;});
-  return norm(1-(ov/cw.length));
+  var overlapRatio=ov/cw.length;
+  // Also penalise very short sentences regardless of overlap
+  // A 3-word sentence cannot introduce much novelty even if words are different
+  var lengthPenalty=allWords.length<5?0.25:allWords.length<8?0.1:0;
+  return norm((1-overlapRatio)-lengthPenalty);
 }
 function extractClarity(s){
   if(!s)return 0;
@@ -90,13 +105,25 @@ function initialState(){return{curiosity:0.5,reward:0.3,tension:0.4,trust:0.4,cl
 
 function updateState(state,f){
   var d=0.15;
-  var curiosity=state.curiosity*(1-d)+f.novelty*0.35+f.payoff*(-0.20)+f.directness*0.10+f.progression*0.10;
+  // Novelty only drives curiosity when paired with some content value
+  // Vague sentences (low specificity + low credibility) get reduced novelty impact
+  var contentAnchor=Math.max(0.2,f.specificity+f.credibility+f.payoff);
+  var anchoredNovelty=f.novelty*Math.min(1,contentAnchor*2);
+  var curiosity=state.curiosity*(1-d)+anchoredNovelty*0.35+f.payoff*(-0.20)+f.directness*0.10+f.progression*0.10;
   var reward=state.reward*(1-d)+f.specificity*0.35+f.payoff*0.40+f.credibility*0.15+f.directness*0.10;
   var tension=state.tension*(1-d)+f.novelty*0.25+f.progression*0.15+f.payoff*(-0.35)+f.credibility*(-0.05);
   var trust=state.trust*(1-d)+f.credibility*0.45+f.specificity*0.25+f.clarity*0.10+f.payoff*0.10;
   var clarityS=state.clarity*(1-d)+f.clarity*0.60+f.specificity*0.10+f.directness*0.10;
+  // Fatigue: accumulates when content is low-value AND low-novelty
+  // Requires BOTH stimulation (novelty+progression) AND value (reward/specificity) to reduce
   var stim=(f.novelty+f.progression)/2;
-  var fatigue=state.fatigue*(1-d)+(1-stim)*0.25+(stim>0.5?-0.15:0);
+  var value=(f.specificity+f.credibility+f.payoff)/3;
+  var stimAndValue=(stim+value)/2;
+  // Fatigue grows when stimulation is low
+  var fatGrowth=(1-stim)*0.20;
+  // Fatigue only reduces when BOTH stimulation AND value are present
+  var fatReduction=stimAndValue>0.5?(stimAndValue-0.5)*0.30:0;
+  var fatigue=norm(state.fatigue*(1-d)+fatGrowth-fatReduction);
   return{curiosity:norm(curiosity),reward:norm(reward),tension:norm(tension),trust:norm(trust),clarity:norm(clarityS),fatigue:norm(fatigue)};
 }
 
