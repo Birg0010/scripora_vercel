@@ -1141,26 +1141,79 @@ var tagOrder=tagOrder2||['hook','ctx','body','cta','out'];
   }
   ov+='</div>';
 
-  // Attention curve
-  ov+='<div class="res-curve-card"><div class="res-card-title" style="display:flex;align-items:center;gap:5px;">Attention Curve';
-  ov+='<button onclick="showStatHelp(\'curve\')" style="background:none;border:none;color:var(--faint);font-size:.6rem;cursor:pointer;">[?]</button></div>';
-  ov+='<div class="res-curve">';
-  var curve=intel.curve||[];
-  var maxAbs=Math.max(0.1,Math.max.apply(null,curve.map(function(v){return Math.abs(v);})));
-  curve.forEach(function(v){
-    var pct=Math.round(((v+maxAbs)/(maxAbs*2))*100);
-    var h=Math.max(8,Math.round((pct/100)*48));
-    var cls=v>0.3?'pos':v<-0.3?'neg':'neu';
-    ov+='<div class="res-curve-bar '+cls+'" style="height:'+h+'px"></div>';
-  });
-  ov+='</div><div class="res-curve-labels"><span class="res-curve-lbl">0%</span><span class="res-curve-lbl">50%</span><span class="res-curve-lbl">100%</span></div></div>';
+  // Attention curve - SVG line chart using simulation data
+  var attCurve=intel.attentionCurve&&intel.attentionCurve.length?intel.attentionCurve:(intel.curve||[]);
+  ov+='<div class="res-curve-card">';
+  ov+='<div class="res-card-title" style="display:flex;align-items:center;gap:5px;">Attention Curve';
+  ov+='<button onclick="showStatHelp(\'curve\')" style="background:none;border:none;color:var(--faint);font-size:.6rem;cursor:pointer;">[?]</button>';
+  ov+='</div>';
+  if(attCurve.length>0){
+    var svgW=310;var svgH=70;var pad=6;
+    var minV=Math.min.apply(null,attCurve);
+    var maxV=Math.max.apply(null,attCurve);
+    var range=Math.max(1,maxV-minV);
+    function ptX(i){return Math.round(pad+(i/(attCurve.length-1||1))*(svgW-pad*2));}
+    function ptY(v){return Math.round(svgH-pad-((v-minV)/range)*(svgH-pad*2-8));}
+    // Build path points
+    var pts=attCurve.map(function(v,i){return ptX(i)+','+ptY(v);});
+    var linePath='M'+pts.join(' L');
+    var areaPath=linePath+' L'+ptX(attCurve.length-1)+','+(svgH)+' L'+ptX(0)+','+svgH+' Z';
+    // Find peak and drop
+    var peakIdx=0;var dropIdx=0;
+    attCurve.forEach(function(v,i){
+      if(v>attCurve[peakIdx])peakIdx=i;
+      if(v<attCurve[dropIdx])dropIdx=i;
+    });
+    var svgHtml='<svg viewBox="0 0 '+svgW+' '+svgH+'" preserveAspectRatio="none" style="width:100%;height:70px;">';
+    svgHtml+='<defs><linearGradient id="atg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity="0.3"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>';
+    svgHtml+='<line x1="0" y1="'+ptY(50)+'" x2="'+svgW+'" y2="'+ptY(50)+'" stroke="rgba(255,255,255,.04)" stroke-width="1"/>';
+    svgHtml+='<path d="'+areaPath+'" fill="url(#atg)"/>';
+    svgHtml+='<path d="'+linePath+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    // Peak marker
+    if(peakIdx!==dropIdx){
+      svgHtml+='<circle cx="'+ptX(peakIdx)+'" cy="'+ptY(attCurve[peakIdx])+'" r="3" fill="var(--s-high)"/>';
+    }
+    // Drop marker
+    svgHtml+='<circle cx="'+ptX(dropIdx)+'" cy="'+ptY(attCurve[dropIdx])+'" r="3" fill="var(--s-low)"/>';
+    svgHtml+='</svg>';
+    ov+='<div style="position:relative;">'+svgHtml+'</div>';
+    ov+='<div class="res-curve-labels"><span class="res-curve-lbl">0%</span><span class="res-curve-lbl">50%</span><span class="res-curve-lbl">100%</span></div>';
+  }
+  ov+='</div>';
 
-  // Stats row
+  // Stats row - updated with new engine fields
+  var readTimeMins=intel.totalWords>0?Math.round(intel.totalWords/130):0;
+  var readTimeStr=readTimeMins>=1?readTimeMins+'m':'<1m';
+  var scriptTypeLabel={tutorial:'Tutorial',story:'Story',opinion:'Opinion',listicle:'Listicle',review:'Review',sport:'Sport',documentary:'Documentary',general:'General'};
+  var stLabel=scriptTypeLabel[intel.scriptType]||'General';
+  var voiceLevel=scoreLevel(intel.voiceRatio||0);
+  var paceLevel=(intel.paceVariance||0)>3?'high':(intel.paceVariance||0)>1.5?'mid':'low';
+  var insightLevel=scoreLevel(Math.min(100,(intel.insightDensity||0)*10));
   ov+='<div class="res-stats-row">';
   ov+='<div class="res-stat-chip"><div class="res-stat-num">'+intel.totalWords+'</div><div class="res-stat-lbl">Words</div></div>';
-  ov+='<div class="res-stat-chip"><div class="res-stat-num">'+intel.totalSentences+'</div><div class="res-stat-lbl">Sentences</div></div>';
-  ov+='<div class="res-stat-chip" onclick="showStatHelp(\'pace\','+intel.sentenceLenVariance+')" style="cursor:pointer;"><div class="res-stat-num">'+intel.sentenceLenVariance+'</div><div class="res-stat-lbl">Pace Var ?</div></div>';
-  ov+='<div class="res-stat-chip" onclick="showStatHelp(\'insight\','+intel.rewardDensity+')" style="cursor:pointer;"><div class="res-stat-num">'+intel.rewardDensity+'</div><div class="res-stat-lbl">Insight ?</div></div>';
+  ov+='<div class="res-stat-chip"><div class="res-stat-num">'+readTimeStr+'</div><div class="res-stat-lbl">Read time</div></div>';
+  ov+='<div class="res-stat-chip"><div class="res-stat-num '+voiceLevel+'" style="color:var(--s-'+(voiceLevel==='high'?'high':voiceLevel==='mid'?'mid':'low')+');">'+(intel.voiceRatio||0)+'%</div><div class="res-stat-lbl">Voice ratio</div></div>';
+  ov+='<div class="res-stat-chip"><div class="res-stat-num '+paceLevel+'" style="color:var(--s-'+(paceLevel==='high'?'high':paceLevel==='mid'?'mid':'low')+');">'+(intel.paceVariance||0)+'</div><div class="res-stat-lbl">Pace var</div></div>';
+  ov+='<div class="res-stat-chip"><div class="res-stat-num '+insightLevel+'" style="color:var(--s-'+insightLevel+');">'+(intel.insightDensity||0)+'</div><div class="res-stat-lbl">Insight</div></div>';
+  ov+='<div class="res-stat-chip"><div class="res-stat-num" style="color:var(--accent);font-size:.7rem;">'+stLabel+'</div><div class="res-stat-lbl">Type</div></div>';
+  ov+='</div>';
+  // Opening and closing strength row
+  ov+='<div style="display:flex;gap:6px;margin-bottom:10px;">';
+  ov+='<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 10px;">';
+  ov+='<div style="font-size:.52rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;">Opening</div>';
+  ov+='<div style="font-size:1.2rem;font-weight:700;color:var(--s-'+scoreLevel(intel.openingStrength||0)+');">'+(intel.openingStrength||0)+'</div>';
+  ov+='<div style="font-size:.58rem;color:var(--muted);">First 3 sentences</div>';
+  ov+='</div>';
+  ov+='<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 10px;">';
+  ov+='<div style="font-size:.52rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;">Closing</div>';
+  ov+='<div style="font-size:1.2rem;font-weight:700;color:var(--s-'+scoreLevel(intel.closingStrength||0)+');">'+(intel.closingStrength||0)+'</div>';
+  ov+='<div style="font-size:.58rem;color:var(--muted);">Last 3 sentences</div>';
+  ov+='</div>';
+  ov+='<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 10px;">';
+  ov+='<div style="font-size:.52rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;">Tension</div>';
+  ov+='<div style="font-size:1.2rem;font-weight:700;color:var(--s-'+scoreLevel(intel.tensionScore||0)+');">'+(intel.tensionScore||0)+'</div>';
+  ov+='<div style="font-size:.58rem;color:var(--muted);">Avg across script</div>';
+  ov+='</div>';
   ov+='</div>';
 
   // Promise + Voice tracking
@@ -1224,7 +1277,14 @@ var tagOrder=tagOrder2||['hook','ctx','body','cta','out'];
   var sec='';var _si=0;
   paras.forEach(function(p){
     if(!p.text||!p.text.trim())return;
-    var sc=scores[p.tag]||scoreText(p.tag,p.text);
+    // Score this paragraph from its own sentences, not the section aggregate
+    var paraSents=intel.sentenceData?intel.sentenceData.filter(function(s){return s.paraId===p.id;}):[];
+    var sc;
+    if(paraSents.length>0){
+      sc=Math.round(paraSents.reduce(function(a,s){return a+s.attention;},0)/paraSents.length);
+    } else {
+      sc=scores[p.tag]||scoreText(p.tag,p.text);
+    }
     var lv=scoreLevel(sc);
     var fb=getParagraphFeedback(p.tag,p.text,sc);
     var fbCls=sc>=70?'pos':sc<45?'neg':'';
