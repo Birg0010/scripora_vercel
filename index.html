@@ -282,7 +282,7 @@
     <button class="res-back" onclick="closeAnalyseResults()"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
     <div class="res-title" id="resTitle" onclick="renameAnalyseSession(S._currentResultId)" style="cursor:pointer;flex:1;" title="Tap to rename">Analysis Results</div>
     <div class="res-date" id="resDate"></div>
-    <button class="hdr-btn" onclick="downloadAnalysisResults()" title="Download" style="flex-shrink:0;">
+    <button class="hdr-btn" onclick="downloadAnalysisResult(S._currentResultId)" title="Download" style="flex-shrink:0;">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
     </button>
   </div>
