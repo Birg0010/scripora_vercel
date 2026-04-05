@@ -1209,135 +1209,103 @@ function openAnalyseResult(id){
 
 var tagOrder=tagOrder2||['hook','ctx','body','cta','out'];
   var id=result.id;
+
+  // Inject hero into DOM
+  var heroEl=document.getElementById('resHero');
+  if(heroEl)heroEl.innerHTML=hero;
+
   var ov='';
   var id=result.id;
 
-  // ── AI fallback ──
+  // ── AI fallback message ──
   ov+='<div id="res-ai-fallback" style="display:none;margin:0 0 12px;padding:10px 14px;background:var(--s2);border-radius:10px;border:1px solid var(--border);font-size:.72rem;color:var(--muted);line-height:1.6;"></div>';
 
-  // ── AI badge + script type ──
+  // ── Scripora AI badge + script type badge ──
   var stLabelMap={tutorial:'Tutorial',story:'Story',opinion:'Opinion',listicle:'Listicle',review:'Review',sport:'Sport',documentary:'Documentary',general:'General'};
   var stLabel=stLabelMap[intel.scriptType]||'General';
   ov+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;">';
-  ov+='<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(106,175,130,.1);border:1px solid rgba(106,175,130,.2);border-radius:20px;padding:3px 10px 3px 7px;font-size:.58rem;font-weight:600;color:var(--s-high);">';
+  ov+='<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(106,175,130,.1);border:1px solid rgba(106,175,130,.2);border-radius:20px;padding:3px 10px 3px 7px;font-size:.6rem;font-weight:600;color:var(--s-high);">';
   ov+='<div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);animation:ai-pulse 2s infinite;"></div>Scripora AI</div>';
   if(intel.scriptType&&intel.scriptType!=='general'){
-    ov+='<div style="display:inline-flex;align-items:center;gap:4px;background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.58rem;font-weight:600;color:var(--muted);">'+stLabel+'</div>';
+    ov+='<div style="display:inline-flex;align-items:center;background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.6rem;font-weight:600;color:var(--muted);">'+stLabel+'</div>';
   }
   ov+='</div>';
 
-  // ── Attention curve (SVG line chart) ──
+  // ── Attention curve ──
   var attCurve=intel.attentionCurve&&intel.attentionCurve.length?intel.attentionCurve:(intel.curve||[]);
-  ov+='<div class="res-panel-card">';
-  ov+='<div class="rpc-lbl">Attention Curve <span class="rpc-lbl-r">viewer retention</span></div>';
+  ov+='<div class="ov-card">';
+  ov+='<div class="ov-card-lbl">Attention Curve<span class="ov-card-lbl-r">viewer retention</span></div>';
   if(attCurve.length>1){
-    var svgW=310;var svgH=72;var px=4;var py=8;
+    var W=310;var H=72;var PX=4;var PY=10;
     var minV=Math.min.apply(null,attCurve);
     var maxV=Math.max.apply(null,attCurve);
     var vR=Math.max(1,maxV-minV);
-    function ax(i){return Math.round(px+(i/Math.max(1,attCurve.length-1))*(svgW-px*2));}
-    function ay(v){return Math.round(svgH-py-((v-minV)/vR)*(svgH-py*2));}
-    var linePts=attCurve.map(function(v,i){return ax(i)+','+ay(v);}).join(' L');
-    var linePath='M'+linePts;
-    var areaPath=linePath+' L'+ax(attCurve.length-1)+','+svgH+' L'+ax(0)+','+svgH+' Z';
-    var pkIdx=0;var dpIdx=0;
-    attCurve.forEach(function(v,i){if(v>attCurve[pkIdx])pkIdx=i;if(v<attCurve[dpIdx])dpIdx=i;});
-    var svg='<svg viewBox="0 0 '+svgW+' '+svgH+'" preserveAspectRatio="none" style="width:100%;height:72px;display:block;">';
-    svg+='<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity=".28"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>';
-    svg+='<line x1="0" y1="'+ay(50)+'" x2="'+svgW+'" y2="'+ay(50)+'" stroke="rgba(255,255,255,.04)" stroke-width="1"/>';
-    svg+='<path d="'+areaPath+'" fill="url(#ag)"/>';
-    svg+='<path d="'+linePath+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
-    if(pkIdx!==dpIdx)svg+='<circle cx="'+ax(pkIdx)+'" cy="'+ay(attCurve[pkIdx])+'" r="3.5" fill="var(--s-high)"/>';
-    svg+='<circle cx="'+ax(dpIdx)+'" cy="'+ay(attCurve[dpIdx])+'" r="3.5" fill="var(--s-low)"/>';
+    function ax(i){return Math.round(PX+(i/Math.max(1,attCurve.length-1))*(W-PX*2));}
+    function ay(v){return Math.round(H-PY-((v-minV)/vR)*(H-PY*2));}
+    var pts=attCurve.map(function(v,i){return ax(i)+','+ay(v);}).join(' L');
+    var line='M'+pts;
+    var area=line+' L'+ax(attCurve.length-1)+','+H+' L'+ax(0)+','+H+' Z';
+    var pkI=0;var dpI=0;
+    attCurve.forEach(function(v,i){if(v>attCurve[pkI])pkI=i;if(v<attCurve[dpI])dpI=i;});
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="width:100%;height:72px;display:block;">';
+    svg+='<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity=".25"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>';
+    svg+='<line x1="0" y1="'+ay(50)+'" x2="'+W+'" y2="'+ay(50)+'" stroke="rgba(255,255,255,.05)" stroke-width="1"/>';
+    svg+='<path d="'+area+'" fill="url(#ag)"/>';
+    svg+='<path d="'+line+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    if(pkI!==dpI)svg+='<circle cx="'+ax(pkI)+'" cy="'+ay(attCurve[pkI])+'" r="3.5" fill="var(--s-high)"/>';
+    svg+='<circle cx="'+ax(dpI)+'" cy="'+ay(attCurve[dpI])+'" r="3.5" fill="var(--s-low)"/>';
     svg+='</svg>';
     ov+=svg;
-    ov+='<div style="display:flex;justify-content:space-between;margin-top:4px;"><span style="font-size:.52rem;color:var(--faint);">0%</span><span style="font-size:.52rem;color:var(--faint);">50%</span><span style="font-size:.52rem;color:var(--faint);">100%</span></div>';
+    ov+='<div style="display:flex;justify-content:space-between;margin-top:5px;"><span style="font-size:.52rem;color:var(--faint);">0%</span><span style="font-size:.52rem;color:var(--faint);">50%</span><span style="font-size:.52rem;color:var(--faint);">100%</span></div>';
+  } else {
+    ov+='<div style="font-size:.7rem;color:var(--muted);padding:10px 0;">Not enough data to build curve.</div>';
   }
   ov+='</div>';
 
-  // ── Section score vertical bars ──
-  ov+='<div class="res-panel-card">';
-  ov+='<div class="rpc-lbl">Section Scores</div>';
-  ov+='<div style="display:flex;gap:8px;align-items:flex-end;height:72px;margin-bottom:4px;">';
-  var vsecOrder=['hook','ctx','body','cta','out'];
-  var vsecNames={hook:'Hook',ctx:'Ctx',body:'Body',cta:'CTA',out:'Outro'};
-  var vsecColors={hook:'var(--hook)',ctx:'var(--ctx)',body:'var(--body-c)',cta:'var(--cta)',out:'var(--out)'};
-  vsecOrder.forEach(function(tag){
-    if(!paras.some(function(p){return p.tag===tag;}))return;
-    var sc=scores[tag]||0;
-    var fillH=Math.max(4,Math.round(sc*0.64));
-    ov+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">';
-    ov+='<div style="width:100%;background:var(--faint);border-radius:5px 5px 0 0;flex:1;display:flex;align-items:flex-end;overflow:hidden;">';
-    ov+='<div style="width:100%;height:'+sc+'%;background:linear-gradient(to top,rgba(0,0,0,.15),'+vsecColors[tag]+');border-radius:5px 5px 0 0;min-height:4px;"></div></div>';
-    ov+='<div style="font-size:.62rem;font-weight:700;color:'+vsecColors[tag]+';">'+sc+'</div>';
-    ov+='<div style="font-size:.46rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">'+vsecNames[tag]+'</div>';
-    ov+='</div>';
-  });
-  ov+='</div>';
-  ov+='</div>';
-
-  // ── Opening / Closing / Read time trio ──
+  // ── Opening / Closing / Read time ──
   var openStr=intel.openingStrength||0;
   var closeStr=intel.closingStrength||0;
   var readMins=intel.totalWords>0?Math.round(intel.totalWords/130):0;
   var readStr=readMins>=1?readMins+'m':'<1m';
   ov+='<div style="display:flex;gap:6px;margin-bottom:10px;">';
-  ['Opening','Closing','Read time'].forEach(function(lbl,i){
-    var val=i===0?openStr:i===1?closeStr:readStr;
-    var col=i===2?'var(--text)':'var(--s-'+scoreLevel(i===0?openStr:closeStr)+')';
-    var sub=i===0?'First 3 sent.':i===1?'Last 3 sent.':'at 130 wpm';
-    ov+='<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 10px;">';
-    ov+='<div style="font-size:.5rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;">'+lbl+'</div>';
-    ov+='<div style="font-size:1.2rem;font-weight:700;color:'+col+';">'+val+'</div>';
-    ov+='<div style="font-size:.56rem;color:var(--muted);">'+sub+'</div>';
-    ov+='</div>';
-  });
+  ov+='<div class="ov-trio-card"><div class="ov-trio-lbl">Opening</div><div class="ov-trio-val" style="color:var(--s-'+scoreLevel(openStr)+');">'+openStr+'</div><div class="ov-trio-sub">First 3 sent.</div></div>';
+  ov+='<div class="ov-trio-card"><div class="ov-trio-lbl">Closing</div><div class="ov-trio-val" style="color:var(--s-'+scoreLevel(closeStr)+');">'+closeStr+'</div><div class="ov-trio-sub">Last 3 sent.</div></div>';
+  ov+='<div class="ov-trio-card"><div class="ov-trio-lbl">Read time</div><div class="ov-trio-val" style="color:var(--text);">'+readStr+'</div><div class="ov-trio-sub">at 130 wpm</div></div>';
   ov+='</div>';
 
-  // ── Stats chips ──
+  // ── Stats chips (4 -- no read time repeat) ──
   var voiceVal=intel.voiceRatio||0;
   var paceVal=intel.paceVariance||0;
   var insightVal=intel.insightDensity||0;
-  var tensVal=intel.tensionScore||0;
   var promiseStr=intel.promises&&intel.promises.length?(intel.promiseDelivered?'Kept':'Broken'):'None';
   var promiseCol=intel.promises&&intel.promises.length?(intel.promiseDelivered?'var(--s-high)':'var(--s-low)'):'var(--muted)';
   var paceCol=(paceVal>3)?'var(--s-high)':(paceVal>1.5)?'var(--s-mid)':'var(--s-low)';
   var insightCol='var(--s-'+scoreLevel(Math.min(100,insightVal*10))+')';
   var voiceCol='var(--s-'+scoreLevel(voiceVal)+')';
-  var chipData=[
-    {val:intel.totalWords,lbl:'Words',col:'var(--text)'},
-    {val:readStr,lbl:'Read time',col:'var(--text)'},
-    {val:voiceVal+'%',lbl:'Viewer voice',col:voiceCol},
-    {val:paceVal,lbl:'Pace var',col:paceCol},
-    {val:insightVal,lbl:'Insight',col:insightCol},
-    {val:promiseStr,lbl:'Promise',col:promiseCol}
-  ];
-  ov+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">';
-  chipData.forEach(function(c){
-    ov+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 10px;">';
-    ov+='<div style="font-size:.85rem;font-weight:700;color:'+c.col+';line-height:1;">'+c.val+'</div>';
-    ov+='<div style="font-size:.52rem;color:var(--muted);margin-top:3px;">'+c.lbl+'</div>';
-    ov+='</div>';
-  });
+  ov+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;">';
+  ov+='<div class="stat-chip2"><div class="sc2-val" style="color:'+voiceCol+';">'+voiceVal+'%</div><div class="sc2-lbl">Viewer voice</div></div>';
+  ov+='<div class="stat-chip2"><div class="sc2-val" style="color:'+paceCol+';">'+paceVal+'</div><div class="sc2-lbl">Pace variance</div></div>';
+  ov+='<div class="stat-chip2"><div class="sc2-val" style="color:'+insightCol+';">'+insightVal+'</div><div class="sc2-lbl">Insight density</div></div>';
+  ov+='<div class="stat-chip2"><div class="sc2-val" style="color:'+promiseCol+';">'+promiseStr+'</div><div class="sc2-lbl">Promise</div></div>';
   ov+='</div>';
 
-  // ── Top issues ──
-  ov+='<div style="font-size:.54rem;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);font-weight:600;margin-bottom:8px;">Top Issues</div>';
+  // ── Top issues (engine, AI replaces these) ──
+  ov+='<div class="ov-sec-lbl">Top Issues</div>';
   ov+='<div id="res-ai-issues">';
   if(intel.issues&&intel.issues.length){
     var issSecColors={Hook:'var(--hook)',Context:'var(--ctx)',Body:'var(--body-c)',CTA:'var(--cta)',Outro:'var(--out)',General:'var(--accent)'};
     intel.issues.forEach(function(issue,ii){
       var lbl=ii===0?'Top Issue':'Issue '+(ii+1);
       var sc2=issSecColors[issue.section]||'var(--accent)';
-      ov+='<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid '+sc2+';border-radius:10px;padding:11px 13px;margin-bottom:8px;">';
-      ov+='<div style="display:flex;align-items:center;gap:5px;margin-bottom:7px;flex-wrap:wrap;">';
-      ov+='<span style="font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);">'+lbl+'</span>';
-      ov+='<span style="font-size:.58rem;font-weight:600;color:'+sc2+';background:var(--s2);border-radius:4px;padding:2px 6px;">'+issue.section+'</span>';
-      ov+='<span style="font-size:.52rem;font-weight:700;text-transform:uppercase;padding:2px 6px;border-radius:4px;margin-left:auto;color:'+(issue.impact==='high'?'var(--s-low)':'var(--s-mid)')+';background:'+(issue.impact==='high'?'rgba(192,90,90,.12)':'rgba(201,150,42,.1)')+';">'+issue.impact+'</span>';
+      ov+='<div class="issue-card-new" style="border-left-color:'+sc2+';">';
+      ov+='<div class="icn-hd">';
+      ov+='<span class="icn-lbl">'+lbl+'</span>';
+      ov+='<span class="icn-sec" style="color:'+sc2+';">'+issue.section+'</span>';
+      ov+='<span class="icn-imp '+(issue.impact==='high'?'hi':'md')+'">'+issue.impact+'</span>';
       ov+='</div>';
-      ov+='<div style="display:flex;gap:7px;margin-bottom:4px;"><div style="width:5px;height:5px;border-radius:50%;background:var(--muted);flex-shrink:0;margin-top:4px;"></div><div style="font-size:.68rem;color:var(--text);line-height:1.55;">'+escHtml(issue.observation)+'</div></div>';
-      ov+='<div style="display:flex;gap:7px;margin-bottom:4px;"><div style="width:5px;height:5px;border-radius:50%;background:var(--s-low);flex-shrink:0;margin-top:4px;"></div><div style="font-size:.68rem;color:var(--muted);line-height:1.55;">'+escHtml(issue.consequence)+'</div></div>';
-      ov+='<div style="display:flex;gap:7px;"><div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);flex-shrink:0;margin-top:4px;"></div><div style="font-size:.68rem;color:var(--s-high);line-height:1.55;">'+escHtml(issue.fix)+'</div></div>';
+      ov+='<div class="icn-row"><div class="icn-dot obs"></div><div class="icn-text obs">'+escHtml(issue.observation)+'</div></div>';
+      ov+='<div class="icn-row"><div class="icn-dot con"></div><div class="icn-text">'+escHtml(issue.consequence)+'</div></div>';
+      ov+='<div class="icn-row"><div class="icn-dot fix"></div><div class="icn-text fix">'+escHtml(issue.fix)+'</div></div>';
       ov+='</div>';
     });
   }
@@ -1349,13 +1317,13 @@ var tagOrder=tagOrder2||['hook','ctx','body','cta','out'];
   ov+='<div class="res-inshort-body" id="res-ai-inshort">'+getScriptVerdictSub(scores,overall,Object.keys(scores))+'</div></div>';
 
   // ── Actions ──
-  ov+='<div style="display:flex;flex-direction:column;gap:8px;padding:16px 0 28px;">';
-  ov+='<button class="res-export-btn" onclick="openAsNewScript(\''+id+'\')" style="width:100%;justify-content:center;">';
-  ov+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:16px;height:16px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>';
+  ov+='<div class="res-actions-row">';
+  ov+='<button class="res-action-btn primary" onclick="openAsNewScript(\''+id+'\')">';
+  ov+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>';
   ov+=(result.scriptId?'Open Script':'Open as New Script')+'</button>';
-  ov+='<button class="res-export-btn" onclick="downloadAnalysisResult(\''+id+'\')" style="width:100%;justify-content:center;">';
-  ov+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:16px;height:16px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
-  ov+='Download Report</button>';
+  ov+='<button class="res-action-btn" onclick="downloadAnalysisResult(\''+id+'\')">';
+  ov+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
+  ov+='Download</button>';
   ov+='</div>';
 
   // ════ SECTIONS PANEL ════
@@ -1363,117 +1331,113 @@ var tagOrder=tagOrder2||['hook','ctx','body','cta','out'];
   paras.forEach(function(p,pi){
     if(!p.text||!p.text.trim())return;
     var paraSents=intel.sentenceData?intel.sentenceData.filter(function(s){return s.paraId===p.id;}):[];
-    var sc;
-    if(paraSents.length>0){
-      sc=Math.round(paraSents.reduce(function(a,s){return a+s.attention;},0)/paraSents.length);
-    } else {
-      sc=scores[p.tag]||scoreText(p.tag,p.text);
-    }
-    var lv=scoreLevel(sc);
+    var sc3=paraSents.length>0?Math.round(paraSents.reduce(function(a,s){return a+s.attention;},0)/paraSents.length):(scores[p.tag]||scoreText(p.tag,p.text));
+    var lv=scoreLevel(sc3);
     var tagCol={hook:'var(--hook)',ctx:'var(--ctx)',body:'var(--body-c)',cta:'var(--cta)',out:'var(--out)'}[p.tag]||'var(--accent)';
     var isOpen=pi===0;
-    sec+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:7px;overflow:hidden;">';
-    sec+='<div style="display:flex;align-items:center;padding:11px 13px;gap:8px;cursor:pointer;" onclick="this.parentElement.classList.toggle(\'sec-open\')">';
-    sec+='<div style="font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:3px 7px;border-radius:4px;background:'+tagCol+'22;color:'+tagCol+';flex-shrink:0;">'+(tagNames[p.tag]||p.tag)+'</div>';
-    sec+='<div style="flex:1;font-size:.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escHtml((p.text||'').slice(0,55))+'...</div>';
-    sec+='<span class="score-pill '+lv+'" style="flex-shrink:0;margin-right:4px;"><span class="score-pill-dot"></span>'+sc+'</span>';
-    sec+='<svg style="width:13px;height:13px;color:var(--faint);flex-shrink:0;transition:transform .2s;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" d="M19 9l-7 7-7-7"/></svg>';
+    sec+='<div class="sec-card'+(isOpen?' sec-open':'')+'">';
+    sec+='<div class="sec-card-hd" onclick="this.parentElement.classList.toggle(\'sec-open\')">';
+    sec+='<div class="sec-tag-pill" style="background:'+tagCol+'1a;color:'+tagCol+';">'+(tagNames[p.tag]||p.tag)+'</div>';
+    sec+='<div class="sec-card-preview">'+escHtml((p.text||'').slice(0,52))+'...</div>';
+    sec+='<span class="score-pill '+lv+'"><span class="score-pill-dot"></span>'+sc3+'</span>';
+    sec+='<svg class="sec-chev" fill="none" stroke="var(--faint)" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" d="M19 9l-7 7-7-7"/></svg>';
     sec+='</div>';
-    sec+='<div class="sec-body-wrap" style="'+(isOpen?'':'display:none;')+'">';
-    sec+='<div style="font-size:.73rem;color:var(--muted);line-height:1.65;padding:0 13px 10px;border-left:2px solid var(--faint);margin:0 13px 10px;">'+escHtml(p.text)+'</div>';
-    var fb=getParagraphFeedback(p.tag,p.text,sc);
-    sec+='<div style="background:var(--s2);border-radius:8px;padding:9px 11px;margin:0 13px 13px;">';
-    sec+='<div style="font-size:.5rem;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);font-weight:700;margin-bottom:4px;">AI Feedback</div>';
-    sec+='<div style="font-size:.7rem;color:var(--text);line-height:1.6;" id="sec-ai-'+p.id+'">'+fb+'</div>';
+    sec+='<div class="sec-card-body">';
+    // Script text
+    sec+='<div class="sec-script-text">'+escHtml(p.text)+'</div>';
+    // Divider
+    sec+='<div class="sec-divider"></div>';
+    // AI feedback
+    var fb=getParagraphFeedback(p.tag,p.text,sc3);
+    sec+='<div class="sec-fb-block">';
+    sec+='<div class="sec-fb-lbl">AI Feedback</div>';
+    sec+='<div class="sec-fb-text" id="sec-ai-'+p.id+'">'+fb+'</div>';
     sec+='</div>';
     sec+='</div>';
     sec+='</div>';
   });
-  sec+='<div style="display:flex;flex-direction:column;gap:8px;padding:8px 0 28px;">';
-  sec+='<button class="res-export-btn" onclick="openAsNewScript(\''+id+'\')" style="width:100%;justify-content:center;">';
-  sec+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:16px;height:16px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>';
+  sec+='<div class="res-actions-row" style="margin-top:8px;">';
+  sec+='<button class="res-action-btn primary" onclick="openAsNewScript(\''+id+'\')">';
+  sec+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>';
   sec+=(result.scriptId?'Open Script':'Open as New Script')+'</button>';
-  sec+='<button class="res-export-btn" onclick="downloadAnalysisResult(\''+id+'\')" style="width:100%;justify-content:center;">';
-  sec+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:16px;height:16px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
-  sec+='Download Report</button>';
+  sec+='<button class="res-action-btn" onclick="downloadAnalysisResult(\''+id+'\')">';
+  sec+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
+  sec+='Download</button>';
   sec+='</div>';
 
   // ════ DEEP PANEL ════
   var deep='';
-  deep+='<div style="background:var(--s2);border-radius:9px;padding:9px 11px;margin-bottom:12px;font-size:.7rem;color:var(--muted);line-height:1.6;">';
-  deep+='<strong style="color:var(--text);">Top issues</strong> ranked by impact. Fix these first regardless of script length.</div>';
+  deep+='<div class="deep-intro-card"><strong>Top issues</strong> ranked by impact. Fix these first regardless of script length.</div>';
 
-  // Top 5 issues ranked
   if(intel.issues&&intel.issues.length){
     var rankBg=['rgba(192,90,90,.15)','rgba(192,90,90,.15)','rgba(201,150,42,.12)','rgba(201,150,42,.12)','rgba(106,175,130,.1)'];
     var rankCol=['var(--s-low)','var(--s-low)','var(--s-mid)','var(--s-mid)','var(--s-high)'];
     var dIssColors={Hook:'var(--hook)',Context:'var(--ctx)',Body:'var(--body-c)',CTA:'var(--cta)',Outro:'var(--out)',General:'var(--accent)'};
     intel.issues.slice(0,5).forEach(function(issue,ii){
       var sCol=dIssColors[issue.section]||'var(--accent)';
-      deep+='<div style="display:flex;align-items:flex-start;gap:9px;padding:9px 11px;background:var(--surface);border:1px solid var(--border);border-radius:9px;margin-bottom:6px;">';
-      deep+='<div style="width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.56rem;font-weight:700;flex-shrink:0;margin-top:1px;background:'+rankBg[ii]+';color:'+rankCol[ii]+';">'+(ii+1)+'</div>';
+      deep+='<div class="deep-issue-row">';
+      deep+='<div class="deep-rank" style="background:'+rankBg[ii]+';color:'+rankCol[ii]+';">'+(ii+1)+'</div>';
       deep+='<div style="flex:1;">';
-      deep+='<div style="font-size:.7rem;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.4;">'+escHtml(issue.observation)+'</div>';
-      deep+='<div style="font-size:.66rem;color:var(--s-high);line-height:1.5;">'+escHtml(issue.fix)+'</div>';
-      deep+='<div style="font-size:.52rem;color:'+sCol+';margin-top:3px;">'+issue.section+' &middot; '+issue.impact+' impact</div>';
+      deep+='<div class="deep-obs">'+escHtml(issue.observation)+'</div>';
+      deep+='<div class="deep-fix">'+escHtml(issue.fix)+'</div>';
+      deep+='<div class="deep-tag" style="color:'+sCol+';">'+issue.section+' &middot; '+issue.impact+' impact</div>';
       deep+='</div></div>';
     });
   }
 
-  // Per-sentence rows
+  // Per-sentence
   var sentByTag={};
   (intel.sentenceData||[]).forEach(function(s){
     if(!sentByTag[s.tag])sentByTag[s.tag]=[];
     sentByTag[s.tag].push(s);
   });
-  var sentTagNames={hook:'Hook',ctx:'Context',body:'Body',cta:'CTA',out:'Outro'};
-  var sentTagColors={hook:'var(--hook)',ctx:'var(--ctx)',body:'var(--body-c)',cta:'var(--cta)',out:'var(--out)'};
+  var sTNames={hook:'Hook',ctx:'Context',body:'Body',cta:'CTA',out:'Outro'};
+  var sTColors={hook:'var(--hook)',ctx:'var(--ctx)',body:'var(--body-c)',cta:'var(--cta)',out:'var(--out)'};
 
-  function renderSentRows(tag){
+  function renderSentSection(tag){
     var sents=sentByTag[tag]||[];
     if(!sents.length)return;
     var tagSc=scores[tag]||0;
-    var tCol=sentTagColors[tag];
-    deep+='<div style="display:flex;align-items:center;gap:5px;margin:12px 0 6px;">';
-    deep+='<div style="width:7px;height:7px;border-radius:50%;background:'+tCol+';flex-shrink:0;"></div>';
-    deep+='<span style="font-size:.54rem;text-transform:uppercase;letter-spacing:.1em;font-weight:600;color:'+tCol+';">'+sentTagNames[tag]+'</span>';
+    var tCol=sTColors[tag];
+    deep+='<div class="sent-hd">';
+    deep+='<div class="sent-hd-dot" style="background:'+tCol+';"></div>';
+    deep+='<span class="sent-hd-name" style="color:'+tCol+';">'+sTNames[tag]+'</span>';
     deep+='<span class="score-pill '+scoreLevel(tagSc)+'" style="margin-left:auto;"><span class="score-pill-dot"></span>'+tagSc+'</span>';
     deep+='</div>';
     sents.forEach(function(s){
       var lv=scoreLevel(s.attention);
-      var lvCol='var(--s-'+lv+')';
       var fb='';
       if(s.features){
         if(s.features.credibility<0.2&&s.features.specificity<0.2)fb='Vague -- add a specific detail or number.';
-        else if(s.features.novelty<0.25)fb='Repeats previous idea -- advance the point.';
+        else if(s.features.novelty<0.25)fb='Repeats previous idea.';
         else if(s.features.directness<0.1)fb='No viewer address -- reframe for the audience.';
         else if(lv==='high')fb='Strong sentence.';
         else if(lv==='mid')fb='Room to improve -- more specificity or a clearer payoff.';
         else fb='Weak attention -- consider restructuring or cutting.';
       }
-      deep+='<div style="display:flex;align-items:flex-start;gap:7px;padding:7px 10px;background:var(--surface);border-radius:7px;margin-bottom:4px;border-left:2px solid '+lvCol+';">';
+      deep+='<div class="sent-row-card '+lv+'">';
       deep+='<div style="flex:1;">';
-      deep+='<div style="font-size:.67rem;color:var(--muted);line-height:1.5;">'+escHtml(s.text)+'</div>';
-      if(fb)deep+='<div style="font-size:.62rem;color:var(--dim);margin-top:3px;line-height:1.4;">'+fb+'</div>';
+      deep+='<div class="sent-text">'+escHtml(s.text)+'</div>';
+      if(fb)deep+='<div class="sent-fb">'+fb+'</div>';
       deep+='</div>';
-      deep+='<div style="font-size:.68rem;font-weight:700;color:'+lvCol+';flex-shrink:0;margin-top:1px;">'+s.attention+'</div>';
+      deep+='<div class="sent-score" style="color:var(--s-'+lv+');">'+s.attention+'</div>';
       deep+='</div>';
     });
   }
 
-  renderSentRows('hook');
-  renderSentRows('ctx');
+  renderSentSection('hook');
+  renderSentSection('ctx');
 
   if(!isPro()){
-    deep+='<div style="background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:10px;padding:12px 13px;text-align:center;margin-top:14px;">';
-    deep+='<div style="font-size:.76rem;font-weight:600;color:var(--accent);margin-bottom:4px;">Body, CTA &amp; Outro per sentence</div>';
-    deep+='<div style="font-size:.66rem;color:var(--muted);line-height:1.5;margin-bottom:9px;">See which sentences are losing attention and exactly why. Pro only.</div>';
-    deep+='<button style="background:var(--accent);color:#12161F;border:none;border-radius:8px;padding:7px 18px;font-size:.73rem;font-weight:700;cursor:pointer;" onclick="openProSheet()">Unlock Pro &middot; $9.99</button>';
+    deep+='<div class="pro-gate-card">';
+    deep+='<div class="pgc-title">Body, CTA &amp; Outro per sentence</div>';
+    deep+='<div class="pgc-sub">See which sentences are losing attention and exactly why. Pro only.</div>';
+    deep+='<button class="pgc-btn" onclick="openProSheet()">Unlock Pro &middot; $9.99</button>';
     deep+='</div>';
   } else {
-    renderSentRows('body');
-    renderSentRows('cta');
-    renderSentRows('out');
+    renderSentSection('body');
+    renderSentSection('cta');
+    renderSentSection('out');
   }
   deep+='<div style="height:28px;"></div>';
 
