@@ -1631,11 +1631,6 @@ nav{height:var(--nh);flex-shrink:0;background:var(--surface);border-top:1px soli
 @keyframes ai-pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .ai-pulse-dot{animation:ai-pulse 2s infinite;}
 
-/* ════════════════════════════════
-   DESKTOP MAX-WIDTH CONTAINER
-   ════════════════════════════════ */
-body{max-width:480px;margin:0 auto;}
-#app{max-width:480px;margin:0 auto;position:relative;}
 
 /* ════════════════════════════════
    ANALYSIS RESULT — SHARED
@@ -1726,3 +1721,43 @@ body{max-width:480px;margin:0 auto;}
 .pgc-title{font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:4px;}
 .pgc-sub{font-size:.68rem;color:var(--muted);line-height:1.5;margin-bottom:10px;}
 .pgc-btn{background:var(--accent);color:#12161F;border:none;border-radius:8px;padding:8px 20px;font-family:'DM Sans',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;}
+
+
+/* ════════════════════════════════
+   RESPONSIVE DESKTOP LAYOUT
+   On mobile: full width as designed.
+   On desktop/tablet: app centres as
+   a 480px column, bg shows on sides.
+   ════════════════════════════════ */
+@media (min-width: 768px) {
+  html { background: var(--bg); }
+  body {
+    background: #0C1017;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 0;
+  }
+  #app {
+    width: 480px;
+    min-height: 100vh;
+    box-shadow: 0 0 60px rgba(0,0,0,.6);
+    position: relative;
+  }
+  /* Login screen fills the app column */
+  #loginScreen {
+    width: 480px;
+    min-height: 100vh;
+  }
+  /* Fixed/absolute overlays anchor to the app column */
+  #analyseResultsScreen,
+  #helpScreen,
+  #onboardScreen,
+  .mo,
+  .pro-sheet-ov {
+    width: 480px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
