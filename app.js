@@ -584,7 +584,7 @@ function liveScore(pid,tag,text){
     save();
   }
   // Debounced live sync - only if Pro and enabled
-  if(S.syncEnabled&&isPro()){
+  if(S.syncEnabled){
     if(_liveSyncTimer)clearTimeout(_liveSyncTimer);
     _liveSyncTimer=setTimeout(runLiveSync,1500);
   }
@@ -616,7 +616,7 @@ function deleteParagraph(pid){
   script.updatedAt=new Date().toISOString();
   script.lastScore=overallScore(script.paragraphs);
   save();setTimeout(renderWrite,0);
-  if(S.syncEnabled&&isPro()){
+  if(S.syncEnabled){
     if(_liveSyncTimer)clearTimeout(_liveSyncTimer);
     _liveSyncTimer=setTimeout(runLiveSync,800);
   }
@@ -635,7 +635,7 @@ function applyTagChange(pid,tag){
   script.paragraphs.forEach(function(p){if(p.id===pid){p.tag=tag;p.score=scoreText(tag,p.text);}});
   script.updatedAt=new Date().toISOString();save();setTimeout(renderWrite,0);
   // Trigger sync on tag change
-  if(S.syncEnabled&&isPro()){
+  if(S.syncEnabled){
     if(_liveSyncTimer)clearTimeout(_liveSyncTimer);
     _liveSyncTimer=setTimeout(runLiveSync,800);
   }
@@ -806,7 +806,6 @@ function downloadAnalysisResult(resultId){
 
 // ── Portfolio ──
 function openPortfolio(){
-  if(!isPro()){openProSheet();return;}
   var script=getActive();if(!script)return;
   document.getElementById('portTitle').textContent=script.title;
   var wc=totalWords(script),mins=Math.max(1,Math.round(wc/130));
@@ -1472,17 +1471,9 @@ var tagOrder=tagOrder2||['hook','ctx','body','cta','out'];
   renderSentSection('hook');
   renderSentSection('ctx');
 
-  if(!isPro()){
-    deep+='<div class="pro-gate-card">';
-    deep+='<div class="pgc-title">Body, CTA &amp; Outro per sentence</div>';
-    deep+='<div class="pgc-sub">See which sentences are losing attention and exactly why. Pro only.</div>';
-    deep+='<button class="pgc-btn" onclick="openProSheet()">Unlock Pro &middot; $7.99</button>';
-    deep+='</div>';
-  } else {
-    renderSentSection('body');
-    renderSentSection('cta');
-    renderSentSection('out');
-  }
+  renderSentSection('body');
+  renderSentSection('cta');
+  renderSentSection('out');
   deep+='<div style="height:28px;"></div>';
 
   S._resPanels={overview:ov,sections:sec,deep:deep};
@@ -1581,8 +1572,8 @@ function openAsNewScript(resultId){
     }
   }
   // Otherwise create a new script from the pasted analysis
-  if(!isPro()&&S.scripts.length>=FREE_LIMIT){
-    showToast('10 script limit reached. Upgrade to Pro for unlimited scripts.','error');
+  if(S.scripts.length>=FREE_LIMIT){
+    showToast('You have reached '+FREE_LIMIT+' scripts. Pro includes unlimited scripts and is coming with more features.','default');
     return;
   }
   var newId=uid();
@@ -1713,17 +1704,15 @@ function getHelpSections(tab){
     ]}
   ];
   if(tab==='analyse')return [
-    {title:'Using the Analyser',items:[
-      {q:'How does the analyser work?',a:'Paste your script text and tap Analyse. The engine reads every sentence and detects signals across five categories: tension, credibility, pacing, direction and reward. It maps them onto an attention timeline and generates a full report.'},
-      {q:'What is the Attention Curve?',a:'The curve shows how viewer engagement is predicted to move through your script. Green bars mean attention is rising. Grey is neutral. Red signals a risk point where viewers may drop off.'},
-      {q:'What is Pace Variance?',a:'Pace variance measures how much your sentence lengths vary. Above 4 means good rhythm. Below 2 means uniform sentence length, which creates a flat, hard-to-follow experience.'},
-      {q:'What is Insight Density?',a:'Insight density counts new insights per 100 words. It measures how often you reward the viewer with something new. Low density means repetition without escalation.'},
-      {q:'What are Failure Patterns?',a:'Failure patterns are named archetypes describing a common structural mistake. Examples: Early Payoff Trap means the hook resolves itself. Creator Diary means the script opens with the creator rather than the viewer. Flatline Pacing means uniform sentence length throughout.'},
-      {q:'Can I rename an analysis?',a:'Yes. Tap the edit icon on any history card, or tap the title on a results page.'}
+    {title:'Script Insights',items:[
+      {q:'What is Script Insights?',a:'Script Insights is a quick read on how your script is doing. Tap the lightbulb icon in the Write tab to open it. You will see your overall score, section scores, and up to three specific issues with fixes. It runs on the current script without leaving the writing tab.'},
+      {q:'What are the section scores?',a:'Hook, Context, Body, CTA and Outro are each scored 0-100 based on how well they do their job. Hook is scored on curiosity and tension. Context on trust and credibility. Body on sustained attention and progression. CTA on clarity and directness. Outro on tension resolution.'},
+      {q:'What are the top issues?',a:'The engine identifies the highest-impact problems in your script. Each issue has an observation (what it sees), a consequence (what it does to the viewer), and a fix (what to change). Fixing the top issue first always has the biggest impact on the score.'},
+      {q:'Is Script Insights available to all users?',a:'Yes. Script Insights is available on all tiers including free. Open it from the lightbulb button in the Write tab header at any time.'}
     ]},
-    {title:'History',items:[
-      {q:'How do I find an old analysis?',a:'Use the search bar above your recent sessions. It filters by script title in real time.'},
-      {q:'Can I open an analysed script in Write?',a:'Yes. On any result page, tap Open Script or Open as New Script to bring it into the Write tab.'}
+    {title:'Script Analysis (Coming Soon)',items:[
+      {q:'What is Script Analysis?',a:'Script Analysis is a full report coming to the Hub tab. It will include an attention curve, section breakdown, per-sentence scores, and deep analysis of structural patterns. Pro members get access first when it launches.'},
+      {q:'How is it different from Script Insights?',a:'Script Insights gives you a quick read while you write. Script Analysis will be a full-depth report after writing is done, with charts, a sentence-by-sentence Deep tab, and AI-generated feedback on specific phrases.'}
     ]}
   ];
   if(tab==='account')return [
@@ -1818,15 +1807,9 @@ function openWriteReport(){
   }
   if(!script.paragraphs||!script.paragraphs.length){showToast('Add some content to analyse','default');return;}
 
-  // Run fresh analysis only when sync is ON; otherwise use last saved intel
-  var intel;
-  if(S.syncEnabled&&isPro()){
-    intel=analyseScript(script.paragraphs);
-    S._liveIntel=intel;
-  } else {
-    intel=S._liveIntel||analyseScript(script.paragraphs);
-    if(!S._liveIntel)S._liveIntel=intel;
-  }
+  // Always run fresh analysis
+  var intel=analyseScript(script.paragraphs);
+  S._liveIntel=intel;
 
   // Populate header
   var overall=intel.overall||0;
@@ -1838,7 +1821,6 @@ function openWriteReport(){
   if(verdictEl){verdictEl.textContent=getScriptVerdict(intel.sectionScores,overall);}
 
   // Update sync toggle state
-  updateSyncToggleUI();
 
   // Render body
   renderWriteReportBody(intel,script);
@@ -1983,12 +1965,7 @@ function wrIssueNav(dir){
 
 
 function toggleLiveSync(){
-  if(!isPro()){
-    openProSheet();
-    return;
-  }
   S.syncEnabled=!S.syncEnabled;
-  updateSyncToggleUI();
   if(S.syncEnabled){
     showToast('Live Sync on','success');
     runLiveSync();
@@ -1998,69 +1975,7 @@ function toggleLiveSync(){
   save();
 }
 
-function updateSyncToggleUI(){
-  var toggle=document.getElementById('wrSyncToggle');
-  var knob=document.getElementById('wrSyncKnob');
-  var sub=document.getElementById('wrSyncSub');
-  if(!toggle)return;
-  if(S.syncEnabled&&isPro()){
-    toggle.style.background='var(--accent)';
-    toggle.style.borderColor='var(--adk)';
-    if(knob)knob.style.transform='translateX(18px)';
-    if(sub)sub.textContent='Syncing as you write';
-  }else{
-    toggle.style.background='rgba(255,255,255,.1)';
-    toggle.style.borderColor='var(--border)';
-    if(knob)knob.style.transform='translateX(0)';
-    if(sub)sub.textContent='Updates analysis as you write';
-  }
-}
-
-function runLiveSync(){
-  var script=getActive();
-  if(!script||!S.syncEnabled||!isPro())return;
-  var intel=analyseScript(script.paragraphs);
-  S._liveIntel=intel;
-  script.lastScore=intel.overall;
-  save();
-
-  // Upsert history entry so full report reflects latest content
-  loadAnalyseHistory();
-  var existingIdx=-1;
-  for(var i=0;i<S.analyseHistory.length;i++){
-    if(S.analyseHistory[i].scriptId===script.id){existingIdx=i;break;}
-  }
-  var entry={
-    id:existingIdx>=0?S.analyseHistory[existingIdx].id:uid(),
-    title:script.title||'Untitled',
-    date:new Date().toISOString(),
-    scriptId:script.id,
-    paragraphs:script.paragraphs.slice(),
-    score:intel.overall,
-    sectionScores:intel.sectionScores
-  };
-  if(existingIdx>=0){
-    // Remove from current position and move to top
-    S.analyseHistory.splice(existingIdx,1);
-  }
-  S.analyseHistory.unshift(entry);
-  if(S.analyseHistory.length>50)S.analyseHistory=S.analyseHistory.slice(0,50);
-  saveAnalyseHistory();
-  S._currentResultId=entry.id;
-
-  // Update drawer if open
-  var wd=document.getElementById('wrDrawer');
-  if(wd&&!wd.classList.contains('hide')){
-    var overall=intel.overall;
-    var level=scoreLevel(overall);
-    var colMap={high:'var(--s-high)',mid:'var(--s-mid)',low:'var(--s-low)'};
-    var scoreEl=document.getElementById('wrScore');
-    if(scoreEl){scoreEl.textContent=overall;scoreEl.style.color=colMap[level]||'var(--muted)';}
-    var verdictEl=document.getElementById('wrVerdict');
-    if(verdictEl)verdictEl.textContent=getScriptVerdict(intel.sectionScores,overall);
-    renderWriteReportBody(intel,script);
-  }
-}
+function updateSyncToggleUI(){}
 
 function closeAnalyseResults(){
   document.getElementById('analyseResultsScreen').classList.add('hide');
@@ -2143,7 +2058,7 @@ function renderProfile(){
       lbl('Upgrade')+
       '<div style="margin:0 14px;background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;">'+
         '<div style="font-size:1.2rem;">&#10038;</div>'+
-        '<div style="flex:1;"><div style="font-size:.84rem;font-weight:600;color:var(--accent);">Scripora Pro</div><div style="font-size:.65rem;color:var(--muted);margin-top:2px;line-height:1.5;">Unlimited scripts, Live Sync, full AI analysis. One payment, yours forever.</div></div>'+
+        '<div style="flex:1;"><div style="font-size:.84rem;font-weight:600;color:var(--accent);">Scripora Pro</div><div style="font-size:.65rem;color:var(--muted);margin-top:2px;line-height:1.5;">Unlimited scripts, portfolio export, Script Analysis and SEO Tools when they launch. One payment, yours forever.</div></div>'+
         '<button onclick="openProSheet()" style="background:var(--accent);color:#12161F;border:none;border-radius:10px;padding:8px 14px;font-size:.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">$7.99</button>'+
       '</div>'+
       appearHTML+supportHTML+legalHTML+ver;
@@ -2174,7 +2089,7 @@ function renderProfile(){
         '</div>'+
         '<div style="display:flex;flex-direction:column;gap:5px;">'+
           '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);flex-shrink:0;"></div>Unlimited scripts</div>'+
-          '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);flex-shrink:0;"></div>Live Sync &mdash; write and analyse together</div>'+
+          '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);flex-shrink:0;"></div>Live Sync &mdash; write with real-time scoring</div>'+
           '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);flex-shrink:0;"></div>Script Analysis access when it launches</div>'+
           '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--faint);flex-shrink:0;"></div>SEO Tools access when it launches</div>'+
         '</div>'+
@@ -2264,9 +2179,11 @@ function openModal(type,data){
 
   if(type==='newScript'){
     html+='<div class="modal-title">New Script</div>'+
-      '<div class="modal-sub">Give your script a working title.</div>'+
-      '<input class="modal-inp" id="newScriptTitle" placeholder="e.g. How I Built a YouTube Channel..." maxlength="120" onkeydown="if(event.key===\'Enter\')createScript()"/>'+
-      '<div class="modal-hint">You can change this at any time.</div>'+
+      '<input class="modal-inp" id="newScriptTitle" placeholder="Working title e.g. How I Built a Channel..." maxlength="120" style="margin-bottom:6px;"/>'+
+      '<div class="modal-hint" style="margin-bottom:10px;">You can change the title at any time.</div>'+
+      '<div style="font-size:.68rem;color:var(--muted);margin-bottom:5px;">Paste an existing script <span style="color:var(--faint);">(optional)</span></div>'+
+      '<textarea id="newScriptPaste" class="modal-inp" placeholder="Paste your script here. Scripora will detect sections and tag them automatically." style="min-height:80px;resize:vertical;font-size:.72rem;line-height:1.6;"></textarea>'+
+      '<div class="modal-hint" style="margin-bottom:10px;">Leave blank to start fresh.</div>'+
       '<div class="modal-acts"><button class="btn-g" onclick="closeMo()">Cancel</button><button class="btn-p" onclick="createScript()">Create</button></div>';
     modal.innerHTML=html;mo.classList.add('open');
     setTimeout(function(){var i=document.getElementById('newScriptTitle');if(i)i.focus();},180);
@@ -2427,7 +2344,7 @@ function openModal(type,data){
       '<div class="long-body">'+
       '<h4>What we collect</h4><p>When you sign in with Google, we collect your name, email address and profile photo to personalise your experience. Your scripts and writing session data are stored locally on your device. If you are signed in, this data is synced to our secure cloud storage (Google Firestore) so you can access it across devices.</p>'+
       '<h4>How we use your data</h4><p>Your data is used solely to provide and improve Scripora. We do not sell, licence or share your personal data with third parties. We do not use your script content for advertising, model training or any purpose beyond storage and delivery back to you.</p>'+
-      '<h4>Script analysis</h4><p>The Analyse feature uses a local rule-based engine that runs entirely in your browser. No script content is sent to any external server during analysis. An AI-assisted layer is planned for future Pro users and will be clearly disclosed when active.</p>'+
+      '<h4>Script analysis</h4><p>Script Insights and the upcoming Script Analysis feature use a local rule-based engine running in your browser. When AI-assisted analysis is enabled in a future update, script content may be sent to a third-party AI API. This will be clearly disclosed and will be opt-in.</p>'+
       '<h4>Analytics</h4><p>We use Google Analytics to understand aggregate usage patterns   which features are used, how often, and on what devices. This data is anonymous. Your script content is never included in analytics events.</p>'+
       '<h4>Local storage</h4><p>Scripora stores your scripts, preferences and writing stats in your browser&#39;s local storage. This data does not leave your device unless you are signed in and syncing is active. Clearing your browser data will remove locally stored scripts.</p>'+
       '<h4>Your rights</h4><p>You can delete your account and all associated cloud data at any time from Profile → Delete Account. Local data can be cleared through your browser or device settings. To request data deletion by email, contact us at support@scripora.app.</p>'+
@@ -2442,8 +2359,8 @@ function openModal(type,data){
       '<h4>Using Scripora</h4><p>Scripora is a scriptwriting tool for YouTube creators. By using it you agree to these terms. You may use Scripora for personal and commercial creative work. You may not use it to produce content that is illegal, harmful, abusive or that infringes on the intellectual property rights of others.</p>'+
       '<h4>Your content</h4><p>You retain full ownership of everything you write in Scripora. By enabling cloud sync, you grant Selerii a limited, non-exclusive licence to store and transmit your content solely for the purpose of delivering it back to you. We do not claim any rights over your scripts.</p>'+
       '<h4>Script scoring and analysis</h4><p><strong>Important notice:</strong> Script scores, structural analysis and all feedback provided by Scripora   whether generated by rule-based logic or AI assistance   are estimates based on language patterns and structural signals. They are not guarantees of video performance, audience retention or commercial outcomes. Scores should be used as guidance to support your creative decisions, not as definitive assessments of quality. Scripora is not responsible for outcomes resulting from reliance on score data.</p>'+
-      '<h4>AI-assisted features</h4><p>Scripora uses a rule-based engine to analyse scripts. Feedback is generated from structural signals in your writing and is provided to support your creative decisions. A Claude API-powered layer is planned as a future Pro feature.</p>'+
-      '<h4>Pro membership</h4><p>Pro features are provided as described at the time of purchase via Gumroad. Pro is a one-time payment for lifetime access to current Pro features. We reserve the right to add, modify or remove features with reasonable notice. Refunds are handled on a case-by-case basis   contact support@scripora.app within 14 days of purchase.</p>'+
+      '<h4>Script Insights and coming features</h4><p>Script Insights uses a local rule-based engine to score your scripts as you write. Full Script Analysis and SEO Tools are planned features coming to Pro members first. No script content leaves your device during current analysis.</p>'+
+      '<h4>Pro membership</h4><p>Pro is a one-time payment of $7.99 for lifetime access via Gumroad. Pro currently includes: unlimited scripts, portfolio export and script history. Script Analysis and SEO Tools are coming to Pro members first when they launch. Features under development are not guaranteed to arrive by a specific date. Refunds are handled on a case-by-case basis contact scripora@selerii.com within 14 days of purchase.</p>'+
       '<h4>Account termination</h4><p>You may delete your account at any time from the Profile tab. We reserve the right to suspend accounts that violate these terms.</p>'+
       '<h4>Limitation of liability</h4><p>Scripora is provided as-is without warranties of any kind. Selerii is not liable for loss of data, loss of revenue, missed opportunities or any indirect damages arising from use of this app.</p>'+
       '<p style="font-size:.7rem;margin-top:12px;">Last updated: March 2026 &nbsp;&middot;&nbsp; Contact: support@scripora.app</p>'+
@@ -2477,12 +2394,27 @@ function createScript(){
   var inp=document.getElementById('newScriptTitle');
   var title=(inp?inp.value:'').trim();
   if(!title){showToast('Enter a title first','error');return;}
-  if(!isPro()&&S.scripts.length>=FREE_LIMIT){closeMo();openProSheet();return;}
+  var pasteEl=document.getElementById('newScriptPaste');
+  var pastedText=pasteEl?pasteEl.value.trim():'';
+  if(S.scripts.length>=FREE_LIMIT){
+    closeMo();
+    showToast('You have reached the free limit of '+FREE_LIMIT+' scripts. Pro includes unlimited scripts and more features coming soon.','default');
+    return;
+  }
+  var startParas=[];
+  if(pastedText){
+    var guessed=guessParagraphs(pastedText);
+    startParas=guessed.map(function(p){return{id:uid(),tag:p.tag,text:p.text,score:0};});
+  }
   var id=uid();
-  S.scripts.unshift({id:id,title:title,status:'Draft',paragraphs:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),notes:{facts:[],ideas:[],links:[],notes:[]},lastScore:null});
+  S.scripts.unshift({id:id,title:title,status:'Draft',paragraphs:startParas,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),notes:{facts:[],ideas:[],links:[],notes:[]},lastScore:null});
   S.activeId=id;save();syncToCloud();
   closeMoForce();goScreen('write');
-  showToast('Script created','success');
+  if(pastedText&&startParas.length){
+    showToast('Script formatted into '+startParas.length+' sections. Adjust tags as needed.','success');
+  } else {
+    showToast('Script created','success');
+  }
   safeGtag('event','script_created');
 }
 
@@ -2592,37 +2524,39 @@ function deleteAccount(){
 function openProSheet(){
   var ov=document.getElementById('proSheetOv');
   var sheet=document.getElementById('proSheet');
+  var chk='<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>';
+  var clk='<path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>';
   var html='<div class="mhandle"></div>';
   html+='<div style="padding:4px 20px 0;text-align:center;">';
   html+='<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:6px;">Scripora Pro</div>';
   html+='<div style="font-size:1.6rem;font-weight:700;color:var(--text);margin-bottom:2px;">$7.99 <span style="font-size:.8rem;font-weight:400;color:var(--muted);">one-time</span></div>';
-  html+='<div style="font-size:.72rem;color:var(--muted);margin-bottom:14px;">Yours forever. Price rises at relaunch.</div>';
+  html+='<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;">Yours forever. Price rises at relaunch.</div>';
+  html+='<div style="font-size:.68rem;color:var(--faint);margin-bottom:14px;">Support development and get early access to every feature as it ships.</div>';
   html+='</div>';
   html+='<div style="margin:0 16px 14px;display:flex;flex-direction:column;gap:6px;">';
-  // Ready features
   var readyFeats=[
     ['Unlimited Scripts',''],
-    ['Portfolio Export',''],
+    ['Portfolio Export','Download all scripts'],
     ['Script History','Version snapshots'],
     ['Early Supporter','Permanent badge']
   ];
   readyFeats.forEach(function(f){
     html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:9px;">';
     html+='<div style="width:20px;height:20px;border-radius:50%;background:rgba(106,175,130,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">';
-    html+='<svg fill="none" stroke="var(--s-high)" viewBox="0 0 24 24" stroke-width="2.2" style="width:11px;height:11px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>';
+    html+='<svg fill="none" stroke="var(--s-high)" viewBox="0 0 24 24" stroke-width="2.5" style="width:11px;height:11px;">'+chk+'</svg></div>';
     html+='<div style="flex:1;font-size:.78rem;font-weight:500;color:var(--text);">'+f[0]+'</div>';
-    if(f[1])html+='<div style="font-size:.56rem;color:var(--muted);background:var(--surface);border-radius:4px;padding:2px 6px;">'+f[1]+'</div>';
+    if(f[1])html+='<div style="font-size:.56rem;color:var(--muted);">'+f[1]+'</div>';
     html+='</div>';
   });
-  // Coming soon features
   var soonFeats=[
     ['Script Analysis','First access'],
-    ['SEO Tools','First access']
+    ['SEO Tools','First access'],
+    ['AI Feedback','First access']
   ];
   soonFeats.forEach(function(f){
     html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:9px;">';
     html+='<div style="width:20px;height:20px;border-radius:50%;background:rgba(184,115,51,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">';
-    html+='<svg fill="none" stroke="var(--accent)" viewBox="0 0 24 24" stroke-width="2.2" style="width:11px;height:11px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>';
+    html+='<svg fill="none" stroke="var(--accent)" viewBox="0 0 24 24" stroke-width="2" style="width:11px;height:11px;">'+clk+'</svg></div>';
     html+='<div style="flex:1;font-size:.78rem;font-weight:500;color:var(--text);">'+f[0]+'</div>';
     html+='<div style="font-size:.56rem;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:2px 6px;">'+f[1]+'</div>';
     html+='</div>';
@@ -2631,15 +2565,16 @@ function openProSheet(){
   html+='<div style="padding:0 16px 8px;">';
   html+='<a href="https://selerii.gumroad.com/l/scripora-pro" target="_blank" style="display:block;text-align:center;background:var(--accent);color:#12161F;padding:14px;border-radius:14px;font-weight:700;font-size:.88rem;text-decoration:none;">Get Pro &mdash; $7.99</a>';
   html+='<div style="margin-top:10px;">';
-  html+='<input class="modal-inp" placeholder="Promo code" id="proCodeInp" style="margin-bottom:6px;"/>';
+  html+='<input class="modal-inp" placeholder="Promo code e.g. EARLYWRITER" id="proCodeInp" style="margin-bottom:6px;"/>';
   html+='<button class="btn-g" style="width:100%;" onclick="checkProCode(document.getElementById(\'proCodeInp\').value.trim())">Apply Code</button>';
   html+='</div>';
-  html+='<div style="text-align:center;font-size:.62rem;color:var(--faint);margin-top:8px;">Secure payment via Gumroad</div>';
+  html+='<div style="text-align:center;font-size:.62rem;color:var(--faint);margin-top:8px;">Secure payment via Gumroad &middot; No subscription</div>';
   html+='</div>';
   if(sheet){sheet.innerHTML=html;}
   if(ov){ov.classList.remove('hide');}
   requestAnimationFrame(function(){if(sheet)sheet.classList.add('open');});
 }
+
 function closeProSheet(evt){if(evt!==null&&evt&&evt.target!==document.getElementById('proSheetOv'))return;document.getElementById('proSheetOv').classList.remove('open');}
 function openGumroad(){window.open('https://selerii.gumroad.com/l/scripora-pro','_blank');}
 
@@ -2747,7 +2682,18 @@ function dismissPWA(){}
   checkProTrial();load();loadAnalyseHistory();applyTheme(currentThemeId());
   // Service worker
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('sw.js').catch(function(){});
+    navigator.serviceWorker.register('/sw.js').then(function(reg){
+      reg.addEventListener('updatefound',function(){
+        var newSW=reg.installing;
+        if(newSW){
+          newSW.addEventListener('statechange',function(){
+            if(newSW.state==='installed'&&navigator.serviceWorker.controller){
+              showToast('Update available -- reload to apply','default');
+            }
+          });
+        }
+      });
+    }).catch(function(err){console.warn('SW registration failed:',err);});
   }
   // Fallback: if Firebase auth doesn't respond in 3s, show login screen
   // This handles offline/local preview mode
