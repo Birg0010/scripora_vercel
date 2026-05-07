@@ -387,3 +387,34 @@ function assignTag(text,index,total){
   var r=index/(total-1);
   if(r<0.15)return'hook';if(r<0.30)return'ctx';if(r<0.75)return'body';if(r<0.90)return'cta';return'out';
 }
+
+// ── Type + Length Score Multipliers ──
+var typeWeights={tutorial:{hook:0.85,ctx:1.10,body:1.15,cta:1.05,out:0.90},story:{hook:1.15,ctx:1.05,body:1.00,cta:0.90,out:1.10},opinion:{hook:1.20,ctx:0.95,body:1.05,cta:1.00,out:0.95},listicle:{hook:1.10,ctx:0.90,body:1.10,cta:1.00,out:0.90},review:{hook:1.00,ctx:1.10,body:1.05,cta:1.05,out:0.95},sport:{hook:1.15,ctx:0.95,body:1.05,cta:0.95,out:1.00},documentary:{hook:1.05,ctx:1.15,body:1.00,cta:0.90,out:1.10},general:{hook:1.00,ctx:1.00,body:1.00,cta:1.00,out:1.00}};
+var lengthWeights={short:{hook:1.20,ctx:0.90,body:0.95,cta:1.05,out:0.75},long:{hook:1.00,ctx:1.10,body:1.10,cta:1.00,out:1.05}};
+
+function applyMultipliers(sectionScores,scriptType,videoLength){
+  var tw=typeWeights[scriptType]||typeWeights.general;
+  var lw=lengthWeights[videoLength]||lengthWeights.long;
+  var result={};
+  ['hook','ctx','body','cta','out'].forEach(function(tag){
+    var base=sectionScores[tag]||0;
+    result[tag]=Math.min(100,Math.max(0,Math.round(base*(tw[tag]||1)*(lw[tag]||1))));
+  });
+  return result;
+}
+
+function recalcWithOptions(paragraphs,scriptType,videoLength){
+  var base=analyseScript(paragraphs);
+  var adjusted=applyMultipliers(base.sectionScores,scriptType,videoLength);
+  var tags=['hook','ctx','body','cta','out'];
+  var weights={hook:0.30,ctx:0.20,body:0.25,cta:0.15,out:0.10};
+  var tw=0;var ts=0;
+  tags.forEach(function(tag){
+    if(paragraphs.some(function(p){return p.tag===tag;})){ts+=(adjusted[tag]||0)*weights[tag];tw+=weights[tag];}
+  });
+  base.sectionScores=adjusted;
+  base.overall=tw>0?Math.round(ts/tw):0;
+  base.scriptType=scriptType||base.scriptType;
+  base.videoLength=videoLength||'long';
+  return base;
+}

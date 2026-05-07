@@ -66,6 +66,8 @@ function refreshProState(){
   },50);
 }
 
+
+function applyProCode(){var i=document.getElementById('proCodeInp');if(i)checkProCode(i.value.trim());}
 function checkProCode(code){
   if(!code){showToast('Enter a promo code','default');return;}
   var c=code.toUpperCase().trim();
@@ -1013,6 +1015,20 @@ function renderStats(){
     '<button onclick="openProSheet()" style="padding:8px 18px;border-radius:8px;background:var(--accent);color:#0A0D14;border:none;font-size:.76rem;font-weight:700;cursor:pointer;">See Pro Features</button>'+
     '</div>';
 
+  // ── Advanced Stats coming soon teaser ──
+  html+='<div style="margin:16px 0 8px;">';
+  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;">';
+  html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">';
+  html+='<div style="width:32px;height:32px;border-radius:9px;background:rgba(90,126,201,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">';
+  html+='<svg fill="none" stroke="var(--body-c)" viewBox="0 0 24 24" stroke-width="1.6" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>';
+  html+='</div>';
+  html+='<div>';
+  html+='<div style="font-size:.78rem;font-weight:600;color:var(--text);">Advanced Stats</div>';
+  html+='<div style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--body-c);margin-top:1px;">Coming Soon</div>';
+  html+='</div></div>';
+  html+='<div style="font-size:.7rem;color:var(--muted);line-height:1.65;margin-bottom:10px;">Score trend over time, per-tag improvement tracking, writing velocity, session history and more detailed breakdowns of where your scripts succeed and fail.</div>';
+    html+='<button onclick="openProSheet()" class="btn-p" style="width:100%;">Support Development &middot; Go Pro</button>';
+  html+='</div></div>';
   el.innerHTML=html;
 }
 
@@ -1059,7 +1075,7 @@ function renderWorkspace(){
   h.push('<div style="font-size:.72rem;color:var(--muted);line-height:1.6;margin-bottom:14px;">Pro members get access first. Supporting development now helps it ship faster.</div>');
   h.push('<button onclick="openProSheet()" style="background:var(--accent);color:#12161F;border:none;border-radius:12px;padding:12px 24px;font-size:.82rem;font-weight:700;cursor:pointer;width:100%;">Support Development &middot; Go Pro</button>');
   h.push('</div>');
-  var el=document.getElementById('hubWorkspace');if(el)el.innerHTML=h.join('');
+    var el=document.getElementById('workspaceScroll');if(el)el.innerHTML=h.join('');
 }
 
 function runAnalyseFromPaste(){
@@ -1705,7 +1721,7 @@ function getHelpSections(tab){
   ];
   if(tab==='analyse')return [
     {title:'Script Insights',items:[
-      {q:'What is Script Insights?',a:'Script Insights is a quick read on how your script is doing. Tap the lightbulb icon in the Write tab to open it. You will see your overall score, section scores, and up to three specific issues with fixes. It runs on the current script without leaving the writing tab.'},
+      {q:'What is Script Insights?',a:'Script Insights is a quick read on how your script is doing. Tap the lightbulb icon in the Write tab to open it. You will see your overall score, section scores, and up to five issues with specific fixes for each. You can change the script type and video length to see how scores shift. It runs without leaving the writing tab.'},
       {q:'What are the section scores?',a:'Hook, Context, Body, CTA and Outro are each scored 0-100 based on how well they do their job. Hook is scored on curiosity and tension. Context on trust and credibility. Body on sustained attention and progression. CTA on clarity and directness. Outro on tension resolution.'},
       {q:'What are the top issues?',a:'The engine identifies the highest-impact problems in your script. Each issue has an observation (what it sees), a consequence (what it does to the viewer), and a fix (what to change). Fixing the top issue first always has the biggest impact on the score.'},
       {q:'Is Script Insights available to all users?',a:'Yes. Script Insights is available on all tiers including free. Open it from the lightbulb button in the Write tab header at any time.'}
@@ -1810,6 +1826,7 @@ function openWriteReport(){
   // Always run fresh analysis
   var intel=analyseScript(script.paragraphs);
   S._liveIntel=intel;
+  script.lastScore=intel.overall;save();
 
   // Populate header
   var overall=intel.overall||0;
@@ -1894,60 +1911,166 @@ function renderWriteReportBody(intel,script){
   var out='';
   var tagOrder=['hook','ctx','body','cta','out'];
   var tagNames={hook:'Hook',ctx:'Context',body:'Main Body',cta:'CTA',out:'Outro'};
-  var scores=intel.sectionScores;
 
-  // Section bars
+  // Get saved options or defaults
+  var savedType=script.scriptType||intel.scriptType||'general';
+  var savedLen=script.videoLength||'long';
+
+  // Recalculate with options applied
+  var ri=(script.paragraphs&&script.paragraphs.length)?recalcWithOptions(script.paragraphs,savedType,savedLen):intel;
+  var scores=ri.sectionScores||intel.sectionScores||{};
+
+  // ── Script type + video length selectors ──
+  var typeLabels={tutorial:'Tutorial',story:'Story',opinion:'Opinion',listicle:'Listicle',review:'Review',sport:'Sport',documentary:'Documentary',general:'General'};
+  var lenLabels={short:'Short video',long:'Long video'};
+  out+='<div style="display:flex;gap:6px;margin-bottom:12px;">';
+  // Type selector
+  out+='<div style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:8px 10px;cursor:pointer;position:relative;" onclick="toggleWrTypeMenu(this)">';
+  out+='<div style="font-size:.5rem;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-bottom:2px;">Script Type</div>';
+  out+='<div style="display:flex;align-items:center;justify-content:space-between;">';
+  out+='<div style="font-size:.74rem;font-weight:600;color:var(--text);" id="wrTypeLabel">'+(typeLabels[savedType]||'General')+'</div>';
+  out+='<svg fill="none" stroke="var(--faint)" viewBox="0 0 24 24" stroke-width="2" style="width:12px;height:12px;"><path stroke-linecap="round" d="M19 9l-7 7-7-7"/></svg>';
+  out+='</div>';
+  out+='<div id="wrTypeMenu" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:9px;z-index:10;overflow:hidden;margin-top:4px;">';
+  ['general','tutorial','story','opinion','listicle','review','sport','documentary'].forEach(function(t){
+    out+='<div style="padding:9px 12px;font-size:.74rem;color:'+(t===savedType?'var(--accent)':'var(--text)')+';cursor:pointer;border-bottom:1px solid var(--border);" onclick="setWrType(\''+t+'\')">'+(typeLabels[t]||t)+'</div>';
+  });
+  out+='</div></div>';
+  // Length selector
+  out+='<div style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:8px 10px;cursor:pointer;position:relative;" onclick="toggleWrLenMenu(this)">';
+  out+='<div style="font-size:.5rem;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-bottom:2px;">Video Length</div>';
+  out+='<div style="display:flex;align-items:center;justify-content:space-between;">';
+  out+='<div style="font-size:.74rem;font-weight:600;color:var(--text);" id="wrLenLabel">'+(lenLabels[savedLen]||'Long video')+'</div>';
+  out+='<svg fill="none" stroke="var(--faint)" viewBox="0 0 24 24" stroke-width="2" style="width:12px;height:12px;"><path stroke-linecap="round" d="M19 9l-7 7-7-7"/></svg>';
+  out+='</div>';
+  out+='<div id="wrLenMenu" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:9px;z-index:10;overflow:hidden;margin-top:4px;">';
+  ['short','long'].forEach(function(l){
+    out+='<div style="padding:9px 12px;font-size:.74rem;color:'+(l===savedLen?'var(--accent)':'var(--text)')+';cursor:pointer;border-bottom:1px solid var(--border);" onclick="setWrLen(\''+l+'\')">'+(lenLabels[l]||l)+'</div>';
+  });
+  out+='</div></div>';
+  out+='</div>';
+
+  // ── Section score bars ──
   out+='<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px;">';
   tagOrder.forEach(function(tag){
     var sc=scores[tag];
     if(!sc&&sc!==0)return;
-    if(!script.paragraphs.find(function(p){return p.tag===tag;}))return;
+    if(!script.paragraphs||!script.paragraphs.find(function(p){return p.tag===tag;}))return;
     var lv=scoreLevel(sc);
     out+='<div style="display:flex;align-items:center;gap:8px;">';
-    out+='<span style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;width:52px;flex-shrink:0;color:var(--muted);">'+tagNames[tag]+'</span>';
-    out+='<div style="flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;">';
-    out+='<div style="width:'+sc+'%;height:100%;border-radius:2px;background:var(--'+( lv==='high'?'s-high':lv==='mid'?'s-mid':'s-low')+');"></div></div>';
-    out+='<span style="font-size:.6rem;font-weight:700;width:22px;text-align:right;color:var(--'+( lv==='high'?'s-high':lv==='mid'?'s-mid':'s-low')+');">'+sc+'</span>';
+    out+='<span style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);width:40px;flex-shrink:0;">'+(tagNames[tag]||tag)+'</span>';
+    out+='<div style="flex:1;height:4px;background:var(--faint);border-radius:2px;overflow:hidden;">';
+    out+='<div style="width:'+sc+'%;height:100%;background:var(--s-'+lv+');border-radius:2px;transition:width .4s ease;"></div></div>';
+    out+='<span style="font-size:.62rem;font-weight:700;color:var(--s-'+lv+');width:24px;text-align:right;">'+sc+'</span>';
     out+='</div>';
   });
   out+='</div>';
 
-  // Top issue
-  if(intel.issues&&intel.issues.length){
-    var issues=intel.issues;
+  // ── Issues ──
+  // Only show issues for sections present in the script
+  var existingTags={};
+  (script.paragraphs||[]).forEach(function(p){existingTags[p.tag]=true;});
+  var tagToSection={hook:'Hook',ctx:'Context',body:'Body',cta:'CTA',out:'Outro'};
+  var allIssues=ri.issues||intel.issues||[];
+  var filteredIssues=allIssues.filter(function(iss){
+    var sec=(iss.section||'').toLowerCase();
+    var tag=Object.keys(tagToSection).find(function(k){return tagToSection[k].toLowerCase()===sec;});
+    if(!tag)return true;
+    return existingTags[tag]===true;
+  }).slice(0,5);
+
+  if(filteredIssues.length){
     out+='<div id="wrIssueCarousel" style="position:relative;">';
     out+='<input type="hidden" id="wrIssueIdx" value="0"/>';
-    issues.forEach(function(issue,ii){
+    filteredIssues.forEach(function(issue,ii){
       var ic=issue.impact==='high'?'background:rgba(139,58,58,.15);color:var(--s-low)':'background:rgba(201,150,42,.12);color:var(--s-mid)';
-      out+='<div class="wr-issue-slide" id="wris_'+ii+'" style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px;'+(ii>0?'display:none;':'display:block;')+'">';
-      out+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">';
-      out+='<span style="font-size:.66rem;font-weight:700;color:var(--text);">'+issue.section+'</span>';
-      out+='<span style="font-size:.56rem;font-weight:700;padding:2px 6px;border-radius:20px;'+ic+'">'+issue.impact+' impact</span>';
-      out+='<span style="font-size:.56rem;color:var(--faint);margin-left:auto;">'+(ii+1)+'/'+issues.length+'</span>';
+      var secColors={Hook:'var(--hook)',Context:'var(--ctx)',Body:'var(--body-c)',CTA:'var(--cta)',Outro:'var(--out)',General:'var(--accent)'};
+      var sc2=secColors[issue.section]||'var(--accent)';
+      out+='<div class="wr-issue-slide" style="display:'+(ii===0?'block':'none')+';">';
+      out+='<div style="background:var(--s2);border:1px solid var(--border);border-left:3px solid '+sc2+';border-radius:10px;padding:11px 13px;margin-bottom:8px;">';
+      out+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;">';
+      out+='<span style="font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);">Issue '+(ii+1)+' of '+filteredIssues.length+'</span>';
+      out+='<span style="font-size:.58rem;font-weight:600;color:'+sc2+';background:var(--surface);border-radius:4px;padding:2px 6px;">'+issue.section+'</span>';
+      out+='<span style="font-size:.52rem;font-weight:700;text-transform:uppercase;padding:2px 6px;border-radius:4px;'+ic+';">'+issue.impact+'</span>';
       out+='</div>';
-      out+='<div style="font-size:.74rem;color:var(--text);line-height:1.55;margin-bottom:4px;">'+issue.observation+'</div>';
-      out+='<div style="font-size:.72rem;color:var(--s-high);line-height:1.55;">'+issue.fix+'</div>';
-      out+='</div>';
+      out+='<div style="font-size:.7rem;color:var(--text);line-height:1.55;margin-bottom:5px;">'+escHtml(issue.observation||'')+'</div>';
+      out+='<div style="font-size:.67rem;color:var(--muted);line-height:1.5;margin-bottom:5px;">'+escHtml(issue.consequence||'')+'</div>';
+      out+='<div style="font-size:.67rem;color:var(--s-high);line-height:1.5;">'+escHtml(issue.fix||'')+'</div>';
+      out+='</div></div>';
     });
-    if(issues.length>1){
-      out+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
-      out+='<button onclick="wrIssueNav(-1)" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--muted);font-size:.72rem;cursor:pointer;">&#8592; Prev</button>';
-      out+='<div style="display:flex;gap:5px;">';
-      issues.forEach(function(_,ii){
-        out+='<div id="wrid_'+ii+'" style="width:6px;height:6px;border-radius:50%;background:'+(ii===0?'var(--accent)':'var(--faint)')+';transition:background .2s;"></div>';
-      });
-      out+='</div>';
-      out+='<button onclick="wrIssueNav(1)" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--muted);font-size:.72rem;cursor:pointer;">Next &#8594;</button>';
+    if(filteredIssues.length>1){
+      out+='<div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:8px;">';
+      out+='<button onclick="prevWrIssue()" style="background:var(--s2);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);">';
+      out+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" style="width:13px;height:13px;"><path stroke-linecap="round" d="M15 19l-7-7 7-7"/></svg></button>';
+      out+='<span id="wrIssueCounter" style="font-size:.62rem;color:var(--faint);">1 / '+filteredIssues.length+'</span>';
+      out+='<button onclick="nextWrIssue()" style="background:var(--s2);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);">';
+      out+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" style="width:13px;height:13px;"><path stroke-linecap="round" d="M9 5l7 7-7 7"/></svg></button>';
       out+='</div>';
     }
     out+='</div>';
+  } else if(script.paragraphs&&script.paragraphs.length>0){
+    out+='<div style="background:var(--s2);border-radius:9px;padding:10px 12px;font-size:.72rem;color:var(--s-high);text-align:center;">No major issues detected. Keep writing.</div>';
   }
-
-  // Full report removed - analysis coming soon
-
-  var body=document.getElementById('wrBody');
-  if(body)body.innerHTML=out;
+  document.getElementById('wrBody').innerHTML=out;
 }
+
+function toggleWrTypeMenu(){
+  var menu=document.getElementById('wrTypeMenu');
+  if(menu)menu.style.display=menu.style.display==='none'?'block':'none';
+}
+function toggleWrLenMenu(){
+  var menu=document.getElementById('wrLenMenu');
+  if(menu)menu.style.display=menu.style.display==='none'?'block':'none';
+}
+function setWrType(type){
+  var script=getActive();if(!script)return;
+  script.scriptType=type;save();
+  var menu=document.getElementById('wrTypeMenu');
+  if(menu)menu.style.display='none';
+  var intel=recalcWithOptions(script.paragraphs,type,script.videoLength||'long');
+  S._liveIntel=intel;script.lastScore=intel.overall;save();
+  renderWriteReportBody(intel,script);
+  var scoreEl=document.getElementById('wrScore');
+  if(scoreEl){scoreEl.textContent=intel.overall;scoreEl.style.color='var(--s-'+scoreLevel(intel.overall)+')';}
+  setTimeout(renderScripts,0);
+}
+function setWrLen(len){
+  var script=getActive();if(!script)return;
+  script.videoLength=len;save();
+  var menu=document.getElementById('wrLenMenu');
+  if(menu)menu.style.display='none';
+  var intel=recalcWithOptions(script.paragraphs,script.scriptType||'general',len);
+  S._liveIntel=intel;script.lastScore=intel.overall;save();
+  renderWriteReportBody(intel,script);
+  var scoreEl=document.getElementById('wrScore');
+  if(scoreEl){scoreEl.textContent=intel.overall;scoreEl.style.color='var(--s-'+scoreLevel(intel.overall)+')';}
+  setTimeout(renderScripts,0);
+}
+function nextWrIssue(){
+  var slides=document.querySelectorAll('.wr-issue-slide');
+  var idxEl=document.getElementById('wrIssueIdx');
+  var ctrEl=document.getElementById('wrIssueCounter');
+  if(!slides.length||!idxEl)return;
+  var cur=parseInt(idxEl.value)||0;
+  var next=(cur+1)%slides.length;
+  slides[cur].style.display='none';
+  slides[next].style.display='block';
+  idxEl.value=next;
+  if(ctrEl)ctrEl.textContent=(next+1)+' / '+slides.length;
+}
+function prevWrIssue(){
+  var slides=document.querySelectorAll('.wr-issue-slide');
+  var idxEl=document.getElementById('wrIssueIdx');
+  var ctrEl=document.getElementById('wrIssueCounter');
+  if(!slides.length||!idxEl)return;
+  var cur=parseInt(idxEl.value)||0;
+  var prev=(cur-1+slides.length)%slides.length;
+  slides[cur].style.display='none';
+  slides[prev].style.display='block';
+  idxEl.value=prev;
+  if(ctrEl)ctrEl.textContent=(prev+1)+' / '+slides.length;
+}
+
 function wrIssueNav(dir){
   var idxEl=document.getElementById('wrIssueIdx');
   if(!idxEl)return;
@@ -2058,8 +2181,8 @@ function renderProfile(){
       lbl('Upgrade')+
       '<div style="margin:0 14px;background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;">'+
         '<div style="font-size:1.2rem;">&#10038;</div>'+
-        '<div style="flex:1;"><div style="font-size:.84rem;font-weight:600;color:var(--accent);">Scripora Pro</div><div style="font-size:.65rem;color:var(--muted);margin-top:2px;line-height:1.5;">Unlimited scripts, portfolio export, Script Analysis and SEO Tools when they launch. One payment, yours forever.</div></div>'+
-        '<button onclick="openProSheet()" style="background:var(--accent);color:#12161F;border:none;border-radius:10px;padding:8px 14px;font-size:.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">$7.99</button>'+
+        '<div style="flex:1;"><div style="font-size:.84rem;font-weight:600;color:var(--accent);">Scripora Pro</div><div style="font-size:.65rem;color:var(--muted);margin-top:2px;line-height:1.5;">Unlimited scripts, early access to Script Analysis, SEO Tools and Advanced Stats when they launch. One payment, yours forever.</div></div>'+
+        '<button onclick="openProSheet()" style="background:var(--accent);color:#12161F;border:none;border-radius:10px;padding:8px 14px;font-size:.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">$4.99</button>'+
       '</div>'+
       appearHTML+supportHTML+legalHTML+ver;
     return;
@@ -2097,8 +2220,8 @@ function renderProfile(){
   } else {
     html+=lbl('Upgrade')+
       '<div class="pro-box">'+
-        '<div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;">Scripora Pro &mdash; $7.99 lifetime</div>'+
-        '<div style="font-size:.7rem;color:var(--muted);line-height:1.6;margin-bottom:10px;">Unlimited scripts, portfolio export, Script Analysis and SEO Tools when they launch. Price rises at relaunch.</div>'+
+        '<div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;">Scripora Pro &mdash; $4.99 lifetime</div>'+
+        '<div style="font-size:.7rem;color:var(--muted);line-height:1.6;margin-bottom:10px;">Unlimited scripts, early access to Script Analysis, SEO Tools and Advanced Stats when they launch. Price rises at launch.</div>'+
         '<button onclick="openProSheet()" class="btn-p" style="width:100%;">Get Pro</button>'+
         '<div style="margin-top:10px;">'+
           '<input class="modal-inp" placeholder="Have a promo code?" id="profPromoInp" style="margin-bottom:6px;"/>'+
@@ -2340,7 +2463,7 @@ function openModal(type,data){
   }
 
   if(type==='privacy'){
-    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div class="modal-title" style="margin-bottom:0;">Privacy Policy</div><button onclick="closeMoForce()" style="background:none;border:none;padding:4px;color:var(--muted);display:flex;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>'+
+    html+='<div class="modal-title" style="margin-bottom:14px;">Privacy Policy</div>'+
       '<div class="long-body">'+
       '<h4>What we collect</h4><p>When you sign in with Google, we collect your name, email address and profile photo to personalise your experience. Your scripts and writing session data are stored locally on your device. If you are signed in, this data is synced to our secure cloud storage (Google Firestore) so you can access it across devices.</p>'+
       '<h4>How we use your data</h4><p>Your data is used solely to provide and improve Scripora. We do not sell, licence or share your personal data with third parties. We do not use your script content for advertising, model training or any purpose beyond storage and delivery back to you.</p>'+
@@ -2354,13 +2477,13 @@ function openModal(type,data){
   }
 
   if(type==='terms'){
-    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div class="modal-title" style="margin-bottom:0;">Terms of Use</div><button onclick="closeMoForce()" style="background:none;border:none;padding:4px;color:var(--muted);display:flex;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>'+
+    html+='<div class="modal-title" style="margin-bottom:14px;">Terms of Use</div>'+
       '<div class="long-body">'+
       '<h4>Using Scripora</h4><p>Scripora is a scriptwriting tool for YouTube creators. By using it you agree to these terms. You may use Scripora for personal and commercial creative work. You may not use it to produce content that is illegal, harmful, abusive or that infringes on the intellectual property rights of others.</p>'+
       '<h4>Your content</h4><p>You retain full ownership of everything you write in Scripora. By enabling cloud sync, you grant Selerii a limited, non-exclusive licence to store and transmit your content solely for the purpose of delivering it back to you. We do not claim any rights over your scripts.</p>'+
       '<h4>Script scoring and analysis</h4><p><strong>Important notice:</strong> Script scores, structural analysis and all feedback provided by Scripora   whether generated by rule-based logic or AI assistance   are estimates based on language patterns and structural signals. They are not guarantees of video performance, audience retention or commercial outcomes. Scores should be used as guidance to support your creative decisions, not as definitive assessments of quality. Scripora is not responsible for outcomes resulting from reliance on score data.</p>'+
       '<h4>Script Insights and coming features</h4><p>Script Insights uses a local rule-based engine to score your scripts as you write. Full Script Analysis and SEO Tools are planned features coming to Pro members first. No script content leaves your device during current analysis.</p>'+
-      '<h4>Pro membership</h4><p>Pro is a one-time payment of $7.99 for lifetime access via Gumroad. Pro currently includes: unlimited scripts, portfolio export and script history. Script Analysis and SEO Tools are coming to Pro members first when they launch. Features under development are not guaranteed to arrive by a specific date. Refunds are handled on a case-by-case basis contact scripora@selerii.com within 14 days of purchase.</p>'+
+      '<h4>Pro membership</h4><p>Pro is a one-time payment of $4.99 for lifetime access via Gumroad. Pro currently includes: unlimited scripts, portfolio export and script history. Script Analysis and SEO Tools are coming to Pro members first when they launch. Features under development are not guaranteed to arrive by a specific date. Refunds are handled on a case-by-case basis contact scripora@selerii.com within 14 days of purchase.</p>'+
       '<h4>Account termination</h4><p>You may delete your account at any time from the Profile tab. We reserve the right to suspend accounts that violate these terms.</p>'+
       '<h4>Limitation of liability</h4><p>Scripora is provided as-is without warranties of any kind. Selerii is not liable for loss of data, loss of revenue, missed opportunities or any indirect damages arising from use of this app.</p>'+
       '<p style="font-size:.7rem;margin-top:12px;">Last updated: March 2026 &nbsp;&middot;&nbsp; Contact: support@scripora.app</p>'+
@@ -2529,18 +2652,13 @@ function openProSheet(){
   var html='<div class="mhandle"></div>';
   html+='<div style="padding:4px 20px 0;text-align:center;">';
   html+='<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:6px;">Scripora Pro</div>';
-  html+='<div style="font-size:1.6rem;font-weight:700;color:var(--text);margin-bottom:2px;">$7.99 <span style="font-size:.8rem;font-weight:400;color:var(--muted);">one-time</span></div>';
-  html+='<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;">Yours forever. Price rises at relaunch.</div>';
-  html+='<div style="font-size:.68rem;color:var(--faint);margin-bottom:14px;">Support development and get early access to every feature as it ships.</div>';
+  html+='<div style="font-size:1.6rem;font-weight:700;color:var(--text);margin-bottom:2px;">$4.99 <span style="font-size:.8rem;font-weight:400;color:var(--muted);">one-time</span></div>';
+  html+='<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;">Early supporter price. Rises when features launch.</div>';
+  html+='<div style="font-size:.68rem;color:var(--faint);margin-bottom:14px;">Support development and get first access to every feature as it ships.</div>';
   html+='</div>';
   html+='<div style="margin:0 16px 14px;display:flex;flex-direction:column;gap:6px;">';
-  var readyFeats=[
-    ['Unlimited Scripts',''],
-    ['Portfolio Export','Download all scripts'],
-    ['Script History','Version snapshots'],
-    ['Early Supporter','Permanent badge']
-  ];
-  readyFeats.forEach(function(f){
+  var ready=[['Unlimited Scripts',''],['Script History','Version snapshots'],['Early Supporter','Permanent badge']];
+  ready.forEach(function(f){
     html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:9px;">';
     html+='<div style="width:20px;height:20px;border-radius:50%;background:rgba(106,175,130,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">';
     html+='<svg fill="none" stroke="var(--s-high)" viewBox="0 0 24 24" stroke-width="2.5" style="width:11px;height:11px;">'+chk+'</svg></div>';
@@ -2548,12 +2666,8 @@ function openProSheet(){
     if(f[1])html+='<div style="font-size:.56rem;color:var(--muted);">'+f[1]+'</div>';
     html+='</div>';
   });
-  var soonFeats=[
-    ['Script Analysis','First access'],
-    ['SEO Tools','First access'],
-    ['AI Feedback','First access']
-  ];
-  soonFeats.forEach(function(f){
+  var soon=[['Script Analysis','First access'],['SEO Tools','First access'],['Advanced Stats','First access'],['Higher Script Limit','First access']];
+  soon.forEach(function(f){
     html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:9px;">';
     html+='<div style="width:20px;height:20px;border-radius:50%;background:rgba(184,115,51,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">';
     html+='<svg fill="none" stroke="var(--accent)" viewBox="0 0 24 24" stroke-width="2" style="width:11px;height:11px;">'+clk+'</svg></div>';
@@ -2563,10 +2677,10 @@ function openProSheet(){
   });
   html+='</div>';
   html+='<div style="padding:0 16px 8px;">';
-  html+='<a href="https://selerii.gumroad.com/l/scripora-pro" target="_blank" style="display:block;text-align:center;background:var(--accent);color:#12161F;padding:14px;border-radius:14px;font-weight:700;font-size:.88rem;text-decoration:none;">Get Pro &mdash; $7.99</a>';
+  html+='<a href="https://selerii.gumroad.com/l/scripora-pro" target="_blank" style="display:block;text-align:center;background:var(--accent);color:#12161F;padding:14px;border-radius:14px;font-weight:700;font-size:.88rem;text-decoration:none;">Get Pro &mdash; $4.99</a>';
   html+='<div style="margin-top:10px;">';
-  html+='<input class="modal-inp" placeholder="Promo code e.g. EARLYWRITER" id="proCodeInp" style="margin-bottom:6px;"/>';
-  html+='<button class="btn-g" style="width:100%;" onclick="checkProCode(document.getElementById(\'proCodeInp\').value.trim())">Apply Code</button>';
+  html+='<input class="modal-inp" placeholder="Promo code e.g. EARLYWRITER" id="proCodeInp" style="margin-bottom:6px;"/>';;
+    html+='<button class="btn-g" style="width:100%;" onclick="applyProCode()">Apply Code</button>';
   html+='</div>';
   html+='<div style="text-align:center;font-size:.62rem;color:var(--faint);margin-top:8px;">Secure payment via Gumroad &middot; No subscription</div>';
   html+='</div>';
@@ -2574,6 +2688,7 @@ function openProSheet(){
   if(ov){ov.classList.remove('hide');}
   requestAnimationFrame(function(){if(sheet)sheet.classList.add('open');});
 }
+
 
 function closeProSheet(evt){if(evt!==null&&evt&&evt.target!==document.getElementById('proSheetOv'))return;document.getElementById('proSheetOv').classList.remove('open');}
 function openGumroad(){window.open('https://selerii.gumroad.com/l/scripora-pro','_blank');}
