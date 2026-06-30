@@ -8,9 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Scripora"/>
 <meta name="theme-color" content="#12161F"/>
-<meta name="description" content="Scripora helps YouTube creators plan, structure and write better scripts. Score your Hook, Context, Main Body, CTA and Outro. Track your growth and export professional Script Portfolios."/>
+<meta name="description" content="Scripora helps YouTube creators plan, structure and write better scripts. Build your Hook, Context, Main Body, CTA and Outro. Track your growth and export professional Script Portfolios."/>
 <meta property="og:title" content="Scripora &middot; Write with Intention"/>
-<meta property="og:description" content="The professional scriptwriting app for YouTube creators. Score your scripts, track your growth and export beautiful Script Portfolios."/>
+<meta property="og:description" content="The professional scriptwriting app for YouTube creators. Structure your scripts, track your growth and export beautiful Script Portfolios."/>
 <meta property="og:url" content="https://scripora.app"/>
 <meta property="og:type" content="website"/>
 <title>Scripora &middot; Write with Intention</title>
@@ -29,7 +29,7 @@
 <!-- Twitter Card (was missing) -->
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Scripora &middot; Write with Intention"/>
-<meta name="twitter:description" content="Score your scripts, track your growth and write better YouTube content."/>
+<meta name="twitter:description" content="Structure your scripts, track your growth and write better YouTube content."/>
 <meta name="twitter:image" content="https://scripora.app/icons/icon-512.png"/>
 <meta name="twitter:site" content="@selerii"/>
 
@@ -44,7 +44,7 @@
   "@type": "WebApplication",
   "name": "Scripora",
   "url": "https://scripora.app",
-  "description": "Scripora helps YouTube creators plan, structure and write better scripts. Score your Hook, Context, Main Body, CTA and Outro. Track your growth and export professional Script Portfolios.",
+  "description": "Scripora helps YouTube creators plan, structure and write better scripts. Build your Hook, Context, Main Body, CTA and Outro. Track your growth and export professional Script Portfolios.",
   "applicationCategory": "ProductivityApplication",
   "operatingSystem": "Any",
   "offers": [
@@ -53,12 +53,6 @@
       "price": "0",
       "priceCurrency": "USD",
       "name": "Free"
-    },
-    {
-      "@type": "Offer",
-      "price": "9.99",
-      "priceCurrency": "USD",
-      "name": "Scripora Pro"
     }
   ],
   "author": {
@@ -66,10 +60,8 @@
     "name": "Selerii"
   },
   "featureList": [
-    "Script structure scoring",
     "Hook, Context, Body, CTA and Outro tagging",
     "Writing streak tracking",
-    "Script analysis and feedback",
     "Portfolio export",
     "Cloud sync"
   ]
@@ -173,9 +165,6 @@
           <button class="hdr-btn" onclick="openViewScript()" title="View Script">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
           </button>
-          <button class="hdr-btn" onclick="openWriteReport()" title="Script Insights" id="writeAnalyseBtn" style="color:var(--accent);">
-            <svg id="writeAnalyseIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-          </button>
         </div>
       </div>
       <div class="scr-scroll">
@@ -185,30 +174,6 @@
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             Add Paragraph
           </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── HUB ── -->
-    <div class="screen" id="screen-hub">
-      <!-- Hub sub-screens rendered dynamically -->
-      <div id="hubStats" class="hub-sub">
-        <div class="stats-seg" id="statsSeg">
-          <button class="sseg-btn on" data-sf="all" onclick="setStatsFilter(this)">All Time</button>
-          <button class="sseg-btn" data-sf="month" onclick="setStatsFilter(this)">This Month</button>
-          <button class="sseg-btn" data-sf="week" onclick="setStatsFilter(this)">This Week</button>
-        </div>
-        <div class="scr-scroll">
-          <div class="stats-body" id="statsBody"></div>
-        </div>
-      </div>
-      <div id="hubAnalyse" class="hub-sub hide">
-        <div class="scr-scroll" id="analyseScroll">
-          <!-- Populated by renderAnalyse() -->
-        </div>
-      </div>
-      <div id="hubWorkspace" class="hub-sub hide">
-        <div class="scr-scroll" id="workspaceScroll">
         </div>
       </div>
     </div>
@@ -231,10 +196,6 @@
     <button class="nt" id="nt-write" onclick="goScreen('write')">
       <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
       Write
-    </button>
-    <button class="nt" id="nt-hub" onclick="goScreen('hub')">
-      <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-      Hub
     </button>
     <button class="nt" id="nt-profile" onclick="goScreen('profile')">
       <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
@@ -279,24 +240,6 @@
   </div>
 </div>
 
-<!-- ANALYSE RESULTS -->
-<div id="analyseResultsScreen" class="hide" style="position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;">
-  <div class="res-hdr">
-    <button class="res-back" onclick="closeAnalyseResults()"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
-    <div class="res-title" id="resTitle" onclick="renameAnalyseSession(S._currentResultId)" style="cursor:pointer;flex:1;" title="Tap to rename">Analysis Results</div>
-    <div class="res-date" id="resDate"></div>
-    <button class="hdr-btn" onclick="downloadAnalysisResult(S._currentResultId)" title="Download" style="flex-shrink:0;">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-    </button>
-  </div>
-  <div id="resHero" style="flex-shrink:0;"></div>
-  <div id="resTabs" style="display:flex;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
-    <button class="res-tab on" id="rtab-overview" onclick="switchResTab('overview',this)">Overview</button>
-    <button class="res-tab" id="rtab-sections" onclick="switchResTab('sections',this)">Sections</button>
-    <button class="res-tab" id="rtab-deep" onclick="switchResTab('deep',this)">Deep</button>
-  </div>
-  <div style="flex:1;overflow-y:auto;" id="resBody"></div>
-</div>
 
 <!-- PORTFOLIO TRIGGER -->
 <div id="portfolioScreen" class="hide" style="position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;">
@@ -309,20 +252,6 @@
   </div>
 </div>
 
-<!-- WRITE REPORT DRAWER -->
-<div class="dov hide" id="wrDov" onclick="closeWriteReport()"></div>
-<div class="drawer-bottom hide" id="wrDrawer">
-  <div class="drawer-hd">
-    <div style="flex:1;">
-      <span class="drawer-title">Script Insights</span>
-      <div id="wrVerdict" style="font-size:.68rem;color:var(--muted);margin-top:1px;"></div>
-    </div>
-    <div id="wrScore" style="font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--s-mid);margin-right:8px;"></div>
-    <button class="drawer-close" onclick="closeWriteReport()"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-  </div>
-
-  <div class="drawer-body" id="wrBody" style="overflow-y:auto;padding:12px 14px 20px;"></div>
-</div>
 <!-- HELP SCREEN -->
 <div id="helpScreen" class="hide" style="position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;">
   <div class="res-hdr">
@@ -332,7 +261,6 @@
   <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none;">
     <button class="help-tab on" id="htab-start" onclick="switchHelpTab('start')">Start</button>
     <button class="help-tab" id="htab-write" onclick="switchHelpTab('write')">Writing</button>
-    <button class="help-tab" id="htab-analyse" onclick="switchHelpTab('analyse')">Insights</button>
     <button class="help-tab" id="htab-account" onclick="switchHelpTab('account')">Account</button>
   </div>
   <div style="flex:1;overflow-y:auto;padding:16px 14px 32px;" id="helpBody"></div>
@@ -353,10 +281,6 @@
   <div class="modal" id="modal" onclick="event.stopPropagation()"></div>
 </div>
 
-<!-- PRO SHEET -->
-<div class="pro-sheet-ov" id="proSheetOv" onclick="closeProSheet(event)">
-  <div class="pro-sheet" id="proSheet" onclick="event.stopPropagation()"></div>
-</div>
 
 
 
@@ -367,7 +291,6 @@
 
 
 
-<script src="feedback.js"></script>
 <script src="engine.js"></script>
 <script src="sync.js"></script>
 <script src="app.js"></script>

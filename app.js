@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 // SCRIPORA  -  APP.JS
 // State, constants, utilities, UI handlers, init
-// Load order: feedback.js -> engine.js -> sync.js -> app.js
+// Load order: engine.js -> sync.js -> app.js
 // ════════════════════════════════════════════════════════════════════
 
 // ── SECTION 1: State & Constants ──
@@ -9,8 +9,7 @@
 // SCRIPORA   Full Engine
 // ═══════════════════════════════════════
 // ── Core state   declared first so nothing can crash before these exist ──
-var SK='sp1',THEME_KEY='sp_theme',PRO_KEY='sp_pro',STATS_KEY='sp_stats';
-var FREE_LIMIT=10;
+var SK='sp1',THEME_KEY='sp_theme',STATS_KEY='sp_stats';
 var EMAILJS_SVC='service_8i8l9cr',EMAILJS_TPL='template_g7hi73d',EMAILJS_KEY='0PgWLFm8kqqvXjc9_';
 var auth=null,db=null;
 
@@ -30,7 +29,7 @@ var TAGS={
   out:{label:'Outro',cls:'tag-out',color:'#8A6AC9'}
 };
 
-var S={scripts:[],activeId:null,currentUser:null,isGuest:false,appShown:false,activeHubTab:'stats',statsFilter:'all',drawerTab:'facts',analyseHistory:[],hubPillOpen:false,bulkMode:false,bulkSelected:[],analysing:false,syncEnabled:false,_liveIntel:null,_currentResultId:null,_aSearch:'',_ahSort:'date',_ahQ:'',_pasteTitle:''};
+var S={scripts:[],activeId:null,currentUser:null,isGuest:false,appShown:false,drawerTab:'facts',bulkMode:false,bulkSelected:[],analysing:false,syncEnabled:false};
 
 
 // ── Firebase init   wrapped so offline/CDN failure can't break the app ──
@@ -46,226 +45,6 @@ try{
 
 
 // ── Helpers ──
-function isPro(){return localStorage.getItem(PRO_KEY)==='true';}
-function refreshProState(){
-  // Called after any pro unlock - refreshes all gated UI
-  setTimeout(function(){
-    if(typeof renderProfile==='function')renderProfile();
-    if(typeof renderHub==='function')renderHub();
-    if(typeof renderWrite==='function')renderWrite();
-    if(typeof updateSyncToggleUI==='function')updateSyncToggleUI();
-    // Re-render write report drawer if open
-    var wd=document.getElementById('wrDrawer');
-    if(wd&&!wd.classList.contains('hide')){
-      var script=getActive();
-      if(script&&typeof renderWriteReportBody==='function'){
-        var intel=analyseScript(script.paragraphs);
-        renderWriteReportBody(intel,script);
-      }
-    }
-  },50);
-}
-
-
-function applyProCode(){var i=document.getElementById('proCodeInp');if(i)checkProCode(i.value.trim());}
-function checkProCode(code){
-  if(!code){showToast('Enter a promo code','default');return;}
-  var c=code.toUpperCase().trim();
-  // Permanent lifetime codes
-  var lifetimeCodes=['SELERII','SCRIPORA','LAUNCHPRO','FOUNDING'];
-  // 7-day trial codes
-  var trialCodes=['EARLYWRITER'];
-  if(lifetimeCodes.indexOf(c)>=0){
-    localStorage.setItem(PRO_KEY,'true');
-    closeProSheet();
-    refreshProState();
-    showToast('Pro unlocked. Welcome.','success');
-    return;
-  }
-  if(trialCodes.indexOf(c)>=0){
-    // Set trial expiry 7 days from now
-    var exp=new Date();
-    exp.setDate(exp.getDate()+7);
-    localStorage.setItem(PRO_KEY,'true');
-    localStorage.setItem('sp_pro_trial',exp.toISOString());
-    closeProSheet();
-    refreshProState();
-    showToast('7-day Pro trial active. Enjoy.','success');
-    return;
-  }
-  showToast('Code not recognised','error');
-}
-
-function checkProTrial(){
-  var trial=localStorage.getItem('sp_pro_trial');
-  if(!trial)return;
-  if(new Date()>new Date(trial)){
-    localStorage.removeItem(PRO_KEY);
-    localStorage.removeItem('sp_pro_trial');
-  }
-}
-
-// ── Scripora AI ──
-var AI_FREE_LIMIT=5;
-var AI_ENDPOINT='/api/analyse';
-
-function getAiUsage(){
-  try{
-    var d=JSON.parse(localStorage.getItem('sp_ai_usage')||'{}');
-    var today=new Date().toLocaleDateString('en-CA');// YYYY-MM-DD
-    if(d.date!==today)return {date:today,count:0};
-    return d;
-  }catch(e){return {date:new Date().toLocaleDateString('en-CA'),count:0};}
-}
-
-function incrementAiUsage(){
-  var u=getAiUsage();
-  u.count=(u.count||0)+1;
-  localStorage.setItem('sp_ai_usage',JSON.stringify(u));
-}
-
-function canUseAi(){
-  if(isPro())return true;
-  return getAiUsage().count<AI_FREE_LIMIT;
-}
-
-function aiCallsRemaining(){
-  if(isPro())return 999;
-  return Math.max(0,AI_FREE_LIMIT-getAiUsage().count);
-}
-
-function runAiAnalysis(engineOutput,tier,resultId){
-  // Show loading state in the result panel
-  var body=document.getElementById('resBody');
-  if(body){
-    var cur=body.innerHTML;
-    body.innerHTML='<div class="ai-loading"><div class="ai-loading-dot"></div><div class="ai-loading-dot"></div><div class="ai-loading-dot"></div><div style="font-size:.72rem;color:var(--muted);margin-top:10px;">Scripora AI is reading your script...</div></div>'+cur;
-  }
-
-  var payload=JSON.stringify({
-    scriptType:engineOutput.scriptType||'general',
-    scriptTypeConfidence:engineOutput.scriptTypeConfidence||0,
-    overall:engineOutput.overall||0,
-    sectionScores:engineOutput.sectionScores||{},
-    paragraphs:engineOutput.paragraphs||[],
-    failurePatterns:engineOutput.failurePatterns||[],
-    signals:{
-      promises:engineOutput.promises||[],
-      promiseDelivered:engineOutput.promiseDelivered||false,
-      sentenceLenVariance:engineOutput.paceVariance||0,
-      voiceRatio:engineOutput.voiceRatio||0,
-      totalSentences:engineOutput.totalSentences||0,
-      openingStrength:engineOutput.openingStrength||0,
-      closingStrength:engineOutput.closingStrength||0,
-      tensionScore:engineOutput.tensionScore||0,
-      insightDensity:engineOutput.insightDensity||0,
-      weakestPoints:engineOutput.weakestPoints||[]
-    },
-    tier:tier
-  });
-
-  var xhr=new XMLHttpRequest();
-  xhr.open('POST',AI_ENDPOINT,true);
-  xhr.setRequestHeader('Content-Type','application/json');
-  xhr.timeout=15000;
-  xhr.onload=function(){
-    // Remove loading state
-    if(body){
-      var ai_load=body.querySelector('.ai-loading');
-      if(ai_load)ai_load.parentNode.removeChild(ai_load);
-    }
-    if(xhr.status===200){
-      try{
-        var resp=JSON.parse(xhr.responseText);
-        if(resp.ok&&resp.result){
-          incrementAiUsage();
-          renderAiResult(resp.result,resultId);
-        } else {
-          renderAiFallback('AI feedback unavailable right now.');
-        }
-      }catch(e){renderAiFallback('AI feedback unavailable right now.');}
-    } else if(xhr.status===504){
-      renderAiFallback('AI took too long to respond. Structural analysis shown.');
-    } else {
-      renderAiFallback('AI feedback unavailable right now.');
-    }
-  };
-  xhr.ontimeout=function(){
-    if(body){var al=body.querySelector('.ai-loading');if(al)al.parentNode.removeChild(al);}
-    renderAiFallback('AI took too long to respond.');
-  };
-  xhr.onerror=function(){
-    if(body){var al=body.querySelector('.ai-loading');if(al)al.parentNode.removeChild(al);}
-    renderAiFallback('AI feedback unavailable right now.');
-  };
-  xhr.send(payload);
-}
-
-function renderAiResult(ai,resultId){
-  // Update the overview panel with AI content
-  // Verdict
-  var vEl=document.getElementById('res-ai-verdict');
-  if(vEl&&ai.verdict)vEl.textContent=ai.verdict;
-  var vsEl=document.getElementById('res-ai-verdictsub');
-  if(vsEl&&ai.verdictSub)vsEl.textContent=ai.verdictSub;
-  // Issues
-  var issEl=document.getElementById('res-ai-issues');
-  if(issEl&&ai.topIssues&&ai.topIssues.length){
-    var html='';
-    ai.topIssues.forEach(function(issue,ii){
-      var lbl=ii===0?'Top Issue':'Issue '+(ii+1);
-      var ic=issue.impact==='high'?'high':'medium';
-      html+='<div class="top-issue-card"'+(ii>0?' style="margin-top:10px;"':'')+' >';
-      html+='<div class="top-issue-hd"><span class="tih-label">'+lbl+'</span><span class="tih-section">'+escHtml(issue.section||'')+'</span>';
-      html+='<span class="tih-impact '+ic+'">'+escHtml(issue.impact||'')+' impact</span></div>';
-      html+='<div class="tih-body">';
-      html+='<div class="tih-row"><div class="tih-dot obs"></div><div class="tih-text obs">'+escHtml(issue.observation||'')+'</div></div>';
-      html+='<div class="tih-row"><div class="tih-dot cons"></div><div class="tih-text">'+escHtml(issue.consequence||'')+'</div></div>';
-      html+='<div class="tih-row"><div class="tih-dot fix"></div><div class="tih-text fix">'+escHtml(issue.fix||'')+'</div></div>';
-      html+='</div></div>';
-    });
-    issEl.innerHTML=html;
-  }
-  // inShort
-  var isEl=document.getElementById('res-ai-inshort');
-  if(isEl&&ai.inShort)isEl.textContent=ai.inShort;
-  // Store AI result in history entry
-  loadAnalyseHistory();
-  for(var i=0;i<S.analyseHistory.length;i++){
-    if(S.analyseHistory[i].id===resultId){
-      S.analyseHistory[i].aiResult=ai;
-      break;
-    }
-  }
-  // Update section feedback if AI returned it
-  if(ai.sectionFeedback){
-    var secFbMap={hook:'Hook',ctx:'Context',body:'Body',cta:'CTA',out:'Outro'};
-    Object.keys(ai.sectionFeedback).forEach(function(tag){
-      var text=ai.sectionFeedback[tag];
-      if(!text)return;
-      // Update any sec-ai-{paraId} elements for this tag
-      document.querySelectorAll('[id^="sec-ai-"]').forEach(function(el){
-        var paraId=el.id.replace('sec-ai-','');
-        // Find this para in history to check its tag
-        for(var i=0;i<S.analyseHistory.length;i++){
-          var h=S.analyseHistory[i];
-          if(h.id===resultId&&h.paragraphs){
-            h.paragraphs.forEach(function(p){
-              if(p.id===paraId&&p.tag===tag){el.textContent=text;}
-            });
-          }
-        }
-      });
-    });
-  }
-  saveAnalyseHistory();
-}
-
-function renderAiFallback(msg){
-  var fb=document.getElementById('res-ai-fallback');
-  if(fb){fb.textContent=msg;fb.style.display='block';}
-}
-
 
 function safeGtag(){try{if(typeof gtag!=='undefined')gtag.apply(null,arguments);}catch(e){}}
 function uid(){return 'id_'+Date.now()+'_'+Math.random().toString(36).substr(2,6);}
@@ -278,8 +57,6 @@ function timeAgo(ts){if(!ts)return 'just now';var d=Date.now()-new Date(ts).getT
 // ── Storage ──
 function save(){localStorage.setItem(SK,JSON.stringify(S.scripts));}
 function load(){try{var d=JSON.parse(localStorage.getItem(SK)||'[]');S.scripts=Array.isArray(d)?d:[];}catch(e){S.scripts=[];}}
-function loadAnalyseHistory(){try{S.analyseHistory=JSON.parse(localStorage.getItem('sp_ah')||'[]');}catch(e){S.analyseHistory=[];}}
-function saveAnalyseHistory(){localStorage.setItem('sp_ah',JSON.stringify(S.analyseHistory));}
 
 // ── Theme ──
 function applyTheme(id){var t=null;for(var i=0;i<THEMES.length;i++){if(THEMES[i].id===id){t=THEMES[i];break;}}t=t||THEMES[0];document.body.className=t.cls||'';localStorage.setItem(THEME_KEY,id);}
@@ -304,7 +81,7 @@ function showToast(msg,type,icon){
 }
 
 // ── Screen navigation ──
-var screens=['scripts','write','hub','profile'];
+var screens=['scripts','write','profile'];
 function goScreen(name){
   screens.forEach(function(s){
     var el=document.getElementById('screen-'+s);
@@ -315,7 +92,6 @@ function goScreen(name){
   updateHeader(name);
   if(name==='scripts'){if(S.bulkMode)exitBulkMode();else setTimeout(renderScripts,0);}
   if(name==='write')renderWrite();
-  if(name==='hub'){S.hubPillOpen=!localStorage.getItem('sp_hub_seen');renderHub();}
   if(name==='profile')renderProfile();
   recordSession();
 }
@@ -327,40 +103,7 @@ function updateHeader(screen){
   right.innerHTML='';
   if(screen==='scripts'){
     right.innerHTML='<button class="hdr-btn" onclick="toggleSearch()" title="Search"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></button>';
-  }else if(screen==='hub'){
-    right.innerHTML=buildHubPillHTML();
   }
-}
-
-// ── Hub pill ──
-function buildHubPillHTML(){
-  var labels={stats:'Stats',analyse:'Analyse',workspace:'Workspace'};
-  var label=labels[S.activeHubTab]||'Stats';
-  var dotsIcon='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:14px;height:14px;"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg>';
-  if(!S.hubPillOpen){
-    return '<div class="hub-pill-wrap"><div class="hub-pill" onclick="toggleHubPill()"><span class="hub-pill-text">'+label+'</span>'+dotsIcon+'</div></div>';
-  }
-  function tabBtn(tab,iconPath,dim){
-    return '<button class="hub-tab-btn'+(S.activeHubTab===tab?' on':'')+(dim?' dim':'')+'" onclick="setHubTab(\''+tab+'\')" title="'+labels[tab]+'"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:15px;height:15px;">'+iconPath+'</svg></button>';
-  }
-  var statsIco='<path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>';
-  var analyseIco='<path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>';
-  var wsIco='<path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>';
-  var div='<div class="hub-pill-div"></div>';
-  return '<div class="hub-pill-wrap"><span class="hub-label" style="color:var(--accent)">'+label+'</span><div class="hub-pill-expanded">'+tabBtn('stats',statsIco,false)+div+tabBtn('analyse',analyseIco,false)+div+tabBtn('workspace',wsIco,true)+'</div></div>';
-}
-function toggleHubPill(){S.hubPillOpen=!S.hubPillOpen;document.getElementById('headerRight').innerHTML=buildHubPillHTML();}
-function setHubTab(tab){
-  S.activeHubTab=tab;S.hubPillOpen=false;localStorage.setItem('sp_hub_seen','1');
-  document.getElementById('headerRight').innerHTML=buildHubPillHTML();
-  ['stats','analyse','workspace'].forEach(function(t){
-    var id='hub'+t.charAt(0).toUpperCase()+t.slice(1);
-    var el=document.getElementById(id);
-    if(el)el.classList.toggle('hide',t!==tab);
-  });
-  if(tab==='stats')setTimeout(renderStats,0);
-  if(tab==='analyse')setTimeout(renderAnalyse,0);
-  if(tab==='workspace')setTimeout(renderWorkspace,0);
 }
 
 // ── Scripts screen ──
@@ -397,14 +140,13 @@ function renderScripts(){
   setTimeout(function(){var eb=document.getElementById('emptyCreateBtn');if(eb)eb.onclick=function(){openModal('newScript');};},0);
   var statusCls={Draft:'draft','In Progress':'progress',Ready:'ready',Filmed:'filmed'};
   el.innerHTML=list.map(function(s){
-    var wc=totalWords(s),pc=(s.paragraphs||[]).length,sc=s.lastScore;
-    var chipHTML=sc!=null?'<span class="score-chip '+scoreLevel(sc)+'"><span class="score-chip-dot"></span>'+sc+'</span>':'';
+    var wc=totalWords(s),pc=(s.paragraphs||[]).length;
     return '<div class="scard'+(S.bulkMode&&S.bulkSelected.indexOf(s.id)>=0?' selected':'')+' " id="sc_'+s.id+'" ontouchstart="onScardTouchStart(\''+s.id+'\',event)" ontouchend="onScardTouchEnd()" ontouchmove="onScardTouchMove()">'+
       '<div class="scard-inner" onclick="openScript(\''+s.id+'\')">'+
       '<div class="scard-ico"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>'+
       '<div class="scard-info"><div class="scard-name">'+escHtml(s.title)+'</div>'+
       '<div class="scard-meta">'+wc+' words &nbsp;&middot;&nbsp; '+pc+' '+(pc===1?'section':'sections')+' &nbsp;&middot;&nbsp; '+timeAgo(s.updatedAt)+'</div>'+
-      '<div class="scard-row"><span class="sbadge '+(statusCls[s.status]||'draft')+'" onclick="event.stopPropagation();cycleStatus(\''+s.id+'\');" style="cursor:pointer;"><span class="sbadge-dot"></span>'+(s.status||'Draft')+'</span>'+chipHTML+'</div></div>'+
+      '<div class="scard-row"><span class="sbadge '+(statusCls[s.status]||'draft')+'" onclick="event.stopPropagation();cycleStatus(\''+s.id+'\');" style="cursor:pointer;"><span class="sbadge-dot"></span>'+(s.status||'Draft')+'</span></div></div>'+
       '<button class="pb-action" onclick="event.stopPropagation();openScriptMenu(\''+s.id+'\')" style="padding:8px;color:var(--muted);background:none;border:none;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01"/></svg></button>'+
       '</div></div>';
   }).join('');
@@ -467,7 +209,6 @@ function openScript(id){
   if(S.bulkMode){toggleBulkSelect(id);return;}
   if(S.activeId!==id){
     S.syncEnabled=false;
-    S._liveIntel=null;
     if(_liveSyncTimer){clearTimeout(_liveSyncTimer);_liveSyncTimer=null;}
   }
   S.activeId=id;goScreen('write');
@@ -533,13 +274,12 @@ function renderWrite(){
   }
   pbList.innerHTML=script.paragraphs.map(function(p){
     var tag=TAGS[p.tag]||TAGS.hook;
-    var sc=scoreText(p.tag,p.text);
     var wc=wordCount(p.text);
     return '<div class="pb '+tag.cls+'" id="pb_'+p.id+'">'+
       '<div class="pb-hd">'+
       '<span class="pb-tag">'+tag.label+'</span>'+
       '</div>'+
-      '<div class="pb-body"><textarea class="pb-ta" rows="3" placeholder="Write your '+tag.label.toLowerCase()+'..." onblur="saveParagraph(\''+p.id+'\',this.value)" oninput="autoResize(this);liveScore(\''+p.id+'\',\''+p.tag+'\',this.value)">'+escHtml(p.text)+'</textarea></div>'+
+      '<div class="pb-body"><textarea class="pb-ta" rows="3" placeholder="Write your '+tag.label.toLowerCase()+'..." onblur="saveParagraph(\''+p.id+'\',this.value)" oninput="autoResize(this);onParagraphInput(\''+p.id+'\',\''+p.tag+'\',this.value)">'+escHtml(p.text)+'</textarea></div>'+
       '<div class="pb-ft"><span class="pb-wc" id="wc_'+p.id+'">'+wc+' words</span>'+
       '<div class="pb-actions">'+
       '<button class="pb-action" onclick="moveParagraph(\''+p.id+'\',-1)" title="Move up"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg></button>'+
@@ -572,20 +312,19 @@ function saveScriptTitle(){
 function autoResize(ta){ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';}
 
 var _liveSyncTimer=null;
-function liveScore(pid,tag,text){
+function onParagraphInput(pid,tag,text){
   var wcel=document.getElementById('wc_'+pid);
   if(wcel)wcel.textContent=wordCount(text)+' words';
   // Save text immediately so sync reads current content
   var script=getActive();
   if(script){
     script.paragraphs.forEach(function(p){
-      if(p.id===pid){p.text=text;p.score=scoreText(p.tag,text);}
+      if(p.id===pid){p.text=text;}
     });
     script.updatedAt=new Date().toISOString();
-    script.lastScore=overallScore(script.paragraphs);
     save();
   }
-  // Debounced live sync - only if Pro and enabled
+  // Debounced live sync
   if(S.syncEnabled){
     if(_liveSyncTimer)clearTimeout(_liveSyncTimer);
     _liveSyncTimer=setTimeout(runLiveSync,1500);
@@ -594,9 +333,8 @@ function liveScore(pid,tag,text){
 
 function saveParagraph(pid,text){
   var script=getActive();if(!script)return;
-  script.paragraphs.forEach(function(p){if(p.id===pid){p.text=text;p.score=scoreText(p.tag,text);}});
+  script.paragraphs.forEach(function(p){if(p.id===pid){p.text=text;}});
   script.updatedAt=new Date().toISOString();
-  script.lastScore=overallScore(script.paragraphs);
   save();syncToCloud();
 }
 
@@ -616,7 +354,6 @@ function deleteParagraph(pid){
   var script=getActive();if(!script)return;
   script.paragraphs=script.paragraphs.filter(function(p){return p.id!==pid;});
   script.updatedAt=new Date().toISOString();
-  script.lastScore=overallScore(script.paragraphs);
   save();setTimeout(renderWrite,0);
   if(S.syncEnabled){
     if(_liveSyncTimer)clearTimeout(_liveSyncTimer);
@@ -634,7 +371,7 @@ function changeParagraphTag(pid){
 
 function applyTagChange(pid,tag){
   var script=getActive();if(!script)return;
-  script.paragraphs.forEach(function(p){if(p.id===pid){p.tag=tag;p.score=scoreText(tag,p.text);}});
+  script.paragraphs.forEach(function(p){if(p.id===pid){p.tag=tag;}});
   script.updatedAt=new Date().toISOString();save();setTimeout(renderWrite,0);
   // Trigger sync on tag change
   if(S.syncEnabled){
@@ -740,70 +477,6 @@ function downloadScript(){
   showToast('Downloaded','success');
 }
 
-function downloadAnalysisResult(resultId){
-  loadAnalyseHistory();
-  var result=S.analyseHistory.find(function(h){return h.id===resultId;});
-  if(!result){result=S.analyseHistory[S.analyseHistory.length-1];}
-  if(!result)return;
-  var tagNames={hook:'Hook',ctx:'Context',body:'Main Body',cta:'CTA',out:'Outro'};
-  var date=result.date?new Date(result.date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}):'';
-  var sc=result.score||0;
-  var lines=[];
-  lines.push('SCRIPORA ANALYSIS REPORT');
-  lines.push(''.padEnd(40,'='));
-  lines.push('');
-  lines.push('Script:  '+(result.title||'Untitled'));
-  lines.push('Date:    '+date);
-  lines.push('Score:   '+sc+' / 100  ('+scoreVerdict(sc)+')');
-  if(result.scriptType)lines.push('Type:    '+result.scriptType);
-  lines.push('');
-  lines.push(''.padEnd(40,'-'));
-  lines.push('SECTION SCORES');
-  lines.push(''.padEnd(40,'-'));
-  ['hook','ctx','body','cta','out'].forEach(function(tag){
-    var tagSc=(result.sectionScores||{})[tag];
-    if(tagSc===undefined||tagSc===null)return;
-    var filled=Math.round(tagSc/5);
-    var bar='';for(var i=0;i<20;i++)bar+=i<filled?'#':'-';
-    lines.push((tagNames[tag]||tag).padEnd(12)+' '+bar+' '+tagSc);
-  });
-  if(result.openingStrength!==undefined){
-    lines.push('');
-    lines.push('Opening strength: '+result.openingStrength);
-    lines.push('Closing strength: '+result.closingStrength);
-    lines.push('Voice ratio:      '+(result.voiceRatio||0)+'%');
-    lines.push('Tension score:    '+(result.tensionScore||0));
-  }
-  lines.push('');
-  lines.push(''.padEnd(40,'-'));
-  lines.push('TOP ISSUES');
-  lines.push(''.padEnd(40,'-'));
-  (result.issues||[]).forEach(function(issue,i){
-    lines.push('');
-    lines.push((i+1)+'. ['+issue.section+'] '+issue.impact.toUpperCase()+' IMPACT');
-    lines.push('   '+issue.observation);
-    lines.push('   Consequence: '+issue.consequence);
-    lines.push('   Fix: '+issue.fix);
-  });
-  lines.push('');
-  lines.push(''.padEnd(40,'-'));
-  lines.push('SCRIPT TEXT');
-  lines.push(''.padEnd(40,'-'));
-  (result.paragraphs||[]).filter(function(p){return p.text&&p.text.trim();}).forEach(function(p){
-    lines.push('');lines.push('['+((tagNames[p.tag]||p.tag).toUpperCase())+']');lines.push(p.text);
-  });
-  lines.push('');
-  lines.push('Generated by Scripora  scripora.vercel.app');
-  lines.push(''.padEnd(40,'='));
-  var txt=lines.join('\n');
-  var a=document.createElement('a');
-  a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(txt);
-  a.download=(result.title||'analysis').replace(/[^a-z0-9]/gi,'_')+'_scripora_report.txt';
-  a.style.cssText='position:fixed;top:0;left:0;opacity:0;';
-  document.body.appendChild(a);a.click();
-  setTimeout(function(){document.body.removeChild(a);},200);
-  showToast('Report downloaded','success');
-}
 
 
 // ── Portfolio ──
@@ -862,27 +535,6 @@ function exportPortfolio(){
   safeGtag('event','portfolio_export');
 }
 
-// ── Stats helpers ──
-function calcStreak(sessions){
-  if(!sessions||!sessions.length)return 0;
-  var dates=Array.from(new Set(sessions.map(function(s){return s.date;}))).sort().reverse();
-  var streak=0,today=new Date().toISOString().split('T')[0],check=today;
-  for(var i=0;i<dates.length;i++){
-    if(dates[i]===check){streak++;var d=new Date(check);d.setDate(d.getDate()-1);check=d.toISOString().split('T')[0];}
-    else if(dates[i]<check)break;
-  }
-  return streak;
-}
-function getLast7(sessions){
-  var days=[];
-  for(var i=6;i>=0;i--){
-    var d=new Date();d.setDate(d.getDate()-i);
-    var ds=d.toISOString().split('T')[0];
-    var active=sessions.some(function(s){return s.date===ds;});
-    days.push({label:ds,active:active});
-  }
-  return days;
-}
 function recordSession(){
   var now=new Date();
   var h=now.getHours();
@@ -905,639 +557,10 @@ function recordSession(){
   localStorage.setItem(STATS_KEY,JSON.stringify(raw));
 }
 
-// ── Stats render ──
-function renderHub(){setHubTab(S.activeHubTab);}
-
-var statsFilterVal='all';
-function setStatsFilter(btn){
-  statsFilterVal=btn.dataset.sf;
-  document.querySelectorAll('.sseg-btn').forEach(function(b){b.classList.toggle('on',b===btn);});
-  setTimeout(renderStats,0);
-}
-
-function renderStats(){
-  var el=document.getElementById('statsBody');if(!el)return;
-  var raw=JSON.parse(localStorage.getItem(STATS_KEY)||'{}');
-  var sessions=raw.sessions||[];
-  var now=new Date();
-  var filtered=sessions.filter(function(s){
-    if(statsFilterVal==='week'){return (now-new Date(s.date))<7*864e5;}
-    if(statsFilterVal==='month'){return (now-new Date(s.date))<30*864e5;}
-    return true;
-  });
-  var streak=calcStreak(sessions);
-  var last7=getLast7(sessions);
-  var statuses={Draft:0,'In Progress':0,Ready:0,Filmed:0};
-  S.scripts.forEach(function(s){var k=s.status||'Draft';statuses[k]=(statuses[k]||0)+1;});
-  var totalSc=S.scripts.length;
-  var totalWd=S.scripts.reduce(function(a,s){return a+totalWords(s);},0);
-  var totalPg=S.scripts.reduce(function(a,s){return a+(s.paragraphs?s.paragraphs.length:0);},0);
-  var done=statuses.Ready+statuses.Filmed;
-  var compPct=totalSc>0?Math.round((done/totalSc)*100):0;
-  var tagCounts={hook:0,ctx:0,body:0,cta:0,out:0};
-  S.scripts.forEach(function(s){(s.paragraphs||[]).forEach(function(p){if(tagCounts[p.tag]!=null)tagCounts[p.tag]++;});});
-  var tagTotal=Object.values(tagCounts).reduce(function(a,b){return a+b;},0)||1;
-  var dayCounts=[0,0,0,0,0,0,0];
-  filtered.forEach(function(s){var d=(new Date(s.date)).getDay();dayCounts[d]++;});
-  var maxDay=Math.max.apply(null,dayCounts)||1;
-  var dayLbls=['S','M','T','W','T','F','S'];
-  var peakDay=dayCounts.indexOf(Math.max.apply(null,dayCounts));
-  var timeCounts={morning:0,afternoon:0,evening:0};
-  filtered.forEach(function(s){timeCounts[s.slot]=(timeCounts[s.slot]||0)+1;});
-  var peakSlot=Object.keys(timeCounts).reduce(function(a,b){return timeCounts[a]>=timeCounts[b]?a:b;},'morning');
-  var activeDays=new Set(filtered.map(function(s){return s.date;})).size;
-  var spanDays=statsFilterVal==='week'?7:statsFilterVal==='month'?30:Math.max(30,sessions.length>0?Math.ceil((now-new Date(sessions[0].date))/864e5):30);
-  var consPct=Math.min(100,Math.round((activeDays/spanDays)*100));
-  var circ=2*Math.PI*30,dashOff=circ-(consPct/100)*circ;
-  var bestSess=raw.bestSession;
-  var avgWd=totalSc>0?Math.round(totalWd/totalSc):0;
-  var html='';
-
-  // Overview
-  html+='<div class="stat-card"><div class="stat-card-title">Overview</div>'+
-    '<div class="hero-grid">'+
-    '<div class="hcell streak"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/></svg><div class="hcell-num">'+streak+'</div><div class="hcell-lbl">day streak</div></div>'+
-    '<div class="hcell"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg><div class="hcell-num">'+totalSc+'</div><div class="hcell-lbl">scripts</div></div>'+
-    '<div class="hcell"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7"/></svg><div class="hcell-num">'+(totalWd>999?(totalWd/1000).toFixed(1)+'k':totalWd)+'</div><div class="hcell-lbl">words</div></div>'+
-    '</div><div class="hero-grid" style="margin-top:8px;">'+
-    '<div class="hcell"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg><div class="hcell-num">'+filtered.length+'</div><div class="hcell-lbl">sessions</div></div>'+
-    '<div class="hcell"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg><div class="hcell-num">'+totalPg+'</div><div class="hcell-lbl">sections</div></div>'+
-    '<div class="hcell"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg><div class="hcell-num">'+avgWd+'</div><div class="hcell-lbl">avg words</div></div>'+
-    '</div>'+
-    '<div class="streak-dots" style="margin-top:14px;">'+last7.map(function(d,i){return '<div class="sdot'+(d.active?' f':'')+(i===6?' t':'')+'" title="'+d.label+'"></div>';}).join('')+'</div>'+
-    '<div style="height:1px;background:var(--border);margin:12px 0 8px;"></div>'+
-    '<div class="status-pills">'+
-    ['Draft','In Progress','Ready','Filmed'].map(function(st){var cls={Draft:'draft','In Progress':'progress',Ready:'ready',Filmed:'filmed'}[st];return '<span class="sbadge '+cls+'"><span class="sbadge-dot"></span>'+(statuses[st]||0)+' '+st+'</span>';}).join('')+
-    '</div>'+
-    (tagTotal>0?'<div style="height:1px;background:var(--border);margin:10px 0 8px;"></div>'+
-    '<div class="tag-bar">'+Object.entries(tagCounts).map(function(e){return '<div class="tag-seg" style="width:'+Math.round(e[1]/tagTotal*100)+'%;background:'+(TAGS[e[0]]||TAGS.hook).color+'"></div>';}).join('')+'</div>'+
-    '<div class="tag-legend">'+Object.entries(tagCounts).map(function(e){var lbl={hook:'Hook',ctx:'Ctx',body:'Body',cta:'CTA',out:'Outro'}[e[0]]||e[0];return '<div class="tleg-item"><div class="tleg-dot" style="background:'+(TAGS[e[0]]||TAGS.hook).color+'"></div><div class="tleg-pct">'+Math.round(e[1]/tagTotal*100)+'%</div><div class="tleg-name">'+lbl+'</div></div>';}).join('')+'</div>':'')+
-    '</div>';
-
-  // Consistency
-  html+='<div class="stat-card"><div class="stat-card-title">Consistency</div><div class="ring-row">'+
-    '<div class="ring-wrap"><svg viewBox="0 0 72 72"><circle class="ring-track" cx="36" cy="36" r="30"/><circle class="ring-fill" cx="36" cy="36" r="30" stroke-dasharray="'+circ+'" stroke-dashoffset="'+dashOff+'"/></svg><div class="ring-lbl"><div class="ring-pct">'+consPct+'%</div><div class="ring-sub">active</div></div></div>'+
-    '<div><div class="ring-info-title">'+activeDays+' active day'+(activeDays===1?'':'s')+'</div><div class="ring-info-sub">Out of the last '+Math.round(spanDays)+' days. Keep the momentum going.</div></div>'+
-    '</div></div>';
-
-  // Activity by day
-  html+='<div class="stat-card"><div class="stat-card-title">Activity by Day</div><div class="bar-chart">'+
-    dayCounts.map(function(c,i){var h=Math.round((c/maxDay)*58);return '<div class="bar-col"><div class="bar-outer"><div class="bar-inner '+(i===peakDay?'peak':'rest')+'" style="height:'+Math.max(h,3)+'px"></div></div><div class="bar-lbl">'+dayLbls[i]+'</div></div>';}).join('')+
-    '</div></div>';
-
-  // When you write
-  var timeIcos={morning:'☀',afternoon:'⛅',evening:'☽'};
-  html+='<div class="stat-card"><div class="stat-card-title">When You Write</div><div class="time-row">'+
-    Object.keys(timeCounts).map(function(slot){return '<div class="time-block'+(slot===peakSlot?' peak':'')+'"><div class="time-ico">'+timeIcos[slot]+'</div><div class="time-lbl">'+slot.charAt(0).toUpperCase()+slot.slice(1)+'</div><div class="time-count">'+(timeCounts[slot]||0)+' sessions</div></div>';}).join('')+
-    '</div></div>';
-
-  // Completion ratio
-  html+='<div class="stat-card"><div class="stat-card-title">Scripts Started vs Completed</div><div class="ratio-row">'+
-    '<div class="ratio-pct">'+compPct+'%</div>'+
-    '<div class="ratio-bars">'+
-    '<div class="ratio-item"><div class="ratio-lbl">Started</div><div class="ratio-track"><div class="ratio-fill started" style="width:100%"></div></div><div class="ratio-num">'+totalSc+'</div></div>'+
-    '<div class="ratio-item"><div class="ratio-lbl">Completed</div><div class="ratio-track"><div class="ratio-fill done" style="width:'+(totalSc?Math.round(done/totalSc*100):0)+'%"></div></div><div class="ratio-num">'+done+'</div></div>'+
-    '</div></div></div>';
-
-  // Best session
-  if(bestSess&&bestSess.words>0){
-    html+='<div class="stat-card"><div class="stat-card-title">Best Writing Session</div><div class="best-row">'+
-      '<div class="best-num">'+bestSess.words+'</div>'+
-      '<div><div class="best-lbl">Words</div><div class="best-date">'+new Date(bestSess.date).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})+'</div><div class="best-sub">Your personal record</div></div>'+
-      '</div></div>';
-  }
-
-  // Pro locked teaser
-  html+='<div style="background:linear-gradient(135deg,var(--accent-soft),rgba(184,115,51,.04));border:1px solid var(--accent-border);border-radius:14px;padding:16px;margin-top:4px;">'+
-    '<div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Coming with Pro</div>'+
-    '<div style="font-size:.84rem;font-weight:600;color:var(--text);margin-bottom:5px;">Score Trends Over Time</div>'+
-    '<div style="font-size:.72rem;color:var(--muted);line-height:1.6;margin-bottom:12px;">See how your Hook, CTA and overall script scores move across every video you write. Spot your consistent weak spots and track real improvement.</div>'+
-    '<button onclick="openProSheet()" style="padding:8px 18px;border-radius:8px;background:var(--accent);color:#0A0D14;border:none;font-size:.76rem;font-weight:700;cursor:pointer;">See Pro Features</button>'+
-    '</div>';
-
-  // ── Advanced Stats coming soon teaser ──
-  html+='<div style="margin:16px 0 8px;">';
-  html+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;">';
-  html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">';
-  html+='<div style="width:32px;height:32px;border-radius:9px;background:rgba(90,126,201,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">';
-  html+='<svg fill="none" stroke="var(--body-c)" viewBox="0 0 24 24" stroke-width="1.6" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>';
-  html+='</div>';
-  html+='<div>';
-  html+='<div style="font-size:.78rem;font-weight:600;color:var(--text);">Advanced Stats</div>';
-  html+='<div style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--body-c);margin-top:1px;">Coming Soon</div>';
-  html+='</div></div>';
-  html+='<div style="font-size:.7rem;color:var(--muted);line-height:1.65;margin-bottom:10px;">Score trend over time, per-tag improvement tracking, writing velocity, session history and more detailed breakdowns of where your scripts succeed and fail.</div>';
-    html+='<button onclick="openProSheet()" class="btn-p" style="width:100%;">Support Development &middot; Go Pro</button>';
-  html+='</div></div>';
-  el.innerHTML=html;
-}
-
-// ── Analyse tab ──
-function renderAnalyse(){
-  var h=[];
-  h.push('<div style="display:flex;flex-direction:column;align-items:center;padding:40px 20px 32px;text-align:center;">');
-  h.push('<div style="width:56px;height:56px;border-radius:16px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:16px;">');
-  h.push('<svg fill="none" stroke="var(--accent)" viewBox="0 0 24 24" stroke-width="1.6" style="width:26px;height:26px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>');
-  h.push('</div>');
-  h.push('<div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:6px;">Script Analysis</div>');
-  h.push('<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:3px 12px;margin-bottom:14px;">Coming Soon</div>');
-  h.push('<div style="font-size:.76rem;color:var(--muted);line-height:1.7;max-width:280px;margin-bottom:20px;">Full viewer state simulation. Attention curve. Per-sentence feedback. Section scores and top issues.</div>');
-  h.push('<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;width:100%;margin-bottom:20px;text-align:left;">');
-  h.push('<div style="font-size:.56rem;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);font-weight:600;margin-bottom:10px;">What is planned</div>');
-  h.push('<div style="display:flex;flex-direction:column;gap:8px;">');
-  h.push('<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:5px;"></div><div style="font-size:.72rem;color:var(--muted);line-height:1.5;">Viewer attention curve showing where engagement rises and drops</div></div>');
-  h.push('<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:5px;"></div><div style="font-size:.72rem;color:var(--muted);line-height:1.5;">Section scores for Hook, Context, Body, CTA and Outro</div></div>');
-  h.push('<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:5px;"></div><div style="font-size:.72rem;color:var(--muted);line-height:1.5;">Top issues ranked by impact with specific observations and fixes</div></div>');
-  h.push('<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:5px;"></div><div style="font-size:.72rem;color:var(--muted);line-height:1.5;">Per-sentence Deep tab with colour-coded attention scores</div></div>');
-  h.push('</div></div>');
-  h.push('<div style="font-size:.72rem;color:var(--muted);line-height:1.6;margin-bottom:14px;">Pro members get access first. Supporting development now helps it ship faster.</div>');
-  h.push('<button onclick="openProSheet()" style="background:var(--accent);color:#12161F;border:none;border-radius:12px;padding:12px 24px;font-size:.82rem;font-weight:700;cursor:pointer;width:100%;">Support Development &middot; Go Pro</button>');
-  h.push('</div>');
-  var el=document.getElementById('analyseScroll');if(el)el.innerHTML=h.join('');
-}
-
-function renderWorkspace(){
-  var h=[];
-  h.push('<div style="display:flex;flex-direction:column;align-items:center;padding:40px 20px 32px;text-align:center;">');
-  h.push('<div style="width:56px;height:56px;border-radius:16px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:16px;">');
-  h.push('<svg fill="none" stroke="var(--body-c)" viewBox="0 0 24 24" stroke-width="1.6" style="width:26px;height:26px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>');
-  h.push('</div>');
-  h.push('<div style="font-size:1rem;font-weight:700;color:var(--text);margin-bottom:6px;">SEO Tools</div>');
-  h.push('<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--body-c);background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:3px 12px;margin-bottom:14px;">Coming Soon</div>');
-  h.push('<div style="font-size:.76rem;color:var(--muted);line-height:1.7;max-width:280px;margin-bottom:20px;">YouTube title analysis, keyword scoring, thumbnail copy suggestions and search intent matching.</div>');
-  h.push('<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;width:100%;margin-bottom:20px;text-align:left;">');
-  h.push('<div style="font-size:.56rem;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);font-weight:600;margin-bottom:10px;">What is planned</div>');
-  h.push('<div style="display:flex;flex-direction:column;gap:8px;">');
-  h.push('<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:5px;height:5px;border-radius:50%;background:var(--body-c);flex-shrink:0;margin-top:5px;"></div><div style="font-size:.72rem;color:var(--muted);line-height:1.5;">Title scoring against YouTube search patterns and click intent</div></div>');
-  h.push('<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:5px;height:5px;border-radius:50%;background:var(--body-c);flex-shrink:0;margin-top:5px;"></div><div style="font-size:.72rem;color:var(--muted);line-height:1.5;">Keyword density and placement suggestions based on your script</div></div>');
-  h.push('<div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:5px;height:5px;border-radius:50%;background:var(--body-c);flex-shrink:0;margin-top:5px;"></div><div style="font-size:.72rem;color:var(--muted);line-height:1.5;">Thumbnail copy recommendations derived from your hook text</div></div>');
-  h.push('</div></div>');
-  h.push('<div style="font-size:.72rem;color:var(--muted);line-height:1.6;margin-bottom:14px;">Pro members get access first. Supporting development now helps it ship faster.</div>');
-  h.push('<button onclick="openProSheet()" style="background:var(--accent);color:#12161F;border:none;border-radius:12px;padding:12px 24px;font-size:.82rem;font-weight:700;cursor:pointer;width:100%;">Support Development &middot; Go Pro</button>');
-  h.push('</div>');
-    var el=document.getElementById('workspaceScroll');if(el)el.innerHTML=h.join('');
-}
-
-function runAnalyseFromPaste(){
-  var ta=document.getElementById('pasteArea');
-  if(!ta||!ta.value||!ta.value.trim()){showToast('Paste some script text first','error');return;}
-  var text=ta.value.trim();
-  var wct=wordCount(text);
-  if(wct<20){showToast('Add more text. Need at least 20 words','error');return;}
-  var titleEl=document.getElementById('pasteTitle');
-  S._pasteTitle=(titleEl&&titleEl.value.trim())||'';
-  var btn=document.querySelector('.abtn-p');
-  if(btn){
-    btn.innerHTML='<svg viewBox="0 0 24 24" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;" fill="none" class="spinning"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" stroke-dasharray="28" stroke-dashoffset="10" stroke-linecap="round"/></svg>Analysing...';
-    btn.disabled=true;
-  }
-  var minDelay=wct>200?5000:3000;
-  var started=Date.now();
-  aiTagAndAnalyse(text,function(){
-    var elapsed=Date.now()-started;
-    var remaining=Math.max(0,minDelay-elapsed);
-    setTimeout(function(){
-      if(btn){btn.innerHTML='Analyse';btn.disabled=false;}
-      S._pasteTitle='';
-    },remaining);
-  },S._pasteTitle);
-}
-
-function aiTagAndAnalyse(text,onDone,title){
-  // AI call removed - rule engine handles analysis
-  // AI-powered analysis will be introduced as a Pro feature with proper API proxy
-  if(onDone)onDone();
-  runAnalyse(text,title||'Pasted Script');
-}
-function runAnalyseForScript(id){
-  var s=S.scripts.find(function(x){return x.id===id;});
-  if(!s)return;
-  var text=(s.paragraphs||[]).map(function(p){return p.text;}).join('\n\n');
-  closeMo();
-  runAnalyse(text,s.title,id,s.paragraphs);
-}
-
-function runAnalyse(text,title,scriptId,paragraphs){
-  // Build pseudo-paragraphs if just raw text
-  var paras=paragraphs||guessParagraphs(text);
-  var sectionScores={};
-  var tagOrder=['hook','ctx','body','cta','out'];
-  tagOrder.forEach(function(tag){
-    var p=paras.find(function(x){return x.tag===tag;});
-    sectionScores[tag]=p?scoreText(tag,p.text):0;
-  });
-  var overall=overallScore(paras);
-  var result={
-    id:uid(),title:title||'Script Analysis',date:new Date().toISOString(),
-    score:overall,sectionScores:sectionScores,paragraphs:paras,scriptId:scriptId||null
-  };
-  loadAnalyseHistory();
-  S.analyseHistory.unshift(result);
-  if(S.analyseHistory.length>50)S.analyseHistory=S.analyseHistory.slice(0,50);
-  saveAnalyseHistory();
-  safeGtag('event','script_analysed',{score:overall});
-  // Small delay so the analysing state is visible before results appear
-  var _resultId=result.id;
-  setTimeout(function(){
-    openAnalyseResult(_resultId);
-    // Fire AI analysis after result opens
-    setTimeout(function(){
-      if(!canUseAi()){
-        // Show limit message in place of AI section
-        var fb=document.getElementById('res-ai-fallback');
-        var rem=aiCallsRemaining();
-        if(fb){
-          fb.innerHTML='You have used your '+AI_FREE_LIMIT+' free AI analyses today. Resets at midnight. <button onclick="openProSheet()" style="background:none;border:none;color:var(--accent);font-size:.72rem;cursor:pointer;text-decoration:underline;">Upgrade to Pro</button> for unlimited.';
-          fb.style.display='block';
-        }
-        return;
-      }
-      var tier=isPro()?'pro':'free';
-      runAiAnalysis(intel,tier,_resultId);
-    },300);
-  },200);
-}
 
 
-function getScriptVerdict(scores,overall){
-  var hookSc=scores.hook||0,ctaSc=scores.cta||0,bodySc=scores.body||0;
-  var seed=Math.round(overall+hookSc);
-  function pv(arr){return arr[Math.abs(seed)%arr.length];}
-  if(overall>=80)return pv(['Ready to film.','This script is ready.','Strong across every section.','Built to hold attention.']);
-  if(overall>=70)return pv(['Nearly there.','One or two fixes from strong.','Good structure, sharpen the edges.','Close to ready.']);
-  if(overall>=60&&hookSc>=65)return pv(['Strong start, loose finish.','Good opening, weak close.','Hook earns it, CTA loses it.','Starts well, ends softly.']);
-  if(overall>=60&&hookSc<45)return pv(['Good content, weak entry.','Strong middle, soft opening.','Content is there, hook is not.','The body works, the hook does not.']);
-  if(hookSc>=70&&ctaSc<40)return pv(['Earns attention, loses the ask.','Hook lands, CTA does not.','Strong open, no close.','Attention earned, action lost.']);
-  if(hookSc<40&&overall>=50)return pv(['The content works, the opening does not.','Good ideas, wrong start.','Structure is there, entry is not.','Substance without a hook.']);
-  if(ctaSc<35&&overall>=50)return pv(['No clear ask at the close.','Ends without direction.','Strong through the body, no finish.','Good content, no call to action.']);
-  if(overall>=45)return pv(['Not ready to film.','Structural gaps throughout.','Needs work before filming.','The foundation is there but incomplete.']);
-  return pv(['Not ready to film.','Significant gaps in structure.','Rebuild before filming.','The script needs substantial work.']);
-}
-function getScriptVerdictSub(scores,overall,tags){
-  var hookSc=scores.hook||0,ctaSc=scores.cta||0,bodySc=scores.body||0;
-  var ctxSc=scores.ctx||0,outSc=scores.out||0;
-  var seed=Math.round(overall+hookSc);
-  function pv(arr,s){if(!arr||!arr.length)return '';return arr[Math.abs(s||seed)%arr.length];}
-  if(typeof FB==='undefined')return '';
 
-  var weakest='hook',weakestSc=hookSc;
-  if(ctaSc>0&&ctaSc<weakestSc){weakest='cta';weakestSc=ctaSc;}
-  if(bodySc>0&&bodySc<weakestSc){weakest='body';weakestSc=bodySc;}
-  if(ctxSc>0&&ctxSc<weakestSc){weakest='ctx';weakestSc=ctxSc;}
-  if(outSc>0&&outSc<weakestSc){weakest='out';weakestSc=outSc;}
 
-  var s1='';
-  if(hookSc>=65){s1=pv(['The hook creates a genuine open loop and earns the viewer\'s attention.','The opening lands well and gives the viewer a reason to stay.','The hook does its job: it creates tension without resolving it.'],seed);}
-  else if(bodySc>=65){s1=pv(['The main body delivers real value and maintains attention through the middle.','The content in the body is strong and consistently rewards the viewer.','The body section works well and justifies the viewer\'s patience.'],seed);}
-  else if(ctxSc>=65){s1=pv(['The context earns credibility early and sets a clear promise.','Strong context means the viewer enters the body with trust already built.','The context section establishes authority and gives the viewer direction.'],seed);}
-  else{s1=pv(['The structure has the right sections in the right order.','The core components are present, though each needs sharpening.','The foundation of a strong video is here.'],seed);}
-
-  var s2='';
-  var entryMap={hook:[hookSc<40?FB.hook.noTension:FB.hook.creatorFirst],cta:[ctaSc<40?FB.cta.noAction:FB.cta.actionNoReason],ctx:[ctxSc<40?FB.ctx.noCredential:FB.ctx.credentialNoPayoff],body:[FB.body.noMomentum],out:[FB.out.abrupt]};
-  var e2=entryMap[weakest]?entryMap[weakest][0]:null;
-  if(e2)s2=pv(e2.consequence,seed+1);
-  if(!s2)s2=pv(['The weakest section is pulling the overall score down significantly.','One section is costing the script more than all the others combined.','The gaps are concentrated and fixable with targeted edits.'],seed+1);
-
-  var s3='';
-  var fixMap={hook:[hookSc<40?FB.hook.noTension:FB.hook.noViewerAddress],cta:[ctaSc<40?FB.cta.noAction:FB.cta.actionNoReason],ctx:[ctxSc<40?FB.ctx.noCredential:FB.ctx.credentialNoPayoff],body:[bodySc<40?FB.body.noMomentum:FB.body.noExamples],out:[FB.out.noCallback]};
-  var e3=fixMap[weakest]?fixMap[weakest][0]:null;
-  if(e3)s3=pv(e3.direction,seed+2);
-  if(!s3)s3=pv(['Fix the weakest section first before adjusting anything else.','One focused rewrite of the lowest-scoring section will move the overall score more than any other change.','Prioritise the section with the lowest score and address it with a single targeted edit.'],seed+2);
-
-  return s1+' '+s2+' '+s3;
-}
-function openAnalyseResult(id){
-  loadAnalyseHistory();
-  var result=S.analyseHistory.find(function(h){return h.id===id;});
-  if(!result)return;
-  S._currentResultId=id;
-
-  document.getElementById('analyseResultsScreen').classList.remove('hide');
-  var titleEl=document.getElementById('resTitle');
-  if(titleEl)titleEl.textContent=result.title||'Analysis';
-  var dateEl=document.getElementById('resDate');
-  if(dateEl)dateEl.textContent=result.date?new Date(result.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
-
-  // Run full intelligence
-  var paras=result.paragraphs||[];
-  // Use stored scores if available to avoid mismatch with history card
-  var intel=analyseScript(paras);
-  // If result has stored scores, use them for hero display for consistency
-  if(result.sectionScores&&Object.keys(result.sectionScores).length){
-    intel.sectionScores=result.sectionScores;
-    intel.overall=result.score||intel.overall;
-  }
-  var scores=intel.sectionScores;
-  var sectionScores=intel.sectionScores;
-  var overall=intel.overall||result.score||0;
-  var level=scoreLevel(overall);
-  var tagNames={hook:'Hook',ctx:'Context',body:'Main Body',cta:'CTA',out:'Outro'};
-  var tagOrder=['hook','ctx','body','cta','out'];
-
-  // Build all three panels
-  var circ=Math.PI*2*22;
-  var fill=Math.round(circ*(1-overall/100)*10)/10;
-  var colMap={high:'var(--s-high)',mid:'var(--s-mid)',low:'var(--s-low)'};
-  var col=colMap[level];
-
-  // ── HERO (shared across all tabs) ──
-  var tagColors={hook:'var(--hook)',ctx:'var(--ctx)',body:'var(--body-c)',cta:'var(--cta)',out:'var(--out)'};
-  var tagOrder2=['hook','ctx','body','cta','out'];
-
-  // ── HERO: Option A (score box + horizontal bars) ──
-  var hero='<div class="res-hero-a">';
-  hero+='<div class="hero-a-score">';
-  hero+='<div class="hero-a-num '+level+'" style="color:var(--s-'+level+');">'+overall+'</div>';
-  hero+='<div class="hero-a-lbl">Score</div>';
-  hero+='</div>';
-  hero+='<div class="hero-a-right">';
-  hero+='<div class="hero-a-verdict">'+getScriptVerdict(sectionScores,overall)+'</div>';
-  hero+='<div class="hero-a-bars">';
-  tagOrder2.forEach(function(tag){
-    var sc=sectionScores[tag];
-    if(!sc&&sc!==0)return;
-    if(!paras.find(function(p){return p.tag===tag;}))return;
-    var lv=scoreLevel(sc);
-    hero+='<div class="hbar">';
-    hero+='<span class="hbar-name" style="color:'+tagColors[tag]+'">'+tagNames[tag].split(' ')[0]+'</span>';
-    hero+='<div class="hbar-track"><div class="hbar-fill" style="width:'+sc+'%;background:'+tagColors[tag]+'"></div></div>';
-    hero+='<span class="hbar-val">'+sc+'</span>';
-    hero+='</div>';
-  });
-  hero+='</div></div></div>';
-
-var tagOrder=tagOrder2||['hook','ctx','body','cta','out'];
-  var id=result.id;
-
-  // Inject hero into DOM
-  var heroEl=document.getElementById('resHero');
-  if(heroEl)heroEl.innerHTML=hero;
-
-  var ov='';
-  var id=result.id;
-
-  // ── AI fallback message ──
-  ov+='<div id="res-ai-fallback" style="display:none;margin:0 0 12px;padding:10px 14px;background:var(--s2);border-radius:10px;border:1px solid var(--border);font-size:.72rem;color:var(--muted);line-height:1.6;"></div>';
-
-  // ── Scripora AI badge + script type badge ──
-  var stLabelMap={tutorial:'Tutorial',story:'Story',opinion:'Opinion',listicle:'Listicle',review:'Review',sport:'Sport',documentary:'Documentary',general:'General'};
-  var stLabel=stLabelMap[intel.scriptType]||'General';
-  ov+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;">';
-  ov+='<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(106,175,130,.1);border:1px solid rgba(106,175,130,.2);border-radius:20px;padding:3px 10px 3px 7px;font-size:.6rem;font-weight:600;color:var(--s-high);">';
-  ov+='<div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);animation:ai-pulse 2s infinite;"></div>Scripora AI</div>';
-  if(intel.scriptType&&intel.scriptType!=='general'){
-    ov+='<div style="display:inline-flex;align-items:center;background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.6rem;font-weight:600;color:var(--muted);">'+stLabel+'</div>';
-  }
-  ov+='</div>';
-
-  // ── Attention curve ──
-  var attCurve=intel.attentionCurve&&intel.attentionCurve.length?intel.attentionCurve:(intel.curve||[]);
-  ov+='<div class="ov-card">';
-  ov+='<div class="ov-card-lbl">Attention Curve<span class="ov-card-lbl-r">viewer retention</span></div>';
-  if(attCurve.length>1){
-    var W=310;var H=72;var PX=4;var PY=10;
-    var minV=Math.min.apply(null,attCurve);
-    var maxV=Math.max.apply(null,attCurve);
-    var vR=Math.max(1,maxV-minV);
-    function ax(i){return Math.round(PX+(i/Math.max(1,attCurve.length-1))*(W-PX*2));}
-    function ay(v){return Math.round(H-PY-((v-minV)/vR)*(H-PY*2));}
-    var pts=attCurve.map(function(v,i){return ax(i)+','+ay(v);}).join(' L');
-    var line='M'+pts;
-    var area=line+' L'+ax(attCurve.length-1)+','+H+' L'+ax(0)+','+H+' Z';
-    var pkI=0;var dpI=0;
-    attCurve.forEach(function(v,i){if(v>attCurve[pkI])pkI=i;if(v<attCurve[dpI])dpI=i;});
-    var svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="width:100%;height:72px;display:block;">';
-    svg+='<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity=".25"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>';
-    svg+='<line x1="0" y1="'+ay(50)+'" x2="'+W+'" y2="'+ay(50)+'" stroke="rgba(255,255,255,.05)" stroke-width="1"/>';
-    svg+='<path d="'+area+'" fill="url(#ag)"/>';
-    svg+='<path d="'+line+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
-    if(pkI!==dpI)svg+='<circle cx="'+ax(pkI)+'" cy="'+ay(attCurve[pkI])+'" r="3.5" fill="var(--s-high)"/>';
-    svg+='<circle cx="'+ax(dpI)+'" cy="'+ay(attCurve[dpI])+'" r="3.5" fill="var(--s-low)"/>';
-    svg+='</svg>';
-    ov+=svg;
-    ov+='<div style="display:flex;justify-content:space-between;margin-top:5px;"><span style="font-size:.52rem;color:var(--faint);">0%</span><span style="font-size:.52rem;color:var(--faint);">50%</span><span style="font-size:.52rem;color:var(--faint);">100%</span></div>';
-  } else {
-    ov+='<div style="font-size:.7rem;color:var(--muted);padding:10px 0;">Not enough data to build curve.</div>';
-  }
-  ov+='</div>';
-
-  // ── Opening / Closing / Read time ──
-  var openStr=intel.openingStrength||0;
-  var closeStr=intel.closingStrength||0;
-  var readMins=intel.totalWords>0?Math.round(intel.totalWords/130):0;
-  var readStr=readMins>=1?readMins+'m':'<1m';
-  ov+='<div style="display:flex;gap:6px;margin-bottom:10px;">';
-  ov+='<div class="ov-trio-card"><div class="ov-trio-lbl">Opening</div><div class="ov-trio-val" style="color:var(--s-'+scoreLevel(openStr)+');">'+openStr+'</div><div class="ov-trio-sub">First 3 sent.</div></div>';
-  ov+='<div class="ov-trio-card"><div class="ov-trio-lbl">Closing</div><div class="ov-trio-val" style="color:var(--s-'+scoreLevel(closeStr)+');">'+closeStr+'</div><div class="ov-trio-sub">Last 3 sent.</div></div>';
-  ov+='<div class="ov-trio-card"><div class="ov-trio-lbl">Read time</div><div class="ov-trio-val" style="color:var(--text);">'+readStr+'</div><div class="ov-trio-sub">at 130 wpm</div></div>';
-  ov+='</div>';
-
-  // ── Stats chips (4 -- no read time repeat) ──
-  var voiceVal=intel.voiceRatio||0;
-  var paceVal=intel.paceVariance||0;
-  var insightVal=intel.insightDensity||0;
-  var promiseStr=intel.promises&&intel.promises.length?(intel.promiseDelivered?'Kept':'Broken'):'None';
-  var promiseCol=intel.promises&&intel.promises.length?(intel.promiseDelivered?'var(--s-high)':'var(--s-low)'):'var(--muted)';
-  var paceCol=(paceVal>3)?'var(--s-high)':(paceVal>1.5)?'var(--s-mid)':'var(--s-low)';
-  var insightCol='var(--s-'+scoreLevel(Math.min(100,insightVal*10))+')';
-  var voiceCol='var(--s-'+scoreLevel(voiceVal)+')';
-  ov+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;">';
-  ov+='<div class="stat-chip2"><div class="sc2-val" style="color:'+voiceCol+';">'+voiceVal+'%</div><div class="sc2-lbl">Viewer voice</div></div>';
-  ov+='<div class="stat-chip2"><div class="sc2-val" style="color:'+paceCol+';">'+paceVal+'</div><div class="sc2-lbl">Pace variance</div></div>';
-  ov+='<div class="stat-chip2"><div class="sc2-val" style="color:'+insightCol+';">'+insightVal+'</div><div class="sc2-lbl">Insight density</div></div>';
-  ov+='<div class="stat-chip2"><div class="sc2-val" style="color:'+promiseCol+';">'+promiseStr+'</div><div class="sc2-lbl">Promise</div></div>';
-  ov+='</div>';
-
-  // ── Top issues (engine, AI replaces these) ──
-  ov+='<div class="ov-sec-lbl">Top Issues</div>';
-  ov+='<div id="res-ai-issues">';
-  if(intel.issues&&intel.issues.length){
-    var issSecColors={Hook:'var(--hook)',Context:'var(--ctx)',Body:'var(--body-c)',CTA:'var(--cta)',Outro:'var(--out)',General:'var(--accent)'};
-    intel.issues.forEach(function(issue,ii){
-      var lbl=ii===0?'Top Issue':'Issue '+(ii+1);
-      var sc2=issSecColors[issue.section]||'var(--accent)';
-      ov+='<div class="issue-card-new" style="border-left-color:'+sc2+';">';
-      ov+='<div class="icn-hd">';
-      ov+='<span class="icn-lbl">'+lbl+'</span>';
-      ov+='<span class="icn-sec" style="color:'+sc2+';">'+issue.section+'</span>';
-      ov+='<span class="icn-imp '+(issue.impact==='high'?'hi':'md')+'">'+issue.impact+'</span>';
-      ov+='</div>';
-      ov+='<div class="icn-row"><div class="icn-dot obs"></div><div class="icn-text obs">'+escHtml(issue.observation)+'</div></div>';
-      ov+='<div class="icn-row"><div class="icn-dot con"></div><div class="icn-text">'+escHtml(issue.consequence)+'</div></div>';
-      ov+='<div class="icn-row"><div class="icn-dot fix"></div><div class="icn-text fix">'+escHtml(issue.fix)+'</div></div>';
-      ov+='</div>';
-    });
-  }
-  ov+='</div>';
-
-  // ── In short ──
-  ov+='<div class="res-inshort"><div class="res-inshort-tag">In short</div>';
-  ov+='<div class="res-inshort-verdict" id="res-ai-verdict">'+getScriptVerdict(scores,overall)+'</div>';
-  ov+='<div class="res-inshort-body" id="res-ai-inshort">'+getScriptVerdictSub(scores,overall,Object.keys(scores))+'</div></div>';
-
-  // ── Actions ──
-  ov+='<div class="res-actions-row">';
-  ov+='<button class="res-action-btn primary" onclick="openAsNewScript(\''+id+'\')">';
-  ov+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>';
-  ov+=(result.scriptId?'Open Script':'Open as New Script')+'</button>';
-  ov+='<button class="res-action-btn" onclick="downloadAnalysisResult(\''+id+'\')">';
-  ov+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
-  ov+='Download</button>';
-  ov+='</div>';
-
-  // ════ SECTIONS PANEL ════
-  var sec='';
-  paras.forEach(function(p,pi){
-    if(!p.text||!p.text.trim())return;
-    var paraSents=intel.sentenceData?intel.sentenceData.filter(function(s){return s.paraId===p.id;}):[];
-    var sc3=paraSents.length>0?Math.round(paraSents.reduce(function(a,s){return a+s.attention;},0)/paraSents.length):(scores[p.tag]||scoreText(p.tag,p.text));
-    var lv=scoreLevel(sc3);
-    var tagCol={hook:'var(--hook)',ctx:'var(--ctx)',body:'var(--body-c)',cta:'var(--cta)',out:'var(--out)'}[p.tag]||'var(--accent)';
-    var isOpen=pi===0;
-    sec+='<div class="sec-card'+(isOpen?' sec-open':'')+'">';
-    sec+='<div class="sec-card-hd" onclick="this.parentElement.classList.toggle(\'sec-open\')">';
-    sec+='<div class="sec-tag-pill" style="background:'+tagCol+'1a;color:'+tagCol+';">'+(tagNames[p.tag]||p.tag)+'</div>';
-    sec+='<div class="sec-card-preview">'+escHtml((p.text||'').slice(0,52))+'...</div>';
-    sec+='<span class="score-pill '+lv+'"><span class="score-pill-dot"></span>'+sc3+'</span>';
-    sec+='<svg class="sec-chev" fill="none" stroke="var(--faint)" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" d="M19 9l-7 7-7-7"/></svg>';
-    sec+='</div>';
-    sec+='<div class="sec-card-body">';
-    // Script text
-    sec+='<div class="sec-script-text">'+escHtml(p.text)+'</div>';
-    // Divider
-    sec+='<div class="sec-divider"></div>';
-    // AI feedback
-    var fb=getParagraphFeedback(p.tag,p.text,sc3);
-    sec+='<div class="sec-fb-block">';
-    sec+='<div class="sec-fb-lbl">AI Feedback</div>';
-    sec+='<div class="sec-fb-text" id="sec-ai-'+p.id+'">'+fb+'</div>';
-    sec+='</div>';
-    sec+='</div>';
-    sec+='</div>';
-  });
-  sec+='<div class="res-actions-row" style="margin-top:8px;">';
-  sec+='<button class="res-action-btn primary" onclick="openAsNewScript(\''+id+'\')">';
-  sec+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>';
-  sec+=(result.scriptId?'Open Script':'Open as New Script')+'</button>';
-  sec+='<button class="res-action-btn" onclick="downloadAnalysisResult(\''+id+'\')">';
-  sec+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:15px;height:15px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
-  sec+='Download</button>';
-  sec+='</div>';
-
-  // ════ DEEP PANEL ════
-  var deep='';
-  deep+='<div class="deep-intro-card"><strong>Top issues</strong> ranked by impact. Fix these first regardless of script length.</div>';
-
-  if(intel.issues&&intel.issues.length){
-    var rankBg=['rgba(192,90,90,.15)','rgba(192,90,90,.15)','rgba(201,150,42,.12)','rgba(201,150,42,.12)','rgba(106,175,130,.1)'];
-    var rankCol=['var(--s-low)','var(--s-low)','var(--s-mid)','var(--s-mid)','var(--s-high)'];
-    var dIssColors={Hook:'var(--hook)',Context:'var(--ctx)',Body:'var(--body-c)',CTA:'var(--cta)',Outro:'var(--out)',General:'var(--accent)'};
-    intel.issues.slice(0,5).forEach(function(issue,ii){
-      var sCol=dIssColors[issue.section]||'var(--accent)';
-      deep+='<div class="deep-issue-row">';
-      deep+='<div class="deep-rank" style="background:'+rankBg[ii]+';color:'+rankCol[ii]+';">'+(ii+1)+'</div>';
-      deep+='<div style="flex:1;">';
-      deep+='<div class="deep-obs">'+escHtml(issue.observation)+'</div>';
-      deep+='<div class="deep-fix">'+escHtml(issue.fix)+'</div>';
-      deep+='<div class="deep-tag" style="color:'+sCol+';">'+issue.section+' &middot; '+issue.impact+' impact</div>';
-      deep+='</div></div>';
-    });
-  }
-
-  // Per-sentence
-  var sentByTag={};
-  (intel.sentenceData||[]).forEach(function(s){
-    if(!sentByTag[s.tag])sentByTag[s.tag]=[];
-    sentByTag[s.tag].push(s);
-  });
-  var sTNames={hook:'Hook',ctx:'Context',body:'Body',cta:'CTA',out:'Outro'};
-  var sTColors={hook:'var(--hook)',ctx:'var(--ctx)',body:'var(--body-c)',cta:'var(--cta)',out:'var(--out)'};
-
-  function renderSentSection(tag){
-    var sents=sentByTag[tag]||[];
-    if(!sents.length)return;
-    var tagSc=scores[tag]||0;
-    var tCol=sTColors[tag];
-    deep+='<div class="sent-hd">';
-    deep+='<div class="sent-hd-dot" style="background:'+tCol+';"></div>';
-    deep+='<span class="sent-hd-name" style="color:'+tCol+';">'+sTNames[tag]+'</span>';
-    deep+='<span class="score-pill '+scoreLevel(tagSc)+'" style="margin-left:auto;"><span class="score-pill-dot"></span>'+tagSc+'</span>';
-    deep+='</div>';
-    sents.forEach(function(s){
-      var lv=scoreLevel(s.attention);
-      var fb='';
-      if(s.features){
-        if(s.features.credibility<0.2&&s.features.specificity<0.2)fb='Vague -- add a specific detail or number.';
-        else if(s.features.novelty<0.25)fb='Repeats previous idea.';
-        else if(s.features.directness<0.1)fb='No viewer address -- reframe for the audience.';
-        else if(lv==='high')fb='Strong sentence.';
-        else if(lv==='mid')fb='Room to improve -- more specificity or a clearer payoff.';
-        else fb='Weak attention -- consider restructuring or cutting.';
-      }
-      deep+='<div class="sent-row-card '+lv+'">';
-      deep+='<div style="flex:1;">';
-      deep+='<div class="sent-text">'+escHtml(s.text)+'</div>';
-      if(fb)deep+='<div class="sent-fb">'+fb+'</div>';
-      deep+='</div>';
-      deep+='<div class="sent-score" style="color:var(--s-'+lv+');">'+s.attention+'</div>';
-      deep+='</div>';
-    });
-  }
-
-  renderSentSection('hook');
-  renderSentSection('ctx');
-
-  renderSentSection('body');
-  renderSentSection('cta');
-  renderSentSection('out');
-  deep+='<div style="height:28px;"></div>';
-
-  S._resPanels={overview:ov,sections:sec,deep:deep};
-  switchResTab('overview', document.getElementById('rtab-overview'));
-}
-
-function switchResTab(name,btn){
-  if(!btn)btn=document.getElementById('rtab-'+name);
-  document.querySelectorAll('.res-tab').forEach(function(t){t.classList.remove('on');});
-  if(btn)btn.classList.add('on');
-  var panel=S._resPanels?S._resPanels[name]:'';
-  var body=document.getElementById('resBody');
-  if(body){
-    body.innerHTML=panel;
-    body.scrollTop=0;
-  }
-}
-
-function getSectionNote(tag,sc){
-  var notes={
-    hook:{
-      high:'Opens a loop the viewer needs to close. Attention earned.',
-      mid:'The opening creates interest but does not fully lock the viewer in.',
-      low:'This does not give the viewer a reason to stay past the first few seconds.'
-    },
-    ctx:{
-      high:'Establishes credibility and promises clear value viewer trust is building.',
-      mid:'Credibility is present but the payoff for the viewer is not clearly defined.',
-      low:'The viewer still does not know why your voice on this topic is worth their time.'
-    },
-    body:{
-      high:'Delivers on the promise. Specificity and structure hold attention.',
-      mid:'The content is there but is not landing with full weight yet.',
-      low:'This section delays or diffuses the value the viewer came for.'
-    },
-    cta:{
-      high:'The ask is earned and specific follow-through probability is high.',
-      mid:'The action is named but the viewer has not been given a strong reason to act.',
-      low:'No clear direction. The viewer finishes the video and moves on.'
-    },
-    out:{
-      high:'Closes the loop and gives the viewer somewhere to go next.',
-      mid:'Functional ending but it does not reinforce what the viewer just watched.',
-      low:'The video stops rather than ends. No reason to stay in your world.'
-    }
-  };
-  return (notes[tag]&&notes[tag][scoreLevel(sc)])||'';
-}
 
 
 function highlightText(text){
@@ -1548,120 +571,7 @@ function highlightText(text){
   return safe;
 }
 
-function scheduleRenderAnalyse(){setTimeout(renderAnalyse,0);}
-function renameAnalyseSession(id){
-  loadAnalyseHistory();
-  var h=S.analyseHistory.find(function(x){return x.id===id;});
-  if(!h)return;
-  openModal('_raw','<div class="mhandle"></div><div class="modal-title">Rename</div>'+
-    '<input class="modal-inp" id="renameAInp" value="'+escHtml(h.title||'')+'" placeholder="Script title" style="margin-bottom:12px;"/>'+
-    '<div class="modal-acts">'+
-    '<button class="btn-g" onclick="closeMoForce()">Cancel</button>'+
-    '<button class="btn-a active" onclick="event.stopPropagation();(function(){var v=document.getElementById(\'renameAInp\').value.trim();if(!v)return;loadAnalyseHistory();var hh=S.analyseHistory.find(function(x){return x.id===\''+id+'\';});if(hh){hh.title=v;saveAnalyseHistory();}closeMoForce();setTimeout(renderAnalyse,0);showToast(\'Renamed\',\'success\');})();">Save</button>'+
-    '</div>');
-  setTimeout(function(){var i=document.getElementById('renameAInp');if(i){i.focus();i.select();}},180);
-}
-function deleteAnalyseSession(id){
-  loadAnalyseHistory();
-  S.analyseHistory=S.analyseHistory.filter(function(h){return h.id!==id;});
-  saveAnalyseHistory();
-  setTimeout(renderAnalyse,0);
-  showToast('Removed','default');
-  // If full history modal is open, re-render it immediately
-  var modal=document.getElementById('modal');
-  if(modal&&modal.getAttribute('data-modal-type')==='allHistory'){
-    openModal('allHistory',null);
-  }
-}
-function openAsNewScript(resultId){
-  loadAnalyseHistory();
-  var result=S.analyseHistory.find(function(h){return h.id===resultId;});
-  if(!result)return;
-  // If this analysis came from an existing script, just open that script
-  if(result.scriptId){
-    var existing=S.scripts.find(function(s){return s.id===result.scriptId;});
-    if(existing){
-      S.activeId=existing.id;
-      closeAnalyseResults();goScreen('write');
-      showToast('Opened in Write','success');
-      return;
-    }
-  }
-  // Otherwise create a new script from the pasted analysis
-  if(S.scripts.length>=FREE_LIMIT){
-    showToast('You have reached '+FREE_LIMIT+' scripts. Pro includes unlimited scripts and is coming with more features.','default');
-    return;
-  }
-  var newId=uid();
-  var script={
-    id:newId,
-    title:result.title==='Pasted Script'?'Script from Analysis':result.title,
-    status:'Draft',
-    paragraphs:result.paragraphs.map(function(p){return {id:uid(),tag:p.tag,text:p.text,score:p.score};}),
-    createdAt:new Date().toISOString(),
-    updatedAt:new Date().toISOString(),
-    notes:{facts:[],ideas:[],links:[],notes:[]},
-    lastScore:result.score
-  };
-  S.scripts.push(script);S.activeId=newId;save();syncToCloud();
-  closeAnalyseResults();goScreen('write');
-  showToast('Opened as new script','success');
-}
 
-function downloadAnalysisResults(){
-  loadAnalyseHistory();
-  var result=S.analyseHistory[S.analyseHistory.length-1];
-  if(!result)return;
-  var tagNames={hook:'Hook',ctx:'Context',body:'Main Body',cta:'CTA',out:'Outro'};
-  var date=result.date?new Date(result.date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}):'';
-  var lines=[];
-  lines.push('SCRIPORA ANALYSIS REPORT');
-  lines.push(''.padEnd(40,'='));
-  lines.push('');
-  lines.push('Script:  '+( result.title||'Untitled'));
-  lines.push('Date:    '+date);
-  lines.push('Score:   '+result.score+' / 100  ('+scoreVerdict(result.score)+')');
-  lines.push('');
-  lines.push(''.padEnd(40,'-'));
-  lines.push('SECTION SCORES');
-  lines.push(''.padEnd(40,'-'));
-  var order=['hook','ctx','body','cta','out'];
-  order.forEach(function(tag){
-    var sc=result.sectionScores[tag];
-    if(!sc&&sc!==0)return;
-    var name=tagNames[tag]||tag;
-    var bar='';
-    var filled=Math.round(sc/5);
-    for(var i=0;i<20;i++)bar+=i<filled?'#':'-';
-    lines.push(name.padEnd(12)+' '+bar+' '+sc);
-  });
-  lines.push('');
-  lines.push(''.padEnd(40,'-'));
-  lines.push('SECTION FEEDBACK');
-  lines.push(''.padEnd(40,'-'));
-  (result.paragraphs||[]).filter(function(p){return p.text&&p.text.trim();}).forEach(function(p){
-    var sc=result.sectionScores[p.tag]||0;
-    var fb=getParagraphFeedback(p.tag,p.text,sc);
-    lines.push('');
-    lines.push('['+( tagNames[p.tag]||p.tag).toUpperCase()+']  Score: '+sc);
-    lines.push(p.text);
-    lines.push('');
-    lines.push('Feedback:');
-    lines.push(fb);
-    lines.push('');
-  });
-  lines.push(''.padEnd(40,'-'));
-  lines.push('Generated by Scripora  scripora.vercel.app');
-  lines.push(''.padEnd(40,'='));
-  var txt=lines.join('\n');
-  var a=document.createElement('a');
-  a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(txt);
-  a.download=(result.title||'analysis').replace(/[^a-z0-9]/gi,'_')+'_scripora_report.txt';
-  a.style.cssText='position:fixed;top:0;left:0;opacity:0;';
-  document.body.appendChild(a);a.click();
-  setTimeout(function(){document.body.removeChild(a);},200);
-  showToast('Report downloaded','success');
-}
 // ── Help page ──
 function openHelp(){
   document.getElementById('helpScreen').classList.remove('hide');
@@ -1671,7 +581,7 @@ function closeHelp(){
   document.getElementById('helpScreen').classList.add('hide');
 }
 function switchHelpTab(tab){
-  ['start','write','analyse','account'].forEach(function(t){
+  ['start','write','account'].forEach(function(t){
     var btn=document.getElementById('htab-'+t);
     if(btn)btn.classList.toggle('on',t===tab);
   });
@@ -1696,14 +606,13 @@ function renderHelpContent(tab){
 function getHelpSections(tab){
   if(tab==='start')return [
     {title:'Welcome',items:[
-      {q:'What is Scripora?',a:'Scripora is a script planning app for YouTube creators. It helps you structure your Hook, Context, Main Body, CTA and Outro, then analyses what each section does to viewer attention.'},
+      {q:'What is Scripora?',a:'Scripora is a script planning app for YouTube creators. It helps you structure your Hook, Context, Main Body, CTA and Outro for a clear, well-paced video.'},
       {q:'How do I create my first script?',a:'Go to the Scripts tab and tap the + button at the top right. Give your script a title and you will be taken straight to the Write tab.'},
-      {q:'Do I need to sign in?',a:'No. You can write and save scripts without an account. Sign in with Google to back up your scripts to the cloud and access them on any device.'},
-      {q:'What does the score mean?',a:'Each section is scored on signals the engine detects: tension, credibility, pacing, direction and reward. A score above 70 is strong. Below 45 needs work. The overall score is a weighted average across all sections.'}
+      {q:'Do I need to sign in?',a:'No. You can write and save scripts without an account. Sign in with Google to back up your scripts to the cloud and access them on any device.'}
     ]},
     {title:'Script Structure',items:[
       {q:'What are Hook, Context, Body, CTA and Outro?',a:'These are the five sections of a YouTube script. Hook grabs attention in the first few seconds. Context builds credibility and sets the promise. Main Body delivers the value. CTA directs the viewer. Outro closes the loop and sends them forward.'},
-      {q:'Do I have to use all five sections?',a:'No. The engine works with whatever sections you have. A complete script with all five gets the most detailed analysis.'}
+      {q:'Do I have to use all five sections?',a:'No. Use whatever sections fit your video. A complete script with all five tends to have the clearest structure.'}
     ]}
   ];
   if(tab==='write')return [
@@ -1711,36 +620,21 @@ function getHelpSections(tab){
       {q:'How do I add sections?',a:'Tap the + button at the bottom of the Write screen. Choose a tag (Hook, Context etc) and type your paragraph.'},
       {q:'Can I reorder sections?',a:'Yes. Each paragraph has up and down arrows to move it.'},
       {q:'What is the Notes drawer?',a:'Tap the clipboard icon in the Write header to open a notes drawer with four tabs: Facts, Ideas, Links and Notes. Use it to store research and reference material while writing.'},
-      {q:'What does the chart icon do?',a:'The chart icon opens a condensed Script Report drawer showing your last analysis result for this script, including top issues and the fix for each one.'},
       {q:'How do I rename a script?',a:'Tap the script title at the top of the Write screen to rename it.'}
     ]},
     {title:'Export',items:[
       {q:'How do I copy my script?',a:'Tap the eye icon in the Write header to open View Script. From there you can copy the full text or download it as a plain text file.'},
-      {q:'What is Portfolio export?',a:'Portfolio is a Pro feature that exports your script as a formatted HTML document with colour-coded sections.'}
-    ]}
-  ];
-  if(tab==='analyse')return [
-    {title:'Script Insights',items:[
-      {q:'What is Script Insights?',a:'Script Insights is a quick read on how your script is doing. Tap the lightbulb icon in the Write tab to open it. You will see your overall score, section scores, and up to five issues with specific fixes for each. You can change the script type and video length to see how scores shift. It runs without leaving the writing tab.'},
-      {q:'What are the section scores?',a:'Hook, Context, Body, CTA and Outro are each scored 0-100 based on how well they do their job. Hook is scored on curiosity and tension. Context on trust and credibility. Body on sustained attention and progression. CTA on clarity and directness. Outro on tension resolution.'},
-      {q:'What are the top issues?',a:'The engine identifies the highest-impact problems in your script. Each issue has an observation (what it sees), a consequence (what it does to the viewer), and a fix (what to change). Fixing the top issue first always has the biggest impact on the score.'},
-      {q:'Is Script Insights available to all users?',a:'Yes. Script Insights is available on all tiers including free. Open it from the lightbulb button in the Write tab header at any time.'}
-    ]},
-    {title:'Script Analysis (Coming Soon)',items:[
-      {q:'What is Script Analysis?',a:'Script Analysis is a full report coming to the Hub tab. It will include an attention curve, section breakdown, per-sentence scores, and deep analysis of structural patterns. Pro members get access first when it launches.'},
-      {q:'How is it different from Script Insights?',a:'Script Insights gives you a quick read while you write. Script Analysis will be a full-depth report after writing is done, with charts, a sentence-by-sentence Deep tab, and AI-generated feedback on specific phrases.'}
+      {q:'What is Portfolio export?',a:'Portfolio export turns your script into a formatted HTML document with colour-coded sections, ready to download or share.'}
     ]}
   ];
   if(tab==='account')return [
     {title:'Account and Sync',items:[
       {q:'How does cloud sync work?',a:'When signed in, your scripts sync automatically after every change. You can access them from any device by signing in with the same Google account.'},
-      {q:'What is Scripora Pro?',a:'Pro unlocks unlimited scripts (free tier has 10), Portfolio export, and future features including the AI writing assistant and advanced analytics.'},
-      {q:'How do I unlock Pro?',a:'Go to Profile and enter a promo code in the Pro section, or purchase through the link provided.'},
       {q:'How do I delete my account?',a:'Go to Profile, scroll to the bottom, tap Delete Account, and type DELETE to confirm. This removes all your data permanently.'}
     ]},
     {title:'Privacy',items:[
       {q:'What data does Scripora store?',a:'Your scripts and analysis history are stored locally on your device and optionally synced to Firebase if you are signed in. Scripora does not sell or share your data.'},
-      {q:'Does Scripora use AI?',a:'The analysis engine is rule-based and runs entirely in your browser. No script content is sent to any server. An AI layer using the Claude API is planned as a Pro feature in a future update.'}
+      {q:'Does Scripora use AI?',a:'The analysis engine is rule-based and runs entirely in your browser. No script content is sent to any server.'}
     ]}
   ];
   return [];
@@ -1768,7 +662,7 @@ function showStatHelp(type,value){
     body=(typeof getStatInsight==='function'?getStatInsight('voice',parseFloat(value)||0):'')||'Voice ratio measures how often the script addresses the viewer directly.';
   }else if(type==='sync'){
     title='Live Sync';
-    body='Live Sync keeps your analysis up to date as you write. Every edit triggers a fresh analysis. Pro only.';
+    body='Live Sync keeps your script backed up to the cloud as you write. Every edit is saved in real time.';
   }
   openModal('_raw','<div class="mhandle"></div><div class="modal-title" style="font-size:.9rem;">'+title+'</div><p style="font-size:.78rem;color:var(--muted);line-height:1.65;margin-bottom:16px;">'+body+'</p><button class="btn-g" onclick="closeMoForce()">Got it</button>');
 }
@@ -1777,9 +671,7 @@ function showStatHelp(type,value){
 var _obSlide=0;
 var _obData=[
   {icon:'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z',title:'Write with structure',body:'Scripora gives you five building blocks: Hook, Context, Body, CTA and Outro. Each paragraph gets a colour-coded tag. Tap the tag to change it. The app is intuitive. Explore every button and see what it does.'},
-  {icon:'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',title:'Start on the Scripts tab',body:'The Scripts tab is your home. Create a script, open one to write, and see your scores at a glance. Tap any card to open it in the Write tab.'},
-  {icon:'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',title:'Script Insights while you write',body:'In the Write tab, tap the lightbulb icon to open Script Insights. It shows your section scores and top issues with specific fixes. No report needed, no tab switching. The insight comes to you.'},
-  {icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',title:'Track your writing on Hub',body:'The Hub tab keeps your stats: scripts written, average scores, streak, and section performance over time. A clear record of how your writing is developing.'},
+  {icon:'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',title:'Start on the Scripts tab',body:'The Scripts tab is your home. Create a script, open one to write, and track its status at a glance. Tap any card to open it in the Write tab.'},
   {icon:'M13 10V3L4 14h7v7l9-11h-7z',title:'Write with intention',body:'Scripora is for writers who want to improve, not shortcuts. Every tag you choose is a decision. Every section you write is a practice. The tool reflects your craft back at you.'}
 ];
 function initOnboarding(){
@@ -1807,286 +699,6 @@ function obNext(){
 }
 function obPrev(){if(_obSlide>0){_obSlide--;showOnboardSlide(_obSlide);}}
 
-// ══════════════════════════════════════════
-// WRITE TAB REPORT DRAWER
-// ══════════════════════════════════════════
-
-function openWriteReport(){
-  var script=getActive();
-  if(!script){
-    // Try to find any script
-    if(S.scripts&&S.scripts.length){
-      S.activeId=S.scripts[S.scripts.length-1].id;
-      script=getActive();
-    }
-    if(!script){showToast('Open a script first','error');return;}
-  }
-  if(!script.paragraphs||!script.paragraphs.length){showToast('Add some content to analyse','default');return;}
-
-  // Always run fresh analysis
-  var intel=analyseScript(script.paragraphs);
-  S._liveIntel=intel;
-  script.lastScore=intel.overall;save();
-
-  // Populate header
-  var overall=intel.overall||0;
-  var level=scoreLevel(overall);
-  var colMap={high:'var(--s-high)',mid:'var(--s-mid)',low:'var(--s-low)'};
-  var scoreEl=document.getElementById('wrScore');
-  if(scoreEl){scoreEl.textContent=overall;scoreEl.style.color=colMap[level]||'var(--muted)';}
-  var verdictEl=document.getElementById('wrVerdict');
-  if(verdictEl){verdictEl.textContent=getScriptVerdict(intel.sectionScores,overall);}
-
-  // Update sync toggle state
-
-  // Render body
-  renderWriteReportBody(intel,script);
-
-  // Open drawer - requestAnimationFrame ensures transition fires after display:none removed
-  var wd=document.getElementById('wrDrawer');
-  var wov=document.getElementById('wrDov');
-  wd.classList.remove('hide');
-  wov.classList.remove('hide');
-  requestAnimationFrame(function(){
-    requestAnimationFrame(function(){
-      wd.classList.add('open');
-      wov.classList.add('open');
-    });
-  });
-}
-
-function goToFullReport(){
-  S._resultOrigin='write';
-  closeWriteReport();
-  // Run fresh analysis on current script and save to history
-  var script=getActive();
-  if(script&&script.paragraphs&&script.paragraphs.length){
-    // Save a fresh analysis entry so we have something to open
-    var intel=analyseScript(script.paragraphs);
-    loadAnalyseHistory();
-    // Check if we already have a recent entry for this script
-    var existing=null;
-    for(var i=0;i<S.analyseHistory.length;i++){
-      if(S.analyseHistory[i].scriptId===script.id){existing=S.analyseHistory[i];break;}
-    }
-    if(existing){
-      // Open existing result directly
-      goScreen('hub');
-      setTimeout(function(){openAnalyseResult(existing.id);},120);
-    } else {
-      // Run analysis and save, then open
-      var entry={
-        id:uid(),
-        title:script.title||'Untitled',
-        date:new Date().toISOString(),
-        scriptId:script.id,
-        paragraphs:script.paragraphs.slice(),
-        score:intel.overall,
-        sectionScores:intel.sectionScores
-      };
-      S.analyseHistory.unshift(entry);
-      if(S.analyseHistory.length>50)S.analyseHistory=S.analyseHistory.slice(0,50);
-      saveAnalyseHistory();
-      goScreen('hub');
-      setTimeout(function(){openAnalyseResult(entry.id);},120);
-    }
-  } else {
-    goScreen('hub');
-    setTimeout(function(){
-      var pill=document.querySelector('.hub-pill[data-tab="analyse"]');
-      if(pill)setHubTab(pill,'analyse');
-    },120);
-  }
-}
-function closeWriteReport(){
-  document.getElementById('wrDrawer').classList.remove('open');
-  document.getElementById('wrDov').classList.remove('open');
-  setTimeout(function(){
-    document.getElementById('wrDrawer').classList.add('hide');
-    document.getElementById('wrDov').classList.add('hide');
-  },250);
-}
-
-function renderWriteReportBody(intel,script){
-  var out='';
-  var tagOrder=['hook','ctx','body','cta','out'];
-  var tagNames={hook:'Hook',ctx:'Context',body:'Main Body',cta:'CTA',out:'Outro'};
-
-  // Get saved options or defaults
-  var savedType=script.scriptType||intel.scriptType||'general';
-  var savedLen=script.videoLength||'long';
-
-  // Recalculate with options applied
-  var ri=(script.paragraphs&&script.paragraphs.length)?recalcWithOptions(script.paragraphs,savedType,savedLen):intel;
-  var scores=ri.sectionScores||intel.sectionScores||{};
-
-  // ── Script type + video length selectors ──
-  var typeLabels={tutorial:'Tutorial',story:'Story',opinion:'Opinion',listicle:'Listicle',review:'Review',sport:'Sport',documentary:'Documentary',general:'General'};
-  var lenLabels={short:'Short video',long:'Long video'};
-  out+='<div style="display:flex;gap:6px;margin-bottom:12px;">';
-  // Type selector
-  out+='<div style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:8px 10px;cursor:pointer;position:relative;" onclick="toggleWrTypeMenu(this)">';
-  out+='<div style="font-size:.5rem;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-bottom:2px;">Script Type</div>';
-  out+='<div style="display:flex;align-items:center;justify-content:space-between;">';
-  out+='<div style="font-size:.74rem;font-weight:600;color:var(--text);" id="wrTypeLabel">'+(typeLabels[savedType]||'General')+'</div>';
-  out+='<svg fill="none" stroke="var(--faint)" viewBox="0 0 24 24" stroke-width="2" style="width:12px;height:12px;"><path stroke-linecap="round" d="M19 9l-7 7-7-7"/></svg>';
-  out+='</div>';
-  out+='<div id="wrTypeMenu" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:9px;z-index:10;overflow:hidden;margin-top:4px;">';
-  ['general','tutorial','story','opinion','listicle','review','sport','documentary'].forEach(function(t){
-    out+='<div style="padding:9px 12px;font-size:.74rem;color:'+(t===savedType?'var(--accent)':'var(--text)')+';cursor:pointer;border-bottom:1px solid var(--border);" onclick="setWrType(\''+t+'\')">'+(typeLabels[t]||t)+'</div>';
-  });
-  out+='</div></div>';
-  // Length selector
-  out+='<div style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:8px 10px;cursor:pointer;position:relative;" onclick="toggleWrLenMenu(this)">';
-  out+='<div style="font-size:.5rem;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-bottom:2px;">Video Length</div>';
-  out+='<div style="display:flex;align-items:center;justify-content:space-between;">';
-  out+='<div style="font-size:.74rem;font-weight:600;color:var(--text);" id="wrLenLabel">'+(lenLabels[savedLen]||'Long video')+'</div>';
-  out+='<svg fill="none" stroke="var(--faint)" viewBox="0 0 24 24" stroke-width="2" style="width:12px;height:12px;"><path stroke-linecap="round" d="M19 9l-7 7-7-7"/></svg>';
-  out+='</div>';
-  out+='<div id="wrLenMenu" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:9px;z-index:10;overflow:hidden;margin-top:4px;">';
-  ['short','long'].forEach(function(l){
-    out+='<div style="padding:9px 12px;font-size:.74rem;color:'+(l===savedLen?'var(--accent)':'var(--text)')+';cursor:pointer;border-bottom:1px solid var(--border);" onclick="setWrLen(\''+l+'\')">'+(lenLabels[l]||l)+'</div>';
-  });
-  out+='</div></div>';
-  out+='</div>';
-
-  // ── Section score bars ──
-  out+='<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px;">';
-  tagOrder.forEach(function(tag){
-    var sc=scores[tag];
-    if(!sc&&sc!==0)return;
-    if(!script.paragraphs||!script.paragraphs.find(function(p){return p.tag===tag;}))return;
-    var lv=scoreLevel(sc);
-    out+='<div style="display:flex;align-items:center;gap:8px;">';
-    out+='<span style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);width:40px;flex-shrink:0;">'+(tagNames[tag]||tag)+'</span>';
-    out+='<div style="flex:1;height:4px;background:var(--faint);border-radius:2px;overflow:hidden;">';
-    out+='<div style="width:'+sc+'%;height:100%;background:var(--s-'+lv+');border-radius:2px;transition:width .4s ease;"></div></div>';
-    out+='<span style="font-size:.62rem;font-weight:700;color:var(--s-'+lv+');width:24px;text-align:right;">'+sc+'</span>';
-    out+='</div>';
-  });
-  out+='</div>';
-
-  // ── Issues ──
-  // Only show issues for sections present in the script
-  var existingTags={};
-  (script.paragraphs||[]).forEach(function(p){existingTags[p.tag]=true;});
-  var tagToSection={hook:'Hook',ctx:'Context',body:'Body',cta:'CTA',out:'Outro'};
-  var allIssues=ri.issues||intel.issues||[];
-  var filteredIssues=allIssues.filter(function(iss){
-    var sec=(iss.section||'').toLowerCase();
-    var tag=Object.keys(tagToSection).find(function(k){return tagToSection[k].toLowerCase()===sec;});
-    if(!tag)return true;
-    return existingTags[tag]===true;
-  }).slice(0,5);
-
-  if(filteredIssues.length){
-    out+='<div id="wrIssueCarousel" style="position:relative;">';
-    out+='<input type="hidden" id="wrIssueIdx" value="0"/>';
-    filteredIssues.forEach(function(issue,ii){
-      var ic=issue.impact==='high'?'background:rgba(139,58,58,.15);color:var(--s-low)':'background:rgba(201,150,42,.12);color:var(--s-mid)';
-      var secColors={Hook:'var(--hook)',Context:'var(--ctx)',Body:'var(--body-c)',CTA:'var(--cta)',Outro:'var(--out)',General:'var(--accent)'};
-      var sc2=secColors[issue.section]||'var(--accent)';
-      out+='<div class="wr-issue-slide" style="display:'+(ii===0?'block':'none')+';">';
-      out+='<div style="background:var(--s2);border:1px solid var(--border);border-left:3px solid '+sc2+';border-radius:10px;padding:11px 13px;margin-bottom:8px;">';
-      out+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;">';
-      out+='<span style="font-size:.52rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);">Issue '+(ii+1)+' of '+filteredIssues.length+'</span>';
-      out+='<span style="font-size:.58rem;font-weight:600;color:'+sc2+';background:var(--surface);border-radius:4px;padding:2px 6px;">'+issue.section+'</span>';
-      out+='<span style="font-size:.52rem;font-weight:700;text-transform:uppercase;padding:2px 6px;border-radius:4px;'+ic+';">'+issue.impact+'</span>';
-      out+='</div>';
-      out+='<div style="font-size:.7rem;color:var(--text);line-height:1.55;margin-bottom:5px;">'+escHtml(issue.observation||'')+'</div>';
-      out+='<div style="font-size:.67rem;color:var(--muted);line-height:1.5;margin-bottom:5px;">'+escHtml(issue.consequence||'')+'</div>';
-      out+='<div style="font-size:.67rem;color:var(--s-high);line-height:1.5;">'+escHtml(issue.fix||'')+'</div>';
-      out+='</div></div>';
-    });
-    if(filteredIssues.length>1){
-      out+='<div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:8px;">';
-      out+='<button onclick="prevWrIssue()" style="background:var(--s2);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);">';
-      out+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" style="width:13px;height:13px;"><path stroke-linecap="round" d="M15 19l-7-7 7-7"/></svg></button>';
-      out+='<span id="wrIssueCounter" style="font-size:.62rem;color:var(--faint);">1 / '+filteredIssues.length+'</span>';
-      out+='<button onclick="nextWrIssue()" style="background:var(--s2);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);">';
-      out+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" style="width:13px;height:13px;"><path stroke-linecap="round" d="M9 5l7 7-7 7"/></svg></button>';
-      out+='</div>';
-    }
-    out+='</div>';
-  } else if(script.paragraphs&&script.paragraphs.length>0){
-    out+='<div style="background:var(--s2);border-radius:9px;padding:10px 12px;font-size:.72rem;color:var(--s-high);text-align:center;">No major issues detected. Keep writing.</div>';
-  }
-  document.getElementById('wrBody').innerHTML=out;
-}
-
-function toggleWrTypeMenu(){
-  var menu=document.getElementById('wrTypeMenu');
-  if(menu)menu.style.display=menu.style.display==='none'?'block':'none';
-}
-function toggleWrLenMenu(){
-  var menu=document.getElementById('wrLenMenu');
-  if(menu)menu.style.display=menu.style.display==='none'?'block':'none';
-}
-function setWrType(type){
-  var script=getActive();if(!script)return;
-  script.scriptType=type;save();
-  var menu=document.getElementById('wrTypeMenu');
-  if(menu)menu.style.display='none';
-  var intel=recalcWithOptions(script.paragraphs,type,script.videoLength||'long');
-  S._liveIntel=intel;script.lastScore=intel.overall;save();
-  renderWriteReportBody(intel,script);
-  var scoreEl=document.getElementById('wrScore');
-  if(scoreEl){scoreEl.textContent=intel.overall;scoreEl.style.color='var(--s-'+scoreLevel(intel.overall)+')';}
-  setTimeout(renderScripts,0);
-}
-function setWrLen(len){
-  var script=getActive();if(!script)return;
-  script.videoLength=len;save();
-  var menu=document.getElementById('wrLenMenu');
-  if(menu)menu.style.display='none';
-  var intel=recalcWithOptions(script.paragraphs,script.scriptType||'general',len);
-  S._liveIntel=intel;script.lastScore=intel.overall;save();
-  renderWriteReportBody(intel,script);
-  var scoreEl=document.getElementById('wrScore');
-  if(scoreEl){scoreEl.textContent=intel.overall;scoreEl.style.color='var(--s-'+scoreLevel(intel.overall)+')';}
-  setTimeout(renderScripts,0);
-}
-function nextWrIssue(){
-  var slides=document.querySelectorAll('.wr-issue-slide');
-  var idxEl=document.getElementById('wrIssueIdx');
-  var ctrEl=document.getElementById('wrIssueCounter');
-  if(!slides.length||!idxEl)return;
-  var cur=parseInt(idxEl.value)||0;
-  var next=(cur+1)%slides.length;
-  slides[cur].style.display='none';
-  slides[next].style.display='block';
-  idxEl.value=next;
-  if(ctrEl)ctrEl.textContent=(next+1)+' / '+slides.length;
-}
-function prevWrIssue(){
-  var slides=document.querySelectorAll('.wr-issue-slide');
-  var idxEl=document.getElementById('wrIssueIdx');
-  var ctrEl=document.getElementById('wrIssueCounter');
-  if(!slides.length||!idxEl)return;
-  var cur=parseInt(idxEl.value)||0;
-  var prev=(cur-1+slides.length)%slides.length;
-  slides[cur].style.display='none';
-  slides[prev].style.display='block';
-  idxEl.value=prev;
-  if(ctrEl)ctrEl.textContent=(prev+1)+' / '+slides.length;
-}
-
-function wrIssueNav(dir){
-  var idxEl=document.getElementById('wrIssueIdx');
-  if(!idxEl)return;
-  var current=parseInt(idxEl.value)||0;
-  var slides=document.querySelectorAll('.wr-issue-slide');
-  var dots=document.querySelectorAll('[id^="wrid_"]');
-  if(!slides.length)return;
-  var next=(current+dir+slides.length)%slides.length;
-  slides[current].style.display='none';
-  slides[next].style.display='block';
-  if(dots[current])dots[current].style.background='var(--faint)';
-  if(dots[next])dots[next].style.background='var(--accent)';
-  idxEl.value=next;
-}
-
-
 function toggleLiveSync(){
   S.syncEnabled=!S.syncEnabled;
   if(S.syncEnabled){
@@ -2098,22 +710,10 @@ function toggleLiveSync(){
   save();
 }
 
-function updateSyncToggleUI(){}
-
-function closeAnalyseResults(){
-  document.getElementById('analyseResultsScreen').classList.add('hide');
-  if(S._resultOrigin==='write'){
-    goScreen('write');
-  } else {
-    if(S.activeHubTab==='analyse')setTimeout(renderAnalyse,0);
-  }
-  S._resultOrigin=null;
-}
 
 // ── Profile ──
 function renderProfile(){
   var el=document.getElementById('profileContent');
-  var pro=isPro();
   var u=S.currentUser;
   var isGuest=!u||S.isGuest;
 
@@ -2174,15 +774,9 @@ function renderProfile(){
         '</button>'+
         '<div style="display:flex;flex-direction:column;gap:6px;width:100%;margin-top:2px;">'+
           '<div style="display:flex;align-items:center;gap:10px;background:var(--s2);border-radius:10px;padding:10px 14px;font-size:.72rem;color:var(--muted);">&#9729; Scripts backed up automatically</div>'+
-          '<div style="display:flex;align-items:center;gap:10px;background:var(--s2);border-radius:10px;padding:10px 14px;font-size:.72rem;color:var(--muted);">&#9889; Live Sync available with Pro</div>'+
+          '<div style="display:flex;align-items:center;gap:10px;background:var(--s2);border-radius:10px;padding:10px 14px;font-size:.72rem;color:var(--muted);">&#9889; Live Sync as you write</div>'+
           '<div style="display:flex;align-items:center;gap:10px;background:var(--s2);border-radius:10px;padding:10px 14px;font-size:.72rem;color:var(--muted);">&#128241; Access from any device</div>'+
         '</div>'+
-      '</div>'+
-      lbl('Upgrade')+
-      '<div style="margin:0 14px;background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;">'+
-        '<div style="font-size:1.2rem;">&#10038;</div>'+
-        '<div style="flex:1;"><div style="font-size:.84rem;font-weight:600;color:var(--accent);">Scripora Pro</div><div style="font-size:.65rem;color:var(--muted);margin-top:2px;line-height:1.5;">Unlimited scripts, early access to Script Analysis, SEO Tools and Advanced Stats when they launch. One payment, yours forever.</div></div>'+
-        '<button onclick="openProSheet()" style="background:var(--accent);color:#12161F;border:none;border-radius:10px;padding:8px 14px;font-size:.72rem;font-weight:600;cursor:pointer;white-space:nowrap;">$4.99</button>'+
       '</div>'+
       appearHTML+supportHTML+legalHTML+ver;
     return;
@@ -2192,49 +786,18 @@ function renderProfile(){
   var avatarHTML=u.photoURL?
     '<img src="'+u.photoURL+'" style="width:68px;height:68px;border-radius:50%;object-fit:cover;" onerror="this.style.display=\'none\'"/>':
     '<div style="width:68px;height:68px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--accent);">'+initials+'</div>';
-  var badge=pro?
-    '<div style="background:var(--accent);color:#12161F;font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:3px 12px;border-radius:50px;text-transform:uppercase;">Pro</div>':
-    '<div style="background:var(--s2);border:1px solid var(--border);color:var(--muted);font-size:.6rem;font-weight:600;letter-spacing:.08em;padding:3px 12px;border-radius:50px;text-transform:uppercase;">Free</div>';
   var html=
     '<div style="padding:28px 20px 20px;background:linear-gradient(170deg,rgba(184,115,51,.08) 0%,transparent 70%);border-bottom:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:10px;">'+
       '<div style="width:76px;height:76px;border-radius:50%;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;">'+avatarHTML+'</div>'+
       '<div style="font-size:1.15rem;font-weight:700;color:var(--text);">'+escHtml(u.displayName||'Scripora User')+'</div>'+
       (u.email?'<div style="font-size:.72rem;color:var(--muted);">'+escHtml(u.email)+'</div>':'')+
-      badge+
     '</div>';
-
-  if(pro){
-    html+=lbl('Membership')+
-      '<div style="margin:0 14px;background:linear-gradient(135deg,rgba(184,115,51,.1),rgba(184,115,51,.04));border:1px solid var(--accent-border);border-radius:16px;padding:16px;">'+
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'+
-          '<div style="background:var(--accent);color:#12161F;font-size:.58rem;font-weight:700;letter-spacing:.1em;padding:3px 10px;border-radius:50px;text-transform:uppercase;">Pro</div>'+
-          '<div style="font-size:.84rem;font-weight:600;color:var(--text);">Lifetime access &middot; active</div>'+
-        '</div>'+
-        '<div style="display:flex;flex-direction:column;gap:5px;">'+
-          '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);flex-shrink:0;"></div>Unlimited scripts</div>'+
-          '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);flex-shrink:0;"></div>Live Sync &mdash; write with real-time scoring</div>'+
-          '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--s-high);flex-shrink:0;"></div>Script Analysis access when it launches</div>'+
-          '<div style="display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted);"><div style="width:5px;height:5px;border-radius:50%;background:var(--faint);flex-shrink:0;"></div>SEO Tools access when it launches</div>'+
-        '</div>'+
-      '</div>';
-  } else {
-    html+=lbl('Upgrade')+
-      '<div class="pro-box">'+
-        '<div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;">Scripora Pro &mdash; $4.99 lifetime</div>'+
-        '<div style="font-size:.7rem;color:var(--muted);line-height:1.6;margin-bottom:10px;">Unlimited scripts, early access to Script Analysis, SEO Tools and Advanced Stats when they launch. Price rises at launch.</div>'+
-        '<button onclick="openProSheet()" class="btn-p" style="width:100%;">Get Pro</button>'+
-        '<div style="margin-top:10px;">'+
-          '<input class="modal-inp" placeholder="Have a promo code?" id="profPromoInp" style="margin-bottom:6px;"/>'+
-          '<button class="btn-g" style="width:100%;" onclick="checkPromoFromProfile()">Apply</button>'+
-        '</div>'+
-      '</div>';
-  }
 
   html+=appearHTML;
   html+=lbl('Account')+
     group([
       row(rowIcon('blue','M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z','var(--body-c)'),'Edit Profile','','openModal(\'editProfile\')',chev),
-      row(rowIcon('green','M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z','var(--s-high)'),'Get the App','Install on your home screen','openGetApp()',chev)
+      row(rowIcon('green','M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z','var(--s-high)'),'Get the App','Install on your home screen','openInstallGuide()',chev)
     ]);
   html+=supportHTML+legalHTML;
   html+=lbl('Account actions')+
@@ -2246,15 +809,6 @@ function renderProfile(){
     ]);
   html+=ver;
   el.innerHTML=html;
-  setTimeout(function(){
-    var inp=document.getElementById('profPromoInp');
-    if(inp)inp.onkeydown=function(e){if(e.key==='Enter')checkPromoFromProfile();};
-  },0);
-}
-
-function checkPromoFromProfile(){
-  var inp=document.getElementById('profPromoInp');
-  if(inp&&inp.value)checkProCode(inp.value.trim());
 }
 
 
@@ -2272,7 +826,7 @@ function signInGoogle(){
 }
 function continueGuest(){
   S.isGuest=true;
-  load();loadAnalyseHistory();applyTheme(currentThemeId());
+  load();applyTheme(currentThemeId());
   showApp();
   showToast('Writing as guest. Sign in anytime to back up.','info');
 }
@@ -2286,8 +840,6 @@ function showLogin(){document.getElementById('loginScreen').classList.remove('hi
 function showApp(){S.appShown=true;setTimeout(initOnboarding,800);document.getElementById('loginScreen').classList.add('hide');document.getElementById('app').classList.remove('hide');goScreen('scripts');}
 
 // ── Modals ──
-function toggleAhSort(){S._ahSort=S._ahSort==='name'?'date':'name';openModal('allHistory');}
-function getAhSortLabel(){return (S._ahSort||'date')==='name'?'Sort: Name':'Sort: Date';}
 var _modalOpen=false;
 function openModal(type,data){
   // Cancel any pending long-press timer
@@ -2342,37 +894,7 @@ function openModal(type,data){
     return;
   }
 
-  if(type==='pickScript'){
-    var list=S.scripts.map(function(s){return '<div class="history-card" onclick="runAnalyseForScript(\''+s.id+'\')"><div class="hinfo"><div class="htitle">'+escHtml(s.title)+'</div><div class="hmeta">'+totalWords(s)+' words &middot; '+timeAgo(s.updatedAt)+'</div></div><div class="harrow"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div>';}).join('');
-    html+='<div class="modal-title">Pick a Script</div>'+
-      (list||'<p style="font-size:.8rem;color:var(--muted);padding:8px 0;">No scripts yet.</p>')+
-      '<button class="btn-g" style="width:100%;margin-top:10px;" onclick="closeMo()">Cancel</button>';
-    modal.innerHTML=html;mo.classList.add('open');return;
-  }
 
-  if(type==='allHistory'){
-    loadAnalyseHistory();
-    var ahSort=S._ahSort||'date';
-    var ahQ=(S._ahQ||'').toLowerCase().trim();
-    var allH=(S.analyseHistory||[]).slice();
-    if(ahSort==='name')allH.sort(function(a,b){return (a.title||'').localeCompare(b.title||'');});
-    // date sort: history already stored newest-first, no reverse needed
-    if(ahQ)allH=allH.filter(function(h){return (h.title||'').toLowerCase().indexOf(ahQ)>=0;});
-    var histList=allH.map(function(h){
-      return '<div class="history-card" onclick="closeMoForce();openAnalyseResult(\''+h.id+'\')">'+
-        '<div class="hscore '+scoreLevel(h.score)+'">'+h.score+'</div>'+
-        '<div class="hinfo"><div class="htitle">'+escHtml(h.title)+'</div><div class="hmeta">'+timeAgo(h.date)+'</div></div>'+
-        '<button class="pb-action" onclick="event.stopPropagation();deleteAnalyseSession(\''+h.id+'\');scheduleRenderAnalyse();" title="Remove" style="color:var(--faint);padding:6px;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>';
-    }).join('');
-    html+='<div class="modal-title">All Analyses</div>'+
-      '<div style="display:flex;gap:6px;margin-bottom:10px;">'+
-      '<input placeholder="Search..." oninput="S._ahQ=this.value;closeMoForce();openModal(\'allHistory\')" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.76rem;color:var(--text);"/>'+
-      '<button onclick="toggleAhSort()" style="padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-size:.7rem;color:var(--muted);white-space:nowrap;">'+getAhSortLabel()+'</button>'+
-      '</div>'+
-      (histList||'<p style="font-size:.8rem;color:var(--muted);">No history yet.</p>')+
-      '<button class="btn-g" style="width:100%;margin-top:10px;" onclick="closeMo()">Close</button>';
-    modal.innerHTML=html;modal.setAttribute('data-modal-type','allHistory');mo.classList.add('open');return;
-  }
 
   if(type==='themes'){
     var cards=THEMES.map(function(t){
@@ -2402,7 +924,7 @@ function openModal(type,data){
   if(type==='contact'){
     html+='<div class="modal-title">Contact Developer</div>'+
       '<div class="contact-form">'+
-      '<select class="contact-sel" id="contactType"><option value="feedback">General feedback</option><option value="bug">Bug report</option><option value="feature">Feature request</option><option value="pro">Pro / billing</option></select>'+
+      '<select class="contact-sel" id="contactType"><option value="feedback">General feedback</option><option value="bug">Bug report</option><option value="feature">Feature request</option></select>'+
       '<textarea class="contact-ta" id="contactMsg" placeholder="Write your message..."></textarea>'+
       '</div>'+
       '<div class="modal-acts" style="margin-top:10px;"><button class="btn-g" onclick="closeMo()">Cancel</button><button class="btn-p" onclick="sendContact()">Send</button></div>';
@@ -2481,9 +1003,6 @@ function openModal(type,data){
       '<div class="long-body">'+
       '<h4>Using Scripora</h4><p>Scripora is a scriptwriting tool for YouTube creators. By using it you agree to these terms. You may use Scripora for personal and commercial creative work. You may not use it to produce content that is illegal, harmful, abusive or that infringes on the intellectual property rights of others.</p>'+
       '<h4>Your content</h4><p>You retain full ownership of everything you write in Scripora. By enabling cloud sync, you grant Selerii a limited, non-exclusive licence to store and transmit your content solely for the purpose of delivering it back to you. We do not claim any rights over your scripts.</p>'+
-      '<h4>Script scoring and analysis</h4><p><strong>Important notice:</strong> Script scores, structural analysis and all feedback provided by Scripora   whether generated by rule-based logic or AI assistance   are estimates based on language patterns and structural signals. They are not guarantees of video performance, audience retention or commercial outcomes. Scores should be used as guidance to support your creative decisions, not as definitive assessments of quality. Scripora is not responsible for outcomes resulting from reliance on score data.</p>'+
-      '<h4>Script Insights and coming features</h4><p>Script Insights uses a local rule-based engine to score your scripts as you write. Full Script Analysis and SEO Tools are planned features coming to Pro members first. No script content leaves your device during current analysis.</p>'+
-      '<h4>Pro membership</h4><p>Pro is a one-time payment of $4.99 for lifetime access via Gumroad. Pro currently includes: unlimited scripts, portfolio export and script history. Script Analysis and SEO Tools are coming to Pro members first when they launch. Features under development are not guaranteed to arrive by a specific date. Refunds are handled on a case-by-case basis contact scripora@selerii.com within 14 days of purchase.</p>'+
       '<h4>Account termination</h4><p>You may delete your account at any time from the Profile tab. We reserve the right to suspend accounts that violate these terms.</p>'+
       '<h4>Limitation of liability</h4><p>Scripora is provided as-is without warranties of any kind. Selerii is not liable for loss of data, loss of revenue, missed opportunities or any indirect damages arising from use of this app.</p>'+
       '<p style="font-size:.7rem;margin-top:12px;">Last updated: March 2026 &nbsp;&middot;&nbsp; Contact: support@scripora.app</p>'+
@@ -2519,18 +1038,13 @@ function createScript(){
   if(!title){showToast('Enter a title first','error');return;}
   var pasteEl=document.getElementById('newScriptPaste');
   var pastedText=pasteEl?pasteEl.value.trim():'';
-  if(S.scripts.length>=FREE_LIMIT){
-    closeMo();
-    showToast('You have reached the free limit of '+FREE_LIMIT+' scripts. Pro includes unlimited scripts and more features coming soon.','default');
-    return;
-  }
   var startParas=[];
   if(pastedText){
     var guessed=guessParagraphs(pastedText);
-    startParas=guessed.map(function(p){return{id:uid(),tag:p.tag,text:p.text,score:0};});
+    startParas=guessed.map(function(p){return{id:uid(),tag:p.tag,text:p.text};});
   }
   var id=uid();
-  S.scripts.unshift({id:id,title:title,status:'Draft',paragraphs:startParas,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),notes:{facts:[],ideas:[],links:[],notes:[]},lastScore:null});
+  S.scripts.unshift({id:id,title:title,status:'Draft',paragraphs:startParas,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),notes:{facts:[],ideas:[],links:[],notes:[]}});
   S.activeId=id;save();syncToCloud();
   closeMoForce();goScreen('write');
   if(pastedText&&startParas.length){
@@ -2544,7 +1058,7 @@ function createScript(){
 function addParagraph(tag){
   var script=getActive();if(!script)return;
   if(!script.paragraphs)script.paragraphs=[];
-  script.paragraphs.push({id:uid(),tag:tag,text:'',score:0});
+  script.paragraphs.push({id:uid(),tag:tag,text:''});
   script.updatedAt=new Date().toISOString();
   save();setTimeout(renderWrite,0);
   // Focus the new textarea
@@ -2633,7 +1147,7 @@ function deleteAccount(){
   if(!S.currentUser)return;
   db.collection('users').doc(S.currentUser.uid).delete().catch(function(){});
   S.currentUser.delete().then(function(){
-    localStorage.removeItem(SK);localStorage.removeItem(PRO_KEY);
+    localStorage.removeItem(SK);localStorage.removeItem('sp_pro');
     S.scripts=[];S.currentUser=null;
     closeMo();showLogin();
     showToast('Account deleted','default');
@@ -2643,62 +1157,12 @@ function deleteAccount(){
   });
 }
 
-// ── Pro Sheet ──
-function openProSheet(){
-  var ov=document.getElementById('proSheetOv');
-  var sheet=document.getElementById('proSheet');
-  var chk='<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>';
-  var clk='<path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>';
-  var html='<div class="mhandle"></div>';
-  html+='<div style="padding:4px 20px 0;text-align:center;">';
-  html+='<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:6px;">Scripora Pro</div>';
-  html+='<div style="font-size:1.6rem;font-weight:700;color:var(--text);margin-bottom:2px;">$4.99 <span style="font-size:.8rem;font-weight:400;color:var(--muted);">one-time</span></div>';
-  html+='<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;">Early supporter price. Rises when features launch.</div>';
-  html+='<div style="font-size:.68rem;color:var(--faint);margin-bottom:14px;">Support development and get first access to every feature as it ships.</div>';
-  html+='</div>';
-  html+='<div style="margin:0 16px 14px;display:flex;flex-direction:column;gap:6px;">';
-  var ready=[['Unlimited Scripts',''],['Script History','Version snapshots'],['Early Supporter','Permanent badge']];
-  ready.forEach(function(f){
-    html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:9px;">';
-    html+='<div style="width:20px;height:20px;border-radius:50%;background:rgba(106,175,130,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">';
-    html+='<svg fill="none" stroke="var(--s-high)" viewBox="0 0 24 24" stroke-width="2.5" style="width:11px;height:11px;">'+chk+'</svg></div>';
-    html+='<div style="flex:1;font-size:.78rem;font-weight:500;color:var(--text);">'+f[0]+'</div>';
-    if(f[1])html+='<div style="font-size:.56rem;color:var(--muted);">'+f[1]+'</div>';
-    html+='</div>';
-  });
-  var soon=[['Script Analysis','First access'],['SEO Tools','First access'],['Advanced Stats','First access'],['Higher Script Limit','First access']];
-  soon.forEach(function(f){
-    html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:9px;">';
-    html+='<div style="width:20px;height:20px;border-radius:50%;background:rgba(184,115,51,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">';
-    html+='<svg fill="none" stroke="var(--accent)" viewBox="0 0 24 24" stroke-width="2" style="width:11px;height:11px;">'+clk+'</svg></div>';
-    html+='<div style="flex:1;font-size:.78rem;font-weight:500;color:var(--text);">'+f[0]+'</div>';
-    html+='<div style="font-size:.56rem;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:2px 6px;">'+f[1]+'</div>';
-    html+='</div>';
-  });
-  html+='</div>';
-  html+='<div style="padding:0 16px 8px;">';
-  html+='<a href="https://selerii.gumroad.com/l/scripora-pro" target="_blank" style="display:block;text-align:center;background:var(--accent);color:#12161F;padding:14px;border-radius:14px;font-weight:700;font-size:.88rem;text-decoration:none;">Get Pro &mdash; $4.99</a>';
-  html+='<div style="margin-top:10px;">';
-  html+='<input class="modal-inp" placeholder="Promo code e.g. EARLYWRITER" id="proCodeInp" style="margin-bottom:6px;"/>';;
-    html+='<button class="btn-g" style="width:100%;" onclick="applyProCode()">Apply Code</button>';
-  html+='</div>';
-  html+='<div style="text-align:center;font-size:.62rem;color:var(--faint);margin-top:8px;">Secure payment via Gumroad &middot; No subscription</div>';
-  html+='</div>';
-  if(sheet){sheet.innerHTML=html;}
-  if(ov){ov.classList.remove('hide');}
-  requestAnimationFrame(function(){if(sheet)sheet.classList.add('open');});
-}
-
-
-function closeProSheet(evt){if(evt!==null&&evt&&evt.target!==document.getElementById('proSheetOv'))return;document.getElementById('proSheetOv').classList.remove('open');}
-function openGumroad(){window.open('https://selerii.gumroad.com/l/scripora-pro','_blank');}
-
 // ── Firebase Auth listener ──
 if(auth){
   auth.onAuthStateChanged(function(user){
     if(user){
       S.currentUser=user;S.isGuest=false;
-      load();loadAnalyseHistory();
+      load();
       applyTheme(currentThemeId());
       showApp();
       loadFromCloud();
@@ -2706,7 +1170,7 @@ if(auth){
     }else{
       if(!S.isGuest&&!S.appShown){
         S.currentUser=null;
-        load();loadAnalyseHistory();
+        load();
         applyTheme(currentThemeId());
         if(S.scripts&&S.scripts.length>0){showApp();}
         else{showLogin();}
@@ -2794,7 +1258,7 @@ function installPWA(){
 function dismissPWA(){}
 
 (function init(){
-  checkProTrial();load();loadAnalyseHistory();applyTheme(currentThemeId());
+  load();applyTheme(currentThemeId());
   // Service worker
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/sw.js').then(function(reg){

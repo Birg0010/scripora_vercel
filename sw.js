@@ -1,12 +1,11 @@
-// Scripora Service Worker v6.7
-var CACHE = 'scripora-v6';
+// Scripora Service Worker v6.8
+var CACHE = 'scripora-v7';
 var ASSETS = [
   '/',
   '/index.html',
   '/styles.css',
   '/app.js',
   '/engine.js',
-  '/feedback.js',
   '/sync.js',
   '/manifest.json',
   '/icons/icon.svg',
