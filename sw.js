@@ -1,17 +1,15 @@
-// Scripora Service Worker v6.8
-var CACHE = 'scripora-v7';
+// Scripora Service Worker v7.0
+var CACHE = 'scripora-v9';
 var ASSETS = [
-  '/',
   '/index.html',
   '/styles.css',
   '/app.js',
   '/engine.js',
   '/sync.js',
   '/manifest.json',
-  '/icons/icon.svg',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/favicon-32.png'
+  '/Icon/icon-192.png',
+  '/Icon/icon-512.png',
+  '/Icon/favicon-32.png'
 ];
 
 self.addEventListener('install', function(e) {

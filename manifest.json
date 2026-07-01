@@ -1,6 +1,7 @@
 {
   "name": "Scripora",
   "short_name": "Scripora",
+  "version": "1.0",
   "description": "Write with intention. Plan and structure your YouTube scripts.",
   "start_url": "/",
   "scope": "/",

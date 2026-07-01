@@ -43,7 +43,6 @@ try{
 }
 
 
-
 // ── Helpers ──
 
 function safeGtag(){try{if(typeof gtag!=='undefined')gtag.apply(null,arguments);}catch(e){}}
@@ -309,7 +308,14 @@ function saveScriptTitle(){
   showToast('Renamed','success');
 }
 
-function autoResize(ta){ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';}
+function autoResize(ta){
+  ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';
+  var rect=ta.getBoundingClientRect();
+  var visibleBottom=(window.visualViewport?window.visualViewport.height:window.innerHeight);
+  if(rect.bottom>visibleBottom-20){
+    ta.scrollIntoView({block:'end',behavior:'smooth'});
+  }
+}
 
 var _liveSyncTimer=null;
 function onParagraphInput(pid,tag,text){
@@ -415,8 +421,9 @@ function renderDrawerTab(){
   }else{
     html=items.map(function(item,i){
       var txt=typeof item==='string'?item:(item.text||'');
-      return '<div class="fact-item"><div class="fact-dot"></div><div class="fact-text">'+escHtml(txt)+'</div>'+
-      '<button class="fact-del" onclick="deleteNote(\''+tab+'\','+i+')"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>';
+      var editBtn='<button class="fact-del" onclick="editNote(\''+tab+'\','+i+')" title="Edit" style="color:var(--accent);"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>';
+      var delBtn='<button class="fact-del" onclick="deleteNote(\''+tab+'\','+i+')" title="Delete"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>';
+      return '<div class="fact-item"><div class="fact-dot"></div><div class="fact-text">'+escHtml(txt)+'</div>'+editBtn+delBtn+'</div>';
     }).join('');
     var singular={facts:'fact',ideas:'idea',links:'link',notes:'note'}[tab]||tab;
     html+='<button class="add-fact-btn" onclick="openModal(\'addNote\',\''+tab+'\')">+ Add a '+singular+'</button>';
@@ -427,6 +434,28 @@ function renderDrawerTab(){
 function deleteNote(tab,idx){
   var script=getActive();if(!script||!script.notes)return;
   script.notes[tab].splice(idx,1);save();setTimeout(renderDrawerTab,0);
+}
+function editNote(tab,idx){
+  var script=getActive();if(!script||!script.notes)return;
+  var current=script.notes[tab][idx]||'';
+  var txt=typeof current==='string'?current:(current.text||'');
+  openModal('_raw',
+    '<div class="mhandle"></div><div class="modal-title">Edit note</div>'+
+    '<textarea class="modal-inp" id="editNoteText" style="min-height:80px;resize:vertical;">'+escHtml(txt)+'</textarea>'+
+    '<div class="modal-acts">'+
+      '<button class="btn-g" onclick="closeMoForce()">Cancel</button>'+
+      '<button class="btn-p" onclick="saveEditNote(\''+tab+'\','+idx+')">Save</button>'+
+    '</div>');
+  setTimeout(function(){var ta=document.getElementById('editNoteText');if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}},180);
+}
+function saveEditNote(tab,idx){
+  var ta=document.getElementById('editNoteText');
+  var val=ta?(ta.value.trim()):'';
+  if(!val){showToast('Note cannot be empty','error');return;}
+  var script=getActive();if(!script||!script.notes)return;
+  script.notes[tab][idx]=val;
+  save();closeMoForce();setTimeout(renderDrawerTab,0);
+  showToast('Updated','success');
 }
 
 // ── View Script ──
@@ -476,7 +505,6 @@ function downloadScript(){
   setTimeout(function(){document.body.removeChild(a);},200);
   showToast('Downloaded','success');
 }
-
 
 
 // ── Portfolio ──
@@ -558,11 +586,6 @@ function recordSession(){
 }
 
 
-
-
-
-
-
 function highlightText(text){
   // Highlight filler words in amber/red, strong words in green
   var safe=escHtml(text);
@@ -633,38 +656,11 @@ function getHelpSections(tab){
       {q:'How do I delete my account?',a:'Go to Profile, scroll to the bottom, tap Delete Account, and type DELETE to confirm. This removes all your data permanently.'}
     ]},
     {title:'Privacy',items:[
-      {q:'What data does Scripora store?',a:'Your scripts and analysis history are stored locally on your device and optionally synced to Firebase if you are signed in. Scripora does not sell or share your data.'},
-      {q:'Does Scripora use AI?',a:'The analysis engine is rule-based and runs entirely in your browser. No script content is sent to any server.'}
+      {q:'What data does Scripora store?',a:'Your scripts and writing session data are stored locally on your device and optionally synced to Firebase if you are signed in. Scripora does not sell or share your data.'},
+      {q:'Does Scripora use AI?',a:'No. Scripora Version 1 does not use AI. There is no analysis engine. You write your script and the app organises it by section. AI-assisted features may come in a future version.'}
     ]}
   ];
   return [];
-}
-
-// ── Report Drawer ──
-function toggleAnnoBlock(el){el.classList.toggle('open');}
-function showStatHelp(type,value){
-  var title='About this stat';
-  var body='';
-  if(type==='curve'){
-    title='Attention Curve';
-    body='The attention curve maps predicted viewer engagement across your script in 10 time buckets. Green bars mean attention is rising. Grey is neutral. Red signals a predicted drop-off point where viewers are likely to leave.';
-  }else if(type==='pace'){
-    title='Pace Variance';
-    body=(typeof getStatInsight==='function'?getStatInsight('pace',parseFloat(value)||0):'')||'Pace variance measures sentence length variation. Above 4 is strong rhythm. Below 2 is flat.';
-  }else if(type==='insight'){
-    title='Insight Density';
-    body=(typeof getStatInsight==='function'?getStatInsight('insight',parseFloat(value)||0):'')||'Insight density counts new insights per 100 words. Low means repetition without escalation.';
-  }else if(type==='promise'){
-    title='Promise Tracking';
-    body=(typeof getStatInsight==='function'?getStatInsight('promise',value||'none'):'')||'Promise tracking checks whether a commitment made in the opening is delivered later.';
-  }else if(type==='voice'){
-    title='Voice Ratio';
-    body=(typeof getStatInsight==='function'?getStatInsight('voice',parseFloat(value)||0):'')||'Voice ratio measures how often the script addresses the viewer directly.';
-  }else if(type==='sync'){
-    title='Live Sync';
-    body='Live Sync keeps your script backed up to the cloud as you write. Every edit is saved in real time.';
-  }
-  openModal('_raw','<div class="mhandle"></div><div class="modal-title" style="font-size:.9rem;">'+title+'</div><p style="font-size:.78rem;color:var(--muted);line-height:1.65;margin-bottom:16px;">'+body+'</p><button class="btn-g" onclick="closeMoForce()">Got it</button>');
 }
 
 // ── Onboarding ──
@@ -758,7 +754,7 @@ function renderProfile(){
       row(rowIcon('gray','M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z','var(--muted)'),'Privacy Policy','','openModal(\'privacy\')',chev),
       row(rowIcon('gray','M9 12h6m-6 4h6M5 8h14M5 4h14','var(--muted)'),'Terms of Use','','openModal(\'terms\')',chev)
     ]);
-  var ver='<div style="text-align:center;font-size:.62rem;color:var(--faint);padding:20px;letter-spacing:.04em;">Scripora v5.9c &middot; by Selerii</div>';
+  var ver='<div style="text-align:center;font-size:.62rem;color:var(--faint);padding:20px;letter-spacing:.04em;">Scripora v1.0 &middot; by Selerii</div>';
 
   if(isGuest){
     el.innerHTML=
@@ -841,10 +837,12 @@ function showApp(){S.appShown=true;setTimeout(initOnboarding,800);document.getEl
 
 // ── Modals ──
 var _modalOpen=false;
+var _modalNoBackdropClose=false;
 function openModal(type,data){
   // Cancel any pending long-press timer
   if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null;}
   _modalOpen=true;
+  _modalNoBackdropClose=(type==='newScript');
   var mo=document.getElementById('mo');
   var modal=document.getElementById('modal');
   var xBtn='<button onclick="closeMoForce()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);padding:4px;cursor:pointer;display:flex;z-index:2;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>';
@@ -855,11 +853,18 @@ function openModal(type,data){
   if(type==='newScript'){
     html+='<div class="modal-title">New Script</div>'+
       '<input class="modal-inp" id="newScriptTitle" placeholder="Working title e.g. How I Built a Channel..." maxlength="120" style="margin-bottom:6px;"/>'+
-      '<div class="modal-hint" style="margin-bottom:10px;">You can change the title at any time.</div>'+
-      '<div style="font-size:.68rem;color:var(--muted);margin-bottom:5px;">Paste an existing script <span style="color:var(--faint);">(optional)</span></div>'+
-      '<textarea id="newScriptPaste" class="modal-inp" placeholder="Paste your script here. Scripora will detect sections and tag them automatically." style="min-height:80px;resize:vertical;font-size:.72rem;line-height:1.6;"></textarea>'+
-      '<div class="modal-hint" style="margin-bottom:10px;">Leave blank to start fresh.</div>'+
-      '<div class="modal-acts"><button class="btn-g" onclick="closeMo()">Cancel</button><button class="btn-p" onclick="createScript()">Create</button></div>';
+      '<div class="modal-hint" style="margin-bottom:12px;">You can change the title at any time.</div>'+
+      '<div id="pasteAccordion">'+
+        '<button type="button" onclick="togglePasteArea()" style="background:none;border:none;color:var(--muted);font-size:.72rem;display:flex;align-items:center;gap:6px;cursor:pointer;padding:0;margin-bottom:0;">'+
+          '<svg id="pasteChevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" style="width:13px;height:13px;transition:transform .18s;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>'+
+          'Paste an existing script <span style="color:var(--faint);margin-left:3px;">(optional)</span>'+
+        '</button>'+
+        '<div id="pasteAreaWrap" style="display:none;margin-top:10px;">'+
+          '<div class="modal-hint" style="margin-bottom:6px;">Separate sections with a blank line. Scripora will automatically detect and tag your Hook, Context, Body, CTA and Outro.</div>'+
+          '<textarea id="newScriptPaste" class="modal-inp" placeholder="Paste your script here..." style="min-height:90px;resize:vertical;font-size:.72rem;line-height:1.6;"></textarea>'+
+        '</div>'+
+      '</div>'+
+      '<div class="modal-acts" style="margin-top:14px;"><button class="btn-g" onclick="closeMoForce()">Cancel</button><button class="btn-p" onclick="createScript()">Create</button></div>';
     modal.innerHTML=html;mo.classList.add('open');
     setTimeout(function(){var i=document.getElementById('newScriptTitle');if(i)i.focus();},180);
     return;
@@ -893,7 +898,6 @@ function openModal(type,data){
     setTimeout(function(){var i=document.getElementById('linkUrl');if(i)i.focus();},180);
     return;
   }
-
 
 
   if(type==='themes'){
@@ -989,11 +993,11 @@ function openModal(type,data){
       '<div class="long-body">'+
       '<h4>What we collect</h4><p>When you sign in with Google, we collect your name, email address and profile photo to personalise your experience. Your scripts and writing session data are stored locally on your device. If you are signed in, this data is synced to our secure cloud storage (Google Firestore) so you can access it across devices.</p>'+
       '<h4>How we use your data</h4><p>Your data is used solely to provide and improve Scripora. We do not sell, licence or share your personal data with third parties. We do not use your script content for advertising, model training or any purpose beyond storage and delivery back to you.</p>'+
-      '<h4>Script analysis</h4><p>Script Insights and the upcoming Script Analysis feature use a local rule-based engine running in your browser. When AI-assisted analysis is enabled in a future update, script content may be sent to a third-party AI API. This will be clearly disclosed and will be opt-in.</p>'+
-      '<h4>Analytics</h4><p>We use Google Analytics to understand aggregate usage patterns   which features are used, how often, and on what devices. This data is anonymous. Your script content is never included in analytics events.</p>'+
-      '<h4>Local storage</h4><p>Scripora stores your scripts, preferences and writing stats in your browser&#39;s local storage. This data does not leave your device unless you are signed in and syncing is active. Clearing your browser data will remove locally stored scripts.</p>'+
+      '<h4>AI and analysis</h4><p>Scripora Version 1 does not use AI or any analysis engine. No script content is processed, analysed or transmitted for any purpose other than syncing your own data to your own account. If AI-assisted features are introduced in a future version, they will be clearly disclosed and opt-in.</p>'+
+      '<h4>Analytics</h4><p>We use Google Analytics to understand aggregate usage patterns — which features are used, how often, and on what devices. This data is anonymous. Your script content is never included in analytics events.</p>'+
+      '<h4>Local storage</h4><p>Scripora stores your scripts, preferences and writing session data in your browser\'s local storage. This data does not leave your device unless you are signed in and syncing is active. Clearing your browser data will remove locally stored scripts.</p>'+
       '<h4>Your rights</h4><p>You can delete your account and all associated cloud data at any time from Profile → Delete Account. Local data can be cleared through your browser or device settings. To request data deletion by email, contact us at support@scripora.app.</p>'+
-      '<p style="font-size:.7rem;margin-top:12px;">Last updated: March 2026 &nbsp;&middot;&nbsp; Contact: support@scripora.app</p>'+
+      '<p style="font-size:.7rem;margin-top:12px;">Last updated: July 2026 &nbsp;&middot;&nbsp; Contact: support@scripora.app</p>'+
       '</div>';
     modal.innerHTML=html;mo.classList.add('open');return;
   }
@@ -1005,7 +1009,7 @@ function openModal(type,data){
       '<h4>Your content</h4><p>You retain full ownership of everything you write in Scripora. By enabling cloud sync, you grant Selerii a limited, non-exclusive licence to store and transmit your content solely for the purpose of delivering it back to you. We do not claim any rights over your scripts.</p>'+
       '<h4>Account termination</h4><p>You may delete your account at any time from the Profile tab. We reserve the right to suspend accounts that violate these terms.</p>'+
       '<h4>Limitation of liability</h4><p>Scripora is provided as-is without warranties of any kind. Selerii is not liable for loss of data, loss of revenue, missed opportunities or any indirect damages arising from use of this app.</p>'+
-      '<p style="font-size:.7rem;margin-top:12px;">Last updated: March 2026 &nbsp;&middot;&nbsp; Contact: support@scripora.app</p>'+
+      '<p style="font-size:.7rem;margin-top:12px;">Last updated: July 2026 &nbsp;&middot;&nbsp; Contact: support@scripora.app</p>'+
       '</div>';
     modal.innerHTML=html;mo.classList.add('open');return;
   }
@@ -1015,16 +1019,18 @@ function openModal(type,data){
 
 function closeMo(evt){
   if(evt&&evt.target!==document.getElementById('mo'))return;
+  if(_modalNoBackdropClose)return;
   _modalOpen=false;
   document.getElementById('mo').classList.remove('open');
 }
 function closeMoTouch(evt){
   if(!evt||evt.target!==document.getElementById('mo'))return;
+  if(_modalNoBackdropClose)return;
   evt.preventDefault();
   _modalOpen=false;
   document.getElementById('mo').classList.remove('open');
 }
-function closeMoForce(){document.getElementById('mo').classList.remove('open');}
+function closeMoForce(){_modalNoBackdropClose=false;document.getElementById('mo').classList.remove('open');}
 
 function checkDeleteConfirm(inp){
   var btn=document.getElementById('deleteBtn');
@@ -1032,6 +1038,16 @@ function checkDeleteConfirm(inp){
 }
 
 // ── Modal actions ──
+function togglePasteArea(){
+  var wrap=document.getElementById('pasteAreaWrap');
+  var chev=document.getElementById('pasteChevron');
+  if(!wrap)return;
+  var open=wrap.style.display==='none'||wrap.style.display==='';
+  wrap.style.display=open?'block':'none';
+  if(chev)chev.style.transform=open?'rotate(90deg)':'';
+  if(open){setTimeout(function(){var ta=document.getElementById('newScriptPaste');if(ta)ta.focus();},80);}
+}
+
 function createScript(){
   var inp=document.getElementById('newScriptTitle');
   var title=(inp?inp.value:'').trim();
@@ -1072,7 +1088,7 @@ function saveNote(tab){
   var script=getActive();if(!script)return;
   if(!script.notes)script.notes={facts:[],ideas:[],links:[],notes:[]};
   if(!script.notes[tab])script.notes[tab]=[];
-  script.notes[tab].push(val);
+  script.notes[tab].unshift(val);
   save();closeMoForce();setTimeout(renderDrawerTab,0);
   showToast('Added','success');
 }
@@ -1201,11 +1217,9 @@ window.addEventListener('appinstalled',function(){
   safeGtag('event','pwa_installed');
 });
 function openInstallGuide(){
-  var isAndroid=/android/i.test(navigator.userAgent);
-  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
   var html='<div class="mhandle"></div>';
   html+='<div class="modal-title">Get Scripora</div>';
-  html+='<div class="modal-sub">Three ways to install Scripora on your device.</div>';
+  html+='<div class="modal-sub">Install Scripora on your device.</div>';
 
   // Option 1: Chrome install prompt
   html+='<div class="inst-opt" onclick="closeMoForce();installPWA();">';
@@ -1215,21 +1229,13 @@ function openInstallGuide(){
   html+='<div class="inst-opt-sub">'+(pwaInstallPrompt?'Tap to install now':'Open in Chrome and use the three-dot menu')+'</div></div>';
   html+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:16px;height:16px;color:var(--faint);flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div>';
 
-  // Option 2: APKPure listing
-  html+='<div class="inst-opt" onclick="window.open(\'https://apkpure.com/scripora\',\'_blank\');closeMoForce();">';
-  html+='<div class="inst-opt-ico" style="background:rgba(90,126,201,.12);border-color:rgba(90,126,201,.3);">';
-  html+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:20px;height:20px;stroke:var(--body-c);"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>';
-  html+='<div class="inst-opt-info"><div class="inst-opt-title">APKPure</div>';
-  html+='<div class="inst-opt-sub">Download the Android app from APKPure</div></div>';
-  html+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:16px;height:16px;color:var(--faint);flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div>';
-
-  // Option 3: Direct APK download
-  html+='<div class="inst-opt" onclick="window.open(\'https://scripora.vercel.app/scripora.apk\',\'_blank\');closeMoForce();">';
-  html+='<div class="inst-opt-ico" style="background:rgba(106,175,130,.12);border-color:rgba(106,175,130,.3);">';
-  html+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:20px;height:20px;stroke:var(--s-high);"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>';
-  html+='<div class="inst-opt-info"><div class="inst-opt-title">Direct APK Download</div>';
-  html+='<div class="inst-opt-sub">Download and install the APK file directly</div></div>';
-  html+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" style="width:16px;height:16px;color:var(--faint);flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div>';
+  // Option 2: Native app — coming soon
+  html+='<div class="inst-opt" style="opacity:.55;pointer-events:none;">';
+  html+='<div class="inst-opt-ico" style="background:rgba(255,255,255,.04);border-color:var(--border);">';
+  html+='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" style="width:20px;height:20px;stroke:var(--muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>';
+  html+='<div class="inst-opt-info"><div class="inst-opt-title">Native App</div>';
+  html+='<div class="inst-opt-sub">Coming Soon</div></div>';
+  html+='</div>';
 
   html+='<button class="btn-g" onclick="closeMoForce()" style="width:100%;margin-top:10px;">Close</button>';
   openModal('_raw',html);
@@ -1259,6 +1265,16 @@ function dismissPWA(){}
 
 (function init(){
   load();applyTheme(currentThemeId());
+  // If the user already has local scripts, show the app immediately
+  // without waiting for Firebase — eliminates the landing-screen flash on resume.
+  // Firebase auth will still resolve in the background and sync cloud data.
+  if(S.scripts&&S.scripts.length>0){
+    S.appShown=true;
+    document.getElementById('loginScreen').classList.add('hide');
+    document.getElementById('app').classList.remove('hide');
+    goScreen('scripts');
+    setTimeout(initOnboarding,800);
+  }
   // Service worker
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/sw.js').then(function(reg){
