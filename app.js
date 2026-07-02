@@ -29,7 +29,7 @@ var TAGS={
   out:{label:'Outro',cls:'tag-out',color:'#8A6AC9'}
 };
 
-var S={scripts:[],activeId:null,currentUser:null,isGuest:false,appShown:false,drawerTab:'facts',bulkMode:false,bulkSelected:[],analysing:false,syncEnabled:false};
+var S={scripts:[],activeId:null,currentUser:null,isGuest:false,appShown:false,drawerTab:'facts',bulkMode:false,bulkSelected:[],syncEnabled:false};
 
 
 // ── Firebase init   wrapped so offline/CDN failure can't break the app ──
@@ -607,15 +607,6 @@ function recordSession(){
   if(!best||todayWords>best.words)best={words:todayWords,date:date};
   raw.sessions=sessions;raw.bestSession=best;
   localStorage.setItem(STATS_KEY,JSON.stringify(raw));
-}
-
-
-function highlightText(text){
-  // Highlight filler words in amber/red, strong words in green
-  var safe=escHtml(text);
-  var fillers=['basically','literally','you know','like i said','sort of','kind of','actually'];
-  fillers.forEach(function(f){safe=safe.replace(new RegExp('\\b'+f+'\\b','gi'),function(m){return '<span class="hl-bad">'+m+'</span>';});});
-  return safe;
 }
 
 
@@ -1294,7 +1285,6 @@ function installPWA(){
     '<p style="font-size:.82rem;color:var(--muted);line-height:1.65;text-align:center;margin-bottom:16px;">'+msg+'</p>'+
     '<button class="btn-p" onclick="closeMoForce()">Got it</button>');
 }
-function dismissPWA(){}
 
 (function init(){
   load();applyTheme(currentThemeId());
