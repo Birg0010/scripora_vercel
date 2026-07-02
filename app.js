@@ -271,6 +271,10 @@ function renderWrite(){
     pbList.innerHTML='<div class="write-empty"><p>No paragraphs yet.<br/>Add your first section below.</p></div>';
     return;
   }
+  // Preserve scroll position across re-renders (tag change, move, etc.)
+  var scrollEl=pbList.closest('.scr-scroll');
+  var savedScroll=scrollEl?scrollEl.scrollTop:0;
+
   pbList.innerHTML=script.paragraphs.map(function(p){
     var tag=TAGS[p.tag]||TAGS.hook;
     var wc=wordCount(p.text);
@@ -288,6 +292,8 @@ function renderWrite(){
       '</div></div></div>';
   }).join('');
   document.querySelectorAll('.pb-ta').forEach(function(ta){autoResize(ta);});
+  // Restore scroll position after reflow so the user stays where they were
+  if(scrollEl&&savedScroll>0){scrollEl.scrollTop=savedScroll;}
 }
 
 function editScriptTitle(){
@@ -309,12 +315,8 @@ function saveScriptTitle(){
 }
 
 function autoResize(ta){
-  ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';
-  var rect=ta.getBoundingClientRect();
-  var visibleBottom=(window.visualViewport?window.visualViewport.height:window.innerHeight);
-  if(rect.bottom>visibleBottom-20){
-    ta.scrollIntoView({block:'end',behavior:'smooth'});
-  }
+  ta.style.height='auto';
+  ta.style.height=ta.scrollHeight+'px';
 }
 
 var _liveSyncTimer=null;
@@ -1076,9 +1078,15 @@ function addParagraph(tag){
   if(!script.paragraphs)script.paragraphs=[];
   script.paragraphs.push({id:uid(),tag:tag,text:''});
   script.updatedAt=new Date().toISOString();
-  save();setTimeout(renderWrite,0);
-  // Focus the new textarea
-  setTimeout(function(){var tas=document.querySelectorAll('.pb-ta');if(tas.length)tas[tas.length-1].focus();},80);
+  save();setTimeout(function(){
+    renderWrite();
+    // Scroll the newly added paragraph into view once — no focus, no keyboard.
+    // User taps the textarea when ready, which is the natural mobile pattern.
+    setTimeout(function(){
+      var tas=document.querySelectorAll('.pb-ta');
+      if(tas.length){tas[tas.length-1].scrollIntoView({block:'end',behavior:'smooth'});}
+    },80);
+  },0);
 }
 
 function saveNote(tab){
@@ -1301,16 +1309,5 @@ function dismissPWA(){}
       }
     }
   },3000);
-
-  // ── Keyboard: scroll active textarea into view on focus ──
-  // Fires immediately when user taps a paragraph box
-  // Fixes the "last two boxes hidden under keyboard" issue
-  document.addEventListener('focusin',function(e){
-    if(e.target&&e.target.classList&&e.target.classList.contains('pb-ta')){
-      setTimeout(function(){
-        e.target.scrollIntoView({block:'center',behavior:'smooth'});
-      },300);
-    }
-  });
 
 })();
