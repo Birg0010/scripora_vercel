@@ -292,8 +292,10 @@ function renderWrite(){
       '</div></div></div>';
   }).join('');
   document.querySelectorAll('.pb-ta').forEach(function(ta){autoResize(ta);});
-  // Restore scroll position after reflow so the user stays where they were
-  if(scrollEl&&savedScroll>0){scrollEl.scrollTop=savedScroll;}
+  // Always restore scroll explicitly so Chrome's scroll-anchoring cannot
+  // move the viewport during autoResize. On initial open savedScroll is 0
+  // (top). On re-renders it is the position the user was already at.
+  if(scrollEl){scrollEl.scrollTop=savedScroll;}
 }
 
 function editScriptTitle(){
@@ -1080,11 +1082,12 @@ function addParagraph(tag){
   script.updatedAt=new Date().toISOString();
   save();setTimeout(function(){
     renderWrite();
-    // Scroll the newly added paragraph into view once — no focus, no keyboard.
-    // User taps the textarea when ready, which is the natural mobile pattern.
+    // Scroll the new paragraph's wrapper into view once.
+    // We target the parent .pb div, not the textarea itself, so Android
+    // Chrome cannot implicitly focus the input and open the keyboard.
     setTimeout(function(){
-      var tas=document.querySelectorAll('.pb-ta');
-      if(tas.length){tas[tas.length-1].scrollIntoView({block:'end',behavior:'smooth'});}
+      var pbs=document.querySelectorAll('.pb');
+      if(pbs.length){pbs[pbs.length-1].scrollIntoView({block:'end',behavior:'smooth'});}
     },80);
   },0);
 }
