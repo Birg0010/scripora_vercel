@@ -407,6 +407,8 @@ function switchDrawerTab(btn){
 }
 function renderDrawerTab(){
   var script=getActive(),body=document.getElementById('drawerBody'),tab=S.drawerTab;
+  // Cancel any pending two-step delete if the tab changed since it was set
+  if(_pendingDelete&&_pendingDelete.tab!==tab){_pendingDelete=null;}
   if(!script){body.innerHTML='<p style="font-size:.8rem;color:var(--muted);text-align:center;padding:20px 0;">Open a script first.</p>';return;}
   if(!script.notes)script.notes={facts:[],ideas:[],links:[],notes:[]};
   var items=script.notes[tab]||[];
@@ -425,9 +427,21 @@ function renderDrawerTab(){
   }else{
     html=items.map(function(item,i){
       var txt=typeof item==='string'?item:(item.text||'');
-      var editBtn='<button class="fact-del" onclick="editNote(\''+tab+'\','+i+')" title="Edit" style="color:var(--accent);"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>';
-      var delBtn='<button class="fact-del" onclick="deleteNote(\''+tab+'\','+i+')" title="Delete"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>';
-      return '<div class="fact-item"><div class="fact-dot"></div><div class="fact-text">'+escHtml(txt)+'</div>'+editBtn+delBtn+'</div>';
+      var isPending=_pendingDelete&&_pendingDelete.tab===tab&&_pendingDelete.idx===i;
+      var editBtn='<button class="fact-del" onclick="editNote(\''+tab+'\','+i+')" title="Edit">'+
+        '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>'+
+        '</button>';
+      var delBtn=isPending
+        ?'<button class="fact-del confirming" onclick="deleteNote(\''+tab+'\','+i+')" title="Confirm delete">'+
+            '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>'+
+          '</button>'
+        :'<button class="fact-del" onclick="confirmDeleteNote(\''+tab+'\','+i+')" title="Delete">'+
+            '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>'+
+          '</button>';
+      return '<div class="fact-item">'+
+        '<div class="fact-body"><div class="fact-dot"></div><div class="fact-text">'+escHtml(txt)+'</div></div>'+
+        '<div class="fact-actions">'+editBtn+delBtn+'</div>'+
+        '</div>';
     }).join('');
     var singular={facts:'fact',ideas:'idea',links:'link',notes:'note'}[tab]||tab;
     html+='<button class="add-fact-btn" onclick="openModal(\'addNote\',\''+tab+'\')">+ Add a '+singular+'</button>';
@@ -435,11 +449,17 @@ function renderDrawerTab(){
   body.innerHTML=html||'<p style="font-size:.78rem;color:var(--muted);text-align:center;padding:16px 0;">No '+tab+' yet.</p>';
   body.innerHTML+=html?'':'';
 }
+function confirmDeleteNote(tab,idx){
+  _pendingDelete={tab:tab,idx:idx};
+  setTimeout(renderDrawerTab,0);
+}
 function deleteNote(tab,idx){
+  _pendingDelete=null;
   var script=getActive();if(!script||!script.notes)return;
   script.notes[tab].splice(idx,1);save();setTimeout(renderDrawerTab,0);
 }
 function editNote(tab,idx){
+  _pendingDelete=null;
   var script=getActive();if(!script||!script.notes)return;
   var current=script.notes[tab][idx]||'';
   var txt=typeof current==='string'?current:(current.text||'');
@@ -842,6 +862,8 @@ function showApp(){S.appShown=true;setTimeout(initOnboarding,800);document.getEl
 // ── Modals ──
 var _modalOpen=false;
 var _modalNoBackdropClose=false;
+// Two-step delete confirmation for notes: stores {tab, idx} or null
+var _pendingDelete=null;
 function openModal(type,data){
   // Cancel any pending long-press timer
   if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null;}
@@ -1312,5 +1334,13 @@ function dismissPWA(){}
       }
     }
   },3000);
+
+  // Cancel two-step note-delete confirmation on any click outside an action button
+  document.addEventListener('click',function(e){
+    if(!_pendingDelete)return;
+    if(e.target&&e.target.closest&&e.target.closest('.fact-del'))return;
+    _pendingDelete=null;
+    setTimeout(renderDrawerTab,0);
+  });
 
 })();
